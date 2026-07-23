@@ -1,0 +1,98 @@
+# DECISIONS.md — 技術判断の記録
+
+仕様・実装に関わる判断と、その理由を時系列で記録する。
+設計書(PRODUCT_SPEC.md)の変更を伴う場合は、実装前に提案・合意の上で本書に記録する。
+
+---
+
+## 2026-07-24 プロジェクト基盤構築(SETUP-001〜007)
+
+### D-001: zod は v3 系を採用
+
+- **判断:** `zod@^3.24` に統一(shared / api / web)
+- **理由:** NestJS 周辺エコシステムとの互換実績を優先。v4 への移行はエコシステムの追従を見て別タスクで判断する
+- **影響:** 全パッケージの zod バージョンは揃えること(スキーマ互換性のため)
+
+### D-002: 共有パッケージは tsup で ESM + CJS 双方を出力
+
+- **判断:** packages/{shared,database,scoring,matchup} は tsup で `dist/index.js`(ESM)と `dist/index.cjs`(CJS)を出力
+- **理由:** apps/web(Vite=ESM)と apps/api(NestJS=CJS)の双方から同一パッケージを参照するため
+- **影響:** パッケージを跨ぐ変更後は `pnpm build`(Turborepo が依存順にビルド)が必要
+
+### D-003: API テストは Vitest + NestJS Testing で実行
+
+- **判断:** 設計方針の「単体テスト: Vitest / API テスト: NestJS Testing」を、`@nestjs/testing` + supertest を **Vitest 上で**動かす構成で実現(Jest は導入しない)
+- **理由:** テストランナーを Vitest に一本化し、モノレポ全体の設定・実行を単純化するため。デコレータメタデータは `unplugin-swc` で対応
+- **影響:** apps/api の vitest.config.ts に swc プラグイン設定が必要
+
+### D-004: Prisma スキーマは最小モデル(SystemHealthCheck)から開始
+
+- **判断:** 初回マイグレーションは接続確認用の `system_health_checks` テーブルのみ
+- **理由:** 依頼要件(DB 接続確認に必要な最低限)。設計書 §6 の全テーブルは MASTER/AUTH/PARTY/ARCHETYPE/BATTLE 系タスクで段階的に追加する
+- **影響:** 本テーブルは本格運用後も死活監視の書き込み確認先として残せる
+
+### D-005: DB の列挙値は当面 text + アプリ層検証
+
+- **判断:** `popularity_tier` 等は DB enum にせず text + shared の定数/zod で検証
+- **理由:** シーズン運用中の値追加・変更にマイグレーション不要で追従できる柔軟性を優先。設計書 §6 も text 表記
+- **影響:** 不正値の防止はアプリ層の責務(ZodValidationPipe 必須)
+
+### D-006: 環境変数は用途別に4ファイルへ分離
+
+- **判断:** ルート(Docker Compose)/ apps/api / apps/web / packages/database の4つの `.env` に分離
+- **理由:** 依頼要件「フロントとバックエンドの環境変数を分離」。特に `VITE_` 変数はブラウザへ公開されるため、バックエンド秘密情報との同居を構造的に防ぐ
+- **影響:** セットアップ時に4ファイルのコピーが必要(README 記載)
+
+### D-007: 開発時の Web→API 通信は Vite プロキシ経由
+
+- **判断:** `/api/*` を Vite の dev プロキシで :3000 へ転送。`VITE_API_BASE_URL` は本番等で別オリジンにする場合のみ設定
+- **理由:** ローカルで CORS 設定に依存せず、本番(同一オリジン配信 or CDN)にも対応できる
+- **影響:** API 側の CORS 設定は保険として維持(`CORS_ORIGIN`)
+
+### D-008: API プレフィックスは shared の定数で一元管理
+
+- **判断:** `/api/v1` は `packages/shared` の `API_PREFIX` / `API_BASE_PATH` を全箇所で使用
+- **理由:** バージョニング変更時の修正漏れ防止
+- **影響:** パスのハードコード禁止(API_CONVENTIONS.md)
+
+### D-009: scoring / matchup は Snapshot 型を受け取る純粋関数
+
+- **判断:** ドメインエンジンは Prisma エンティティを直接受け取らず、`ArchetypeSnapshot` 等の専用型を受け取る。DB→Snapshot 変換は apps/api の責務
+- **理由:** 設計書 §2.2(決定的アルゴリズム・再現性)と開発ルール(UI/DB 非依存の純粋ロジック)の実装保証。テストが DB なしで書ける
+- **影響:** BATTLE-002 等で変換層の実装が必要
+
+### D-010: ロジック未実装の関数は明示的に throw する雛形とする
+
+- **判断:** `scoreArchetype` 等は `Not implemented` を throw し、テストでもそれを検証。将来仕様は `it.todo` で列挙
+- **理由:** 誤って未実装のまま呼び出された場合に静かに誤動作せず即座に失敗させる。todo が実装タスクの受け入れ条件リストを兼ねる
+- **影響:** ロジック実装タスクでは throw の除去+ todo の実テスト化をセットで行う
+
+### D-011: CI(SETUP-008)は今回の基盤構築に含めない
+
+- **判断:** GitHub Actions の整備は SETUP-008 として登録のみ
+- **理由:** 依頼の初回完了条件に CI は含まれず、リモートリポジトリ未設定のため検証できない
+- **影響:** 次タスクの最有力候補(IMPLEMENTATION_PLAN 参照)
+
+### D-012: Git リポジトリを初期化(コミットは未実施)
+
+- **判断:** `git init` を実施し `.gitignore` を整備。初回コミットはユーザー判断に委ねる
+- **理由:** 開発ルール「Git 差分を確認してから完了報告」にはリポジトリが必要。コミット・プッシュは指示があるまで行わない方針
+- **影響:** 以後のタスクは通常の diff 運用が可能
+
+### D-013: Playwright は chromium のみ・起動確認1件から開始
+
+- **判断:** E2E はデスクトップ Chrome 1プロジェクト、スモークテスト1件(トップ表示+ヘルス疎通)
+- **理由:** 依頼要件(最低限の起動確認テストを1件)。モバイルビューポート等は WEB-010 で拡充
+- **影響:** 初回実行前に `playwright install chromium` が必要
+
+### D-014: ローカルの Docker ランタイムは colima を使用
+
+- **判断:** この開発機では Docker Desktop ではなく colima + docker CLI + docker-compose(brew)で動作確認した
+- **理由:** 既にインストール済みの環境を利用。compose v2 プラグインは `~/.docker/cli-plugins` にシンボリックリンクで導入
+- **影響:** 他の開発者は Docker Desktop 等でも問題ない(compose v2 が使えれば良い)
+
+### D-015: 設計書にない補助タスクIDの追加
+
+- **判断:** 設計書・依頼の例示タスクに加え、SETUP-009〜011 / MASTER-003〜009 / SCORE-006〜007 / MATCHUP-002〜008 / WEB-004〜011 / LLM / WS / OPS / ENCOUNTER / HISTORY 系を追加し、SCORE 系は例示の ID(SCORE-002〜005)を維持したまま細分化した
+- **理由:** 「1タスク=1セッションで完了できる粒度」の要件を満たすため。依存関係は IMPLEMENTATION_PLAN の前提タスク欄に明記
+- **影響:** タスクの追加・変更時は IMPLEMENTATION_PLAN と本書を更新する

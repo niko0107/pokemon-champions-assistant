@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+*.tsbuildinfo
+
+# turbo
+.turbo/
+
+# env files (secrets) — examples are tracked
+.env
+.env.*
+!.env.example
+
+# test artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# logs
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# local claude settings
+.claude/settings.local.json
