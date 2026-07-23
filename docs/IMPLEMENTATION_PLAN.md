@@ -85,7 +85,7 @@
 - **前提タスク:** SETUP-002, SETUP-003
 - **対象外:** 実 DB を使う結合テスト(SETUP-011)
 
-### ⬜ SETUP-008 CI 設定
+### ✅ SETUP-008 CI 設定
 
 - **目的:** push / PR ごとに品質チェックを自動実行する
 - **作業範囲:** GitHub Actions(pnpm キャッシュ、lint / typecheck / test / build、Playwright E2E)
