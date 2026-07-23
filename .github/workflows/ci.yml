@@ -74,11 +74,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace for E2E
+        run: pnpm build
+
       - name: Install Playwright Chromium
         run: pnpm --filter @pokemon-champions/web exec playwright install --with-deps chromium
 
       - name: Run Playwright smoke test
         run: pnpm --filter @pokemon-champions/web exec playwright test e2e/smoke.spec.ts
+        env:
+          DEBUG: pw:webserver
 
       - name: Upload Playwright traces
         if: failure()

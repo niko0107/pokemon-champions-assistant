@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const apiHealthUrl = "http://localhost:3000/api/v1/health";
+const webUrl = "http://localhost:5173";
+
 /**
  * 最低限の起動確認 E2E。
  * webServer で API(:3000)と Web(:5173)を起動してからテストする。
@@ -11,7 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: webUrl,
     trace: "on-first-retry",
   },
   projects: [
@@ -22,15 +25,22 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "pnpm --dir ../api dev",
-      url: "http://localhost:3000/api/v1/health",
+      name: "API",
+      command: "pnpm dev",
+      cwd: "../api",
+      url: apiHealthUrl,
       reuseExistingServer: !process.env.CI,
+      stdout: "pipe",
+      stderr: "pipe",
       timeout: 120_000,
     },
     {
-      command: "pnpm dev",
-      url: "http://localhost:5173",
+      name: "Web",
+      command: "pnpm dev --host localhost --port 5173 --strictPort",
+      url: webUrl,
       reuseExistingServer: !process.env.CI,
+      stdout: "pipe",
+      stderr: "pipe",
       timeout: 120_000,
     },
   ],
