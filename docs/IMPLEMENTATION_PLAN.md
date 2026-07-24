@@ -301,7 +301,7 @@
 
 ## フェーズ1: テンプレ構築(ARCHETYPE)
 
-### ⬜ ARCHETYPE-001 テンプレ構築のスキーマ
+### ✅ ARCHETYPE-001 テンプレ構築のスキーマ
 
 - **目的:** archetypes / archetype_pokemons / archetype_pokemon_moves / archetype_sources(§6.4)を実装する
 - **作業範囲:** Prisma モデル+マイグレーション+ §6.6 のインデックス(逆引き用)
