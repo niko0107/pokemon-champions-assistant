@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 export { PrismaClient, Prisma } from "@prisma/client";
-export type { Move, Pokemon, SystemHealthCheck } from "@prisma/client";
+export type { Ability, Item, Move, Pokemon, SystemHealthCheck } from "@prisma/client";
 
 /**
  * PrismaClient を生成する。接続は最初のクエリ実行時に確立される(遅延接続)。
