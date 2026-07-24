@@ -147,7 +147,9 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
       rawScore: 0,
       maxScore: 0,
       matched: [],
+      contradictions: [],
       excluded: false,
+      exclusionCodes: [],
       likelyUnseen: [],
       threatMoveIds: [],
     });
@@ -188,16 +190,16 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
     expect(result.matched.every((detail) => detail.matched)).toBe(true);
   });
 
-  it("一部一致では未観測の構築ポケモンを減点せず、観測数だけを最大点へ積む", () => {
+  it("一部一致では未観測の構築ポケモンを減点せず、観測された不一致だけを減点する", () => {
     const result = scoreArchetype(
       createArchetype([createPokemon(1), createPokemon(2, 0.5), createPokemon(3)]),
       [observePokemon(1, 1), observePokemon(2, 2), observePokemon(99, 3)],
     );
 
     expect(result).toMatchObject({
-      rawScore: 15,
+      rawScore: 0,
       maxScore: 30,
-      matchRate: 50,
+      matchRate: 0,
     });
     expect(result.matched).toEqual([
       {
@@ -219,6 +221,15 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
         kind: "pokemon",
         matched: false,
         points: 0,
+        pokemonId: 99,
+      },
+    ]);
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 3,
+        kind: "pokemon",
+        penaltyPoints: -20,
+        contradictionCode: "pokemon_not_in_archetype",
         pokemonId: 99,
       },
     ]);
@@ -361,13 +372,13 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
   it("小数のusageRateを安定した精度で返し、スコアを下限0・上限max/100内に保つ", () => {
     const result = scoreArchetype(
       createArchetype([createPokemon(1, 0.3333), createPokemon(2, 0)]),
-      [observePokemon(1, 1), observePokemon(2, 2), observePokemon(99, 3)],
+      [observePokemon(1, 1), observePokemon(2, 2)],
     );
 
     expect(result).toMatchObject({
       rawScore: 3.333,
-      maxScore: 30,
-      matchRate: 11.11,
+      maxScore: 20,
+      matchRate: 16.665,
     });
     expect(result.rawScore).toBeGreaterThanOrEqual(0);
     expect(result.rawScore).toBeLessThanOrEqual(result.maxScore);
@@ -460,16 +471,16 @@ describe("scoreArchetype: SCORE-003 技一致", () => {
     expect(result.matched.map((detail) => detail.points)).toEqual([15, 7.5, 3.75]);
   });
 
-  it("一部一致では一致技だけを加点し、不一致技を減点しない", () => {
+  it("一部一致では一致技の加点と対象ポケモンの技矛盾減点を合成する", () => {
     const result = scoreArchetype(createArchetype([createPokemon(1, 1, false, [createMove(10)])]), [
       observeMove(1, 10, 1),
       observeMove(1, 99, 2),
     ]);
 
     expect(result).toMatchObject({
-      rawScore: 15,
+      rawScore: 3,
       maxScore: 30,
-      matchRate: 50,
+      matchRate: 10,
     });
     expect(result.matched[1]).toEqual({
       observationSeq: 2,
@@ -479,6 +490,16 @@ describe("scoreArchetype: SCORE-003 技一致", () => {
       pokemonId: 1,
       moveId: 99,
     });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 2,
+        kind: "move",
+        penaltyPoints: -12,
+        contradictionCode: "move_not_in_archetype",
+        pokemonId: 1,
+        moveId: 99,
+      },
+    ]);
   });
 
   it("技一致0件でも負点を付けず一致度0%に保つ", () => {
@@ -802,7 +823,7 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
       expect(result.matched[0]).toMatchObject({ matched: true, points: 8, itemId: 21 });
     });
 
-    it("不一致持ち物を0点とし減点しない", () => {
+    it("不一致持ち物を加点せず、矛盾内訳へ分離する", () => {
       const result = scoreArchetype(
         createArchetype([createPokemon(1, 1, false, [], { itemId: 20 })]),
         [observeItem(1, 99, 1)],
@@ -810,6 +831,10 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
 
       expect(result).toMatchObject({ rawScore: 0, maxScore: 15, matchRate: 0 });
       expect(result.matched[0]).toMatchObject({ matched: false, points: 0 });
+      expect(result.contradictions[0]).toMatchObject({
+        penaltyPoints: -12,
+        contradictionCode: "item_not_in_archetype",
+      });
     });
 
     it("別ポケモンが同じ持ち物を持つだけでは一致にしない", () => {
@@ -860,7 +885,7 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
       });
     });
 
-    it("不一致特性を0点とし減点しない", () => {
+    it("不一致特性を加点せず、矛盾内訳へ分離する", () => {
       const result = scoreArchetype(
         createArchetype([createPokemon(1, 1, false, [], { abilityId: 30 })]),
         [observeAbility(1, 99, 1)],
@@ -868,6 +893,10 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
 
       expect(result).toMatchObject({ rawScore: 0, maxScore: 8, matchRate: 0 });
       expect(result.matched[0]).toMatchObject({ matched: false, points: 0 });
+      expect(result.contradictions[0]).toMatchObject({
+        penaltyPoints: -8,
+        contradictionCode: "ability_mismatch",
+      });
     });
 
     it("別ポケモンが同じ特性を持つだけでは一致にしない", () => {
@@ -1242,18 +1271,19 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
 
   it("小数配点を安定化し、rawScoreとmatchRateを上下限内に保つ", () => {
     const result = scoreArchetype(
-      createArchetype([createPokemon(1, 1, false, [], { itemId: 20 })]),
+      createArchetype([createPokemon(1, 1, false, [], { itemId: 20, itemAlternativeIds: [99] })]),
       [observeItem(1, 20, 1), observeItem(1, 99, 2)],
       {
         ...DEFAULT_SCORING_CONFIG,
         itemHit: 1.3333333,
+        itemAlternativeHit: 0.6666667,
       },
     );
 
     expect(result).toMatchObject({
-      rawScore: 1.333333,
+      rawScore: 2,
       maxScore: 2.666667,
-      matchRate: 49.999981,
+      matchRate: 74.999991,
     });
     expect(result.rawScore).toBeGreaterThanOrEqual(0);
     expect(result.rawScore).toBeLessThanOrEqual(result.maxScore);
@@ -1262,13 +1292,408 @@ describe("scoreArchetype: SCORE-006 持ち物・特性・先発・メガ一致",
   });
 });
 
-describe("scoreArchetype: 後続タスク", () => {
-  it.todo("観測ポケモンが構築に存在しない場合 -pokemonMiss 減点する");
-  it.todo("構築のそのポケモンにない技を観測した場合 -moveConflict 減点する");
-  it.todo("raw_score が負の場合は一致度 0% とする");
-  it.todo("ポケモン不一致3体以上で excluded=true とする");
-  it.todo("メガ矛盾が発生した場合 excluded=true とする");
-  it.todo("付録A の具体例(カバルドン先発+ステロ+ドラパルト+リフレクター)で一致度 89% になる");
+describe("scoreArchetype: SCORE-004 矛盾・除外判定", () => {
+  const archetypeWithKnownSet = () =>
+    createArchetype(
+      [
+        createPokemon(1, 1, false, [createMove(10)], {
+          itemId: 20,
+          itemAlternativeIds: [21],
+          abilityId: 30,
+        }),
+        createPokemon(2, 1, true, [createMove(11)], {
+          itemId: 22,
+          abilityId: 31,
+        }),
+      ],
+      [1, 2],
+    );
+
+  it("矛盾観測0件では減点・除外理由を返さない", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(1, 1),
+      observeMove(1, 10, 2),
+      observeItem(1, 21, 3),
+      observeAbility(1, 30, 4),
+      observePosition(1, "lead", 5),
+      observeMega(2, 6),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 59,
+      maxScore: 66,
+      matchRate: 89.393939,
+      contradictions: [],
+      excluded: false,
+      exclusionCodes: [],
+    });
+  });
+
+  it("構築にないポケモン観測へ -pokemonMiss を一度適用する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(1, 1),
+      observePokemon(99, 2),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      maxScore: 20,
+      matchRate: 0,
+      excluded: false,
+    });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 2,
+        kind: "pokemon",
+        penaltyPoints: -20,
+        contradictionCode: "pokemon_not_in_archetype",
+        pokemonId: 99,
+      },
+    ]);
+  });
+
+  it("対象ポケモンにない技観測へ -moveConflict を適用する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observeItem(1, 20, 1),
+      observeMove(1, 99, 2),
+    ]);
+
+    expect(result).toMatchObject({ rawScore: 3, maxScore: 30, matchRate: 10 });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 2,
+        kind: "move",
+        penaltyPoints: -12,
+        contradictionCode: "move_not_in_archetype",
+        pokemonId: 1,
+        moveId: 99,
+      },
+    ]);
+  });
+
+  it("定番・代替のどちらにもない持ち物観測へ -itemConflict を適用する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observeMove(1, 10, 1),
+      observeItem(1, 99, 2),
+    ]);
+
+    expect(result).toMatchObject({ rawScore: 3, maxScore: 30, matchRate: 10 });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 2,
+        kind: "item",
+        penaltyPoints: -12,
+        contradictionCode: "item_not_in_archetype",
+        pokemonId: 1,
+        itemId: 99,
+      },
+    ]);
+  });
+
+  it("確定特性と異なる特性観測へ -abilityConflict を適用する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(1, 1),
+      observeAbility(1, 99, 2),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 2,
+      maxScore: 18,
+      matchRate: 11.111111,
+    });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 2,
+        kind: "ability",
+        penaltyPoints: -8,
+        contradictionCode: "ability_mismatch",
+        pokemonId: 1,
+        abilityId: 99,
+      },
+    ]);
+  });
+
+  it("先発不一致は仕様どおり0点だけとし、矛盾減点へ含めない", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [observePosition(2, "lead", 1)]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      maxScore: 6,
+      matchRate: 0,
+      contradictions: [],
+      excluded: false,
+    });
+    expect(result.matched[0]).toMatchObject({
+      kind: "position",
+      matched: false,
+      points: 0,
+    });
+  });
+
+  it("構築にないメガ形態観測へ -megaConflict を適用し候補を除外する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [observeMega(99, 1)]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      maxScore: 12,
+      matchRate: 0,
+      excluded: true,
+      exclusionCodes: ["mega_conflict"],
+    });
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 1,
+        kind: "mega",
+        penaltyPoints: -25,
+        contradictionCode: "mega_not_in_archetype",
+        pokemonId: 99,
+      },
+    ]);
+  });
+
+  it("通常形態へのメガ観測もメガ矛盾とし、通常形態から派生先を推測しない", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [observeMega(1, 1)]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      excluded: true,
+      exclusionCodes: ["mega_conflict"],
+    });
+    expect(result.contradictions[0]).toMatchObject({
+      contradictionCode: "mega_not_in_archetype",
+      pokemonId: 1,
+    });
+  });
+
+  it("対象ポケモン不在の従属観測と未設定特性は判定不能として二重減点しない", () => {
+    const archetype = createArchetype([createPokemon(1)]);
+    const result = scoreArchetype(archetype, [
+      observePokemon(99, 1),
+      observeMove(99, 10, 2),
+      observeItem(99, 20, 3),
+      observeAbility(99, 30, 4),
+      observeAbility(1, 30, 5),
+    ]);
+
+    expect(result.contradictions).toEqual([
+      {
+        observationSeq: 1,
+        kind: "pokemon",
+        penaltyPoints: -20,
+        contradictionCode: "pokemon_not_in_archetype",
+        pokemonId: 99,
+      },
+    ]);
+    expect(result.matched.slice(1).every((detail) => !detail.matched && detail.points === 0)).toBe(
+      true,
+    );
+  });
+
+  it("異なる矛盾を仕様どおり累積し、maxScoreは観測の理論最大点のまま維持する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(1, 1),
+      observeMove(1, 99, 2),
+      observeItem(1, 99, 3),
+      observeAbility(1, 99, 4),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      maxScore: 48,
+      matchRate: 0,
+      excluded: false,
+    });
+    expect(result.contradictions.map((detail) => detail.penaltyPoints)).toEqual([-12, -12, -8]);
+  });
+
+  it("同一内容の重複観測は最小seqの1件へ集約し二重減点しない", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(99, 5),
+      observePokemon(99, 2),
+      observeMove(1, 99, 6),
+      observeMove(1, 99, 3),
+      observeItem(1, 99, 7),
+      observeItem(1, 99, 4),
+    ]);
+
+    expect(result.contradictions).toHaveLength(3);
+    expect(result.contradictions.map((detail) => detail.observationSeq)).toEqual([2, 3, 4]);
+    expect(result.contradictions.map((detail) => detail.penaltyPoints)).toEqual([-20, -12, -12]);
+  });
+
+  it("取消済みの矛盾観測を減点・除外判定から除外する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(99, 1, true),
+      observeMove(1, 99, 2, true),
+      observeItem(1, 99, 3, true),
+      observeAbility(1, 99, 4, true),
+      observeMega(99, 5, true),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      maxScore: 0,
+      matchRate: 0,
+      matched: [],
+      contradictions: [],
+      excluded: false,
+      exclusionCodes: [],
+    });
+  });
+
+  it("一致観測へ減点を適用しない", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(1, 1),
+      observeMove(1, 10, 2),
+      observeItem(1, 20, 3),
+      observeItem(1, 21, 4),
+      observeAbility(1, 30, 5),
+      observeMega(2, 6),
+    ]);
+
+    expect(result.contradictions).toEqual([]);
+    expect(result.excluded).toBe(false);
+  });
+
+  it("ポケモン不一致が閾値未満では除外せず、ちょうど閾値で除外する", () => {
+    const belowThreshold = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(98, 1),
+      observePokemon(99, 2),
+    ]);
+    const atThreshold = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(97, 3),
+      observePokemon(98, 1),
+      observePokemon(99, 2),
+    ]);
+
+    expect(belowThreshold).toMatchObject({ excluded: false, exclusionCodes: [] });
+    expect(atThreshold).toMatchObject({
+      excluded: true,
+      exclusionCodes: ["pokemon_miss_threshold"],
+    });
+    expect(atThreshold.contradictions).toHaveLength(3);
+  });
+
+  it("複数の除外条件を仕様順で返し、除外後も診断内訳を保持する", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(97, 1),
+      observeMega(99, 4),
+      observePokemon(98, 2),
+      observePokemon(99, 3),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 0,
+      excluded: true,
+      exclusionCodes: ["pokemon_miss_threshold", "mega_conflict"],
+    });
+    expect(result.contradictions).toHaveLength(4);
+    expect(result.matched).toHaveLength(4);
+  });
+
+  it("観測・Snapshotの順序が異なっても減点と内訳を決定的に返し、入力を変更しない", () => {
+    const archetype = archetypeWithKnownSet();
+    const observations = [
+      observeMega(99, 5),
+      observeAbility(1, 99, 4),
+      observeItem(1, 99, 3),
+      observeMove(1, 99, 2),
+      observePokemon(99, 1),
+    ];
+    const archetypeBefore = structuredClone(archetype);
+    const observationsBefore = structuredClone(observations);
+
+    const forward = scoreArchetype(archetype, observations);
+    const reversed = scoreArchetype(
+      {
+        ...archetype,
+        pokemons: [...archetype.pokemons].reverse(),
+      },
+      [...observations].reverse(),
+    );
+
+    expect(reversed).toEqual(forward);
+    expect(forward.contradictions.map((detail) => detail.observationSeq)).toEqual([1, 2, 3, 4, 5]);
+    expect(archetype).toEqual(archetypeBefore);
+    expect(observations).toEqual(observationsBefore);
+  });
+
+  it("減点前合計が負でもrawScoreを0、matchRateを0〜100へclampする", () => {
+    const result = scoreArchetype(archetypeWithKnownSet(), [
+      observePokemon(99, 1),
+      observeMove(1, 99, 2),
+    ]);
+
+    expect(result).toMatchObject({ rawScore: 0, maxScore: 25, matchRate: 0 });
+    expect(result.rawScore).toBeGreaterThanOrEqual(0);
+    expect(result.rawScore).toBeLessThanOrEqual(result.maxScore);
+    expect(result.matchRate).toBeGreaterThanOrEqual(0);
+    expect(result.matchRate).toBeLessThanOrEqual(100);
+  });
+
+  it.each([
+    "pokemonMiss",
+    "moveConflict",
+    "itemConflict",
+    "abilityConflict",
+    "megaConflict",
+  ] as const)("不正なconfig.%sを拒否する", (weight) => {
+    expect(() =>
+      scoreArchetype(archetypeWithKnownSet(), [], {
+        ...DEFAULT_SCORING_CONFIG,
+        [weight]: Number.NaN,
+      }),
+    ).toThrowError(RangeError);
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "不正なconfig.excludeMissCount=%sを拒否する",
+    (excludeMissCount) => {
+      expect(() =>
+        scoreArchetype(archetypeWithKnownSet(), [], {
+          ...DEFAULT_SCORING_CONFIG,
+          excludeMissCount,
+        }),
+      ).toThrowError(RangeError);
+    },
+  );
+
+  it("SCORE-001の拡張型契約を満たし、矛盾・除外の識別子を型安全に返す", () => {
+    const result: ScoredCandidate = scoreArchetype(archetypeWithKnownSet(), [observeMega(99, 1)]);
+
+    expectTypeOf(result).toEqualTypeOf<ScoredCandidate>();
+    expect(result.contradictions[0]?.contradictionCode).toBe("mega_not_in_archetype");
+    expect(result.exclusionCodes).toEqual(["mega_conflict"]);
+  });
+
+  it("付録Aの表と§7.2の最大点定義を適用すると56/56=100%になる", () => {
+    const archetype = createArchetype(
+      [
+        createPokemon(450, 1, false, [createMove(446)]),
+        createPokemon(887, 1, false, [createMove(113)]),
+        createPokemon(1_130, 1, true),
+        createPokemon(1_000),
+        createPokemon(730),
+        createPokemon(149),
+      ],
+      [1],
+    );
+    const result = scoreArchetype(archetype, [
+      observePokemon(450, 1),
+      observePosition(450, "lead", 2),
+      observeMove(450, 446, 3),
+      observePokemon(887, 4),
+      observeMove(887, 113, 5),
+    ]);
+
+    expect(result).toMatchObject({
+      rawScore: 56,
+      maxScore: 56,
+      matchRate: 100,
+      contradictions: [],
+      excluded: false,
+    });
+  });
 });
 
 describe("rankCandidates (SCORE-005 で実装)", () => {
