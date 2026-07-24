@@ -53,6 +53,24 @@ jobs:
     name: Playwright smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://pokemon:pokemon_ci_test@localhost:5432/pokemon_champions?schema=public
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pokemon
+          POSTGRES_PASSWORD: pokemon_ci_test
+          POSTGRES_DB: pokemon_champions
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pokemon -d pokemon_champions"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 10s
 
     steps:
       - name: Check out repository
@@ -73,6 +91,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Apply Prisma migrations
+        run: pnpm --filter @pokemon-champions/database db:deploy
 
       - name: Build workspace for E2E
         run: pnpm build

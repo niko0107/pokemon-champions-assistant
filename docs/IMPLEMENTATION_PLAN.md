@@ -95,7 +95,7 @@
 - **前提タスク:** SETUP-007
 - **対象外:** デプロイパイプライン
 
-### ⬜ SETUP-009 API の Prisma モジュール
+### ✅ SETUP-009 API の Prisma モジュール
 
 - **目的:** NestJS から DB アクセスする共通基盤(PrismaService)を作る
 - **作業範囲:** apps/api に PrismaModule / PrismaService(ライフサイクル管理、graceful shutdown)
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **SETUP-008(CI 設定)**、その後 **SETUP-009(API の Prisma モジュール)**。
+次に着手すべきタスク: **MASTER-001(ポケモンマスタのスキーマ)**。
