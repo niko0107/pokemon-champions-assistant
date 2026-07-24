@@ -287,7 +287,7 @@
 - **前提タスク:** MASTER-001〜004, AUTH-001
 - **対象外:** API・画面
 
-### ⬜ PARTY-002 パーティ CRUD API
+### ✅ PARTY-002 パーティ CRUD API
 
 - **目的:** GET/POST /parties, GET/PUT/DELETE /parties/{id}(U-02, U-04)を実装する
 - **作業範囲:** shared スキーマ(6体・技4・努力値上限等の検証)、parties モジュール、所有者チェック
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **PARTY-002(パーティ CRUD API)**。
+次に着手すべきタスク: **SCORE-002(採用ポケモン一致スコア)**。
