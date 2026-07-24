@@ -6,3 +6,6 @@ export * from "./master/ability";
 export * from "./master/item";
 export * from "./master/move";
 export * from "./master/pokemon";
+export * from "./master/pokemon-move";
+export * from "./master/rule";
+export * from "./master/season";
