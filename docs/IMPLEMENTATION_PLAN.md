@@ -189,7 +189,7 @@
 - **前提タスク:** SETUP-009, MASTER-005
 - **対象外:** 技・持ち物検索(MASTER-007)
 
-### ⬜ MASTER-007 技・持ち物・特性検索 API
+### ✅ MASTER-007 技・持ち物・特性検索 API
 
 - **目的:** `GET /master/moves?q=&pokemon_id=` / `/master/items?q=` / `/master/abilities?pokemon_id=` を実装する
 - **作業範囲:** shared スキーマ、apps/api。pokemon_id 指定時は習得可能技/所持可能特性で絞り込み
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **MASTER-006(ポケモン検索 API)**。
+次に着手すべきタスク: **AUTH-001(users スキーマ)**。
