@@ -45,6 +45,7 @@ describe("AUTH-001 User Prisma model", () => {
       "createdAt",
       "updatedAt",
       "refreshTokens",
+      "parties",
     ]);
     expect(fields).toMatchObject({
       id: { type: "String", required: true, id: true },
@@ -55,6 +56,7 @@ describe("AUTH-001 User Prisma model", () => {
       createdAt: { type: "DateTime", required: true },
       updatedAt: { type: "DateTime", required: true, updatedAt: true },
       refreshTokens: { type: "RefreshToken", required: true },
+      parties: { type: "Party", required: true },
     });
     expect(migration).toContain('"id" UUID NOT NULL');
     expect(migration).toContain('"password_hash" VARCHAR(255)');

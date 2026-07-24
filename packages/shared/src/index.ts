@@ -17,4 +17,5 @@ export * from "./master/pokemon";
 export * from "./master/pokemon-move";
 export * from "./master/rule";
 export * from "./master/season";
+export * from "./party";
 export * from "./user";
