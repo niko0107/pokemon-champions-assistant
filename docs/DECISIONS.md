@@ -289,3 +289,15 @@
 - **判断:** テンプレ内の同一ポケモンにmoveId重複がある場合、またはmoveId・adoptionRateが範囲外の場合は、不正SnapshotとしてRangeErrorを返す。ポケモンと技の内訳は `seq → kind → pokemonId → moveId` の順で決定的に統合し、合算後も小数6桁への丸めと0〜100へのclampを維持する
 - **理由:** 観測技の使用者を取り違えず、重複・入力順に依存しない純粋な一致判定をSCORE-002へ合成しながら、PRODUCT_SPECの採用率加点と段階的な減点実装の境界を守るため
 - **影響:** BATTLE-002のSnapshot変換はmove観測へpokemonIdとmoveIdを必ず設定する。SCORE-004は今回の不一致技内訳を技矛盾の判定へ再利用できる
+
+## 2026-07-25 持ち物・特性・先発・メガ一致スコア(SCORE-006)
+
+### D-031: 追加観測のID照合・先発順序・メガ形態の判定境界
+
+- **判断:** 持ち物は `(pokemonId, itemId)` の完全一致で判定し、確定 `itemId` は `itemHit`、`itemAlternativeIds` は `itemAlternativeHit` を加点する。現行Snapshotに持ち物の採用率はないため率補正を追加しない。特性も `(pokemonId, abilityId)` と単一の確定 `abilityId` だけを照合し、候補特性や採用率を推測しない
+- **判断:** `position=lead` だけを先発一致の評価対象とし、順序付き `defaultLeadSlots` の先頭slotに対応するpokemonIdとの一致へ `leadHit` を加点する。PRODUCT_SPECに控え位置の配点がないため `position=back` はrawScore・maxScore・内訳へ含めない
+- **判断:** メガ観測はフォルム単位のpokemonIdがテンプレに存在し、そのSnapshotの `isMega=true` の場合だけ `megaHit` を加点する。通常形態IDからメガ形態を推測せず、SnapshotにないbasePokemonIdや名前照合を追加しない
+- **判断:** item / abilityは `(pokemonId, 対象ID)`、lead / megaはpokemonId単位で最小seqの観測へ集約する。理論最大点は各一意な有効観測へ確定枠のhit値を積み、不一致は0点の内訳だけを返してSCORE-004の減点・除外を先取りしない
+- **判断:** ポケモンslot、確定・代替持ち物ID、特性ID、isMega、defaultLeadSlotsを計算前に検証し、重複slot、確定と代替の持ち物重複、未知の基本選出slot等は不正SnapshotとしてRangeErrorにする。内訳にはpositionを追加し、既存のseq・kind・各ID順で決定的に統合する
+- **理由:** PRODUCT_SPECに存在する情報と配点だけで使用者単位の誤一致を防ぎ、SCORE-002/003の純粋・決定的な合成方式を維持しながら、後続の矛盾判定と表示理由が同じ内訳を再利用できるようにするため
+- **影響:** BATTLE-002のSnapshot変換はitem / ability観測へpokemonIdと対象ID、position観測へpokemonIdとposition、mega観測へメガ形態自身のpokemonIdを設定する。持ち物・特性の採用率や控え位置の加点を将来導入する場合はSnapshot契約と配点仕様を先に更新する
