@@ -1,9 +1,10 @@
-import { describe, beforeAll, afterAll, expect, it } from "vitest";
+import { describe, beforeAll, afterAll, expect, it, vi } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { API_PREFIX, healthResponseSchema } from "@pokemon-champions/shared";
 import { AppModule } from "../src/app.module";
+import { PrismaService } from "../src/modules/prisma/prisma.service";
 
 describe("GET /api/v1/health", () => {
   let app: INestApplication;
@@ -11,7 +12,13 @@ describe("GET /api/v1/health", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({
+        onModuleInit: vi.fn().mockResolvedValue(undefined),
+        onModuleDestroy: vi.fn().mockResolvedValue(undefined),
+      })
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix(API_PREFIX);

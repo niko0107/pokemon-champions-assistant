@@ -6,7 +6,7 @@ const webUrl = "http://localhost:5173";
 /**
  * 最低限の起動確認 E2E。
  * webServer で API(:3000)と Web(:5173)を起動してからテストする。
- * DB / Redis は不要(health エンドポイントは DB に依存しない)。
+ * API 起動時に PostgreSQL へ接続する。Redis は現時点では不要。
  */
 export default defineConfig({
   testDir: "./e2e",
