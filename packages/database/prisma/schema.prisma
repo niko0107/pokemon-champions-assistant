@@ -58,25 +58,26 @@ model RefreshToken {
 
 /// ポケモンマスタ。通常形態・派生形態を1行ずつ保持する。
 model Pokemon {
-  id             Int           @id @default(autoincrement())
-  dexNo          Int           @map("dex_no")
-  nameJa         String        @map("name_ja")
-  nameEn         String        @map("name_en")
-  form           String
-  type1          String
-  type2          String?
-  baseHp         Int           @map("base_hp")
-  baseAtk        Int           @map("base_atk")
-  baseDef        Int           @map("base_def")
-  baseSpa        Int           @map("base_spa")
-  baseSpd        Int           @map("base_spd")
-  baseSpe        Int           @map("base_spe")
-  abilities      Json          @db.JsonB
-  isMega         Boolean       @default(false) @map("is_mega")
-  basePokemonId  Int?          @map("base_pokemon_id")
-  basePokemon    Pokemon?      @relation("PokemonForms", fields: [basePokemonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  derivedForms   Pokemon[]     @relation("PokemonForms")
-  learnableMoves PokemonMove[]
+  id               Int                @id @default(autoincrement())
+  dexNo            Int                @map("dex_no")
+  nameJa           String             @map("name_ja")
+  nameEn           String             @map("name_en")
+  form             String
+  type1            String
+  type2            String?
+  baseHp           Int                @map("base_hp")
+  baseAtk          Int                @map("base_atk")
+  baseDef          Int                @map("base_def")
+  baseSpa          Int                @map("base_spa")
+  baseSpd          Int                @map("base_spd")
+  baseSpe          Int                @map("base_spe")
+  abilities        Json               @db.JsonB
+  isMega           Boolean            @default(false) @map("is_mega")
+  basePokemonId    Int?               @map("base_pokemon_id")
+  basePokemon      Pokemon?           @relation("PokemonForms", fields: [basePokemonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  derivedForms     Pokemon[]          @relation("PokemonForms")
+  learnableMoves   PokemonMove[]
+  archetypeEntries ArchetypePokemon[]
 
   @@unique([dexNo, form])
   @@index([nameJa])
@@ -87,16 +88,17 @@ model Pokemon {
 
 /// 技マスタ。分類・数値性能と警戒判定用タグを保持する。
 model Move {
-  id        Int           @id @default(autoincrement())
-  nameJa    String        @unique @map("name_ja")
-  nameEn    String        @unique @map("name_en")
-  type      String
-  category  String
-  power     Int?
-  accuracy  Int?
-  priority  Int           @default(0)
-  tags      Json          @db.JsonB
-  learnedBy PokemonMove[]
+  id               Int                    @id @default(autoincrement())
+  nameJa           String                 @unique @map("name_ja")
+  nameEn           String                 @unique @map("name_en")
+  type             String
+  category         String
+  power            Int?
+  accuracy         Int?
+  priority         Int                    @default(0)
+  tags             Json                   @db.JsonB
+  learnedBy        PokemonMove[]
+  archetypeEntries ArchetypePokemonMove[]
 
   @@index([tags], type: Gin)
   @@map("moves")
@@ -104,10 +106,11 @@ model Move {
 
 /// 持ち物マスタ。相性・一致判定用の効果分類タグを保持する。
 model Item {
-  id         Int    @id @default(autoincrement())
-  nameJa     String @unique @map("name_ja")
-  nameEn     String @unique @map("name_en")
-  effectTags Json   @map("effect_tags") @db.JsonB
+  id               Int                @id @default(autoincrement())
+  nameJa           String             @unique @map("name_ja")
+  nameEn           String             @unique @map("name_en")
+  effectTags       Json               @map("effect_tags") @db.JsonB
+  archetypeEntries ArchetypePokemon[]
 
   @@index([effectTags], type: Gin)
   @@map("items")
@@ -115,10 +118,11 @@ model Item {
 
 /// 特性マスタ。相性判定用の効果分類タグを保持する。
 model Ability {
-  id         Int    @id @default(autoincrement())
-  nameJa     String @unique @map("name_ja")
-  nameEn     String @unique @map("name_en")
-  effectTags Json   @map("effect_tags") @db.JsonB
+  id               Int                @id @default(autoincrement())
+  nameJa           String             @unique @map("name_ja")
+  nameEn           String             @unique @map("name_en")
+  effectTags       Json               @map("effect_tags") @db.JsonB
+  archetypeEntries ArchetypePokemon[]
 
   @@index([effectTags], type: Gin)
   @@map("abilities")
@@ -138,10 +142,11 @@ model PokemonMove {
 
 /// 対象期間を持つシーズンマスタ。
 model Season {
-  id       Int      @id @default(autoincrement())
-  name     String   @unique
-  startsAt DateTime @map("starts_at") @db.Date
-  endsAt   DateTime @map("ends_at") @db.Date
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  startsAt   DateTime    @map("starts_at") @db.Date
+  endsAt     DateTime    @map("ends_at") @db.Date
+  archetypes Archetype[]
 
   @@index([startsAt, endsAt])
   @@map("seasons")
@@ -149,10 +154,94 @@ model Season {
 
 /// 対戦時のチーム人数・選出人数を持つルールマスタ。
 model Rule {
-  id       Int    @id @default(autoincrement())
-  name     String @unique
-  teamSize Int    @map("team_size")
-  pickSize Int    @map("pick_size")
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  teamSize   Int         @map("team_size")
+  pickSize   Int         @map("pick_size")
+  archetypes Archetype[]
 
   @@map("rules")
+}
+
+/// シーズン・ルール単位のテンプレ構築本体。
+model Archetype {
+  id              String             @id @default(uuid()) @db.Uuid
+  name            String             @db.VarChar(100)
+  description     String
+  seasonId        Int                @map("season_id")
+  ruleId          Int                @map("rule_id")
+  popularityTier  String             @default("mid") @map("popularity_tier")
+  popularityScore Decimal?           @map("popularity_score") @db.Decimal(7, 4)
+  encounterCount  Int                @default(0) @map("encounter_count")
+  pickCount       Int                @default(0) @map("pick_count")
+  defaultLeads    Json               @map("default_leads") @db.JsonB
+  playstyleNotes  String             @map("playstyle_notes")
+  status          String             @default("published")
+  publishedAt     DateTime           @default(now()) @map("published_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  season          Season             @relation(fields: [seasonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  rule            Rule               @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  pokemons        ArchetypePokemon[]
+  sources         ArchetypeSource[]
+
+  @@index([seasonId, ruleId, status])
+  @@index([popularityTier, encounterCount, updatedAt])
+  @@map("archetypes")
+}
+
+/// テンプレ構築内の採用ポケモン。slotが構築内の決定的な並び順を表す。
+model ArchetypePokemon {
+  id               String                 @id @default(uuid()) @db.Uuid
+  archetypeId      String                 @map("archetype_id") @db.Uuid
+  slot             Int
+  pokemonId        Int                    @map("pokemon_id")
+  itemId           Int?                   @map("item_id")
+  itemAlternatives Json                   @map("item_alternatives") @db.JsonB
+  abilityId        Int?                   @map("ability_id")
+  nature           String?
+  teraType         String?                @map("tera_type")
+  evs              Json?                  @db.JsonB
+  role             String
+  usageRate        Decimal                @default(1.0) @map("usage_rate") @db.Decimal(5, 4)
+  threatNotes      String?                @map("threat_notes")
+  archetype        Archetype              @relation(fields: [archetypeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  pokemon          Pokemon                @relation(fields: [pokemonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  item             Item?                  @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  ability          Ability?               @relation(fields: [abilityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  moves            ArchetypePokemonMove[]
+
+  @@unique([archetypeId, slot])
+  @@unique([archetypeId, pokemonId])
+  @@index([pokemonId])
+  @@index([itemId])
+  @@index([abilityId])
+  @@map("archetype_pokemons")
+}
+
+/// テンプレ構築内ポケモンの採用技と採用率。
+model ArchetypePokemonMove {
+  archetypePokemonId String           @map("archetype_pokemon_id") @db.Uuid
+  moveId             Int              @map("move_id")
+  adoptionRate       Decimal          @default(1.0) @map("adoption_rate") @db.Decimal(5, 4)
+  archetypePokemon   ArchetypePokemon @relation(fields: [archetypePokemonId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  move               Move             @relation(fields: [moveId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([archetypePokemonId, moveId])
+  @@index([moveId])
+  @@map("archetype_pokemon_moves")
+}
+
+/// 構築データの根拠となる外部記事。本文・画像は保存せず出典情報だけを保持する。
+model ArchetypeSource {
+  id          String    @id @default(uuid()) @db.Uuid
+  archetypeId String    @map("archetype_id") @db.Uuid
+  title       String
+  url         String    @db.VarChar(2048)
+  siteName    String    @map("site_name")
+  siteRank    Int?      @map("site_rank")
+  archetype   Archetype @relation(fields: [archetypeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([archetypeId, url])
+  @@map("archetype_sources")
 }

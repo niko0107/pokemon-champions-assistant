@@ -5,6 +5,7 @@ export * from "./api/master-items";
 export * from "./api/master-moves";
 export * from "./api/master-pokemons";
 export * from "./api/master-search";
+export * from "./archetype";
 export * from "./constants/api";
 export * from "./enums";
 export * from "./errors";
