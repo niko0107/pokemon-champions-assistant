@@ -67,3 +67,25 @@ model Move {
   @@index([tags], type: Gin)
   @@map("moves")
 }
+
+/// 持ち物マスタ。相性・一致判定用の効果分類タグを保持する。
+model Item {
+  id         Int    @id @default(autoincrement())
+  nameJa     String @unique @map("name_ja")
+  nameEn     String @unique @map("name_en")
+  effectTags Json   @map("effect_tags") @db.JsonB
+
+  @@index([effectTags], type: Gin)
+  @@map("items")
+}
+
+/// 特性マスタ。相性判定用の効果分類タグを保持する。
+model Ability {
+  id         Int    @id @default(autoincrement())
+  nameJa     String @unique @map("name_ja")
+  nameEn     String @unique @map("name_en")
+  effectTags Json   @map("effect_tags") @db.JsonB
+
+  @@index([effectTags], type: Gin)
+  @@map("abilities")
+}

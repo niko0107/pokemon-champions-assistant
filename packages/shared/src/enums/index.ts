@@ -38,6 +38,38 @@ export type MoveCategory = (typeof MOVE_CATEGORIES)[number];
 export const MOVE_TAGS = ["setup", "hazard", "screen", "pivot", "status", "priority"] as const;
 export type MoveTag = (typeof MOVE_TAGS)[number];
 
+/** 持ち物の効果分類(items.effect_tags) */
+export const ITEM_TAGS = [
+  "choice",
+  "berry",
+  "mega_stone",
+  "type_boost",
+  "damage_boost",
+  "speed_boost",
+  "defense_boost",
+  "recovery",
+  "survival",
+  "status_orb",
+  "weather",
+  "terrain",
+] as const;
+export type ItemTag = (typeof ITEM_TAGS)[number];
+
+/** 相性判定等に使う特性の効果分類(abilities.effect_tags) */
+export const ABILITY_TAGS = [
+  "type_immunity",
+  "damage_reduction",
+  "damage_boost",
+  "speed_boost",
+  "status_immunity",
+  "weather",
+  "terrain",
+  "stat_control",
+  "priority_control",
+  "contact_effect",
+] as const;
+export type AbilityTag = (typeof ABILITY_TAGS)[number];
+
 /** 対戦結果(battle_sessions.result) */
 export const BATTLE_RESULTS = ["win", "lose", "unknown"] as const;
 export type BattleResult = (typeof BATTLE_RESULTS)[number];
