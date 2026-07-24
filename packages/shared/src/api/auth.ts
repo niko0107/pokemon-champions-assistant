@@ -1,11 +1,41 @@
 import { z } from "zod";
-import { userDisplayNameSchema, userEmailSchema, userSchema } from "../user";
+import {
+  userDisplayNameSchema,
+  userEmailSchema,
+  userRoleSchema,
+  userSchema,
+} from "../user";
 
 export const AUTH_PASSWORD_MIN_LENGTH = 12;
 export const AUTH_PASSWORD_MAX_BYTES = 72;
 export const AUTH_ACCESS_TOKEN_TYPE = "Bearer";
 export const AUTH_REFRESH_TOKEN_BYTES = 32;
 export const AUTH_REFRESH_TOKEN_LENGTH = 43;
+
+/**
+ * AUTH-002が発行し、AUTH-004のGuardが検証するHS256アクセストークンのpayload。
+ * 標準claimの追加余地は残しつつ、認証に使うclaimは必須かつ型安全に検証する。
+ */
+export const accessTokenPayloadSchema = z
+  .object({
+    sub: z.string().uuid(),
+    role: userRoleSchema,
+    iat: z.number().int().nonnegative(),
+    exp: z.number().int().positive(),
+  })
+  .passthrough();
+
+export type AccessTokenPayload = z.infer<typeof accessTokenPayloadSchema>;
+
+/** Guardが検証後にHTTP requestへ設定する、公開可能な最小の認証情報。 */
+export const authenticatedUserSchema = z
+  .object({
+    id: z.string().uuid(),
+    role: userRoleSchema,
+  })
+  .strict();
+
+export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
 
 function utf8ByteLength(value: string): number {
   let length = 0;
