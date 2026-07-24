@@ -1,4 +1,5 @@
 export * from "./api/health";
+export * from "./api/master-pokemons";
 export * from "./constants/api";
 export * from "./enums";
 export * from "./errors";
