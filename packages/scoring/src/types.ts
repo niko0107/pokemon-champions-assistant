@@ -19,8 +19,9 @@ export interface ObservationInput {
   /** 入力順(Undo・再現用) */
   seq: number;
   kind: ObservationKind;
-  /** 対象ポケモンのマスタID */
+  /** 対象ポケモンのマスタID。kind=moveでも技の使用者として必須。 */
   pokemonId?: number;
+  /** kind=moveで必須となる技マスタID */
   moveId?: number;
   itemId?: number;
   abilityId?: number;

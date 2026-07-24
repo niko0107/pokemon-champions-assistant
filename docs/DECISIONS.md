@@ -278,3 +278,14 @@
 - **判断:** SCORE-001の `matched` 配列には今回評価した一致・不一致の両方をseq順で格納し、不一致は `matched=false / points=0` とする。ポケモン不一致の減点・除外はSCORE-004、技等の加点はSCORE-003/SCORE-006、likelyUnseen・警戒技はSCORE-007の責務なので、今回は先取りしない
 - **理由:** 観測が少ない段階で未観測5体を不一致にせず、入力順や重複によらない再現可能なスコアを返しながら、既存型契約と段階的なSCOREタスク境界を維持するため
 - **影響:** BATTLE-002のSnapshot変換はフォルム単位のpokemonIdをそのまま渡す。将来通常形態と派生形態を同一視する仕様へ変更する場合は、SCORE-001のSnapshot契約へ明示的なbasePokemonIdを追加してから判定を変更する
+
+## 2026-07-25 技一致スコア(SCORE-003)
+
+### D-030: ポケモンと技の組による照合・採用率加点・重複集約
+
+- **判断:** 技一致は未取消の `kind=move` 観測に正の整数の `pokemonId` と `moveId` の両方を必須とし、テンプレ内の同じpokemonIdに紐付くmoveIdとの完全一致だけで判定する。技名による照合や、別ポケモンが同じ技を持つ場合の横断的な照合は行わない
+- **判断:** kind=pokemonの先行観測がなくても、技観測自身のpokemonIdとmoveIdがテンプレに一致すれば評価する。同一 `(pokemonId, moveId)` の複数観測は最小seqの1件へ集約し、同じmoveIdでもpokemonIdが異なれば別の観測として扱う
+- **判断:** 獲得点は一致技の `moveHit × adoptionRate`、理論最大点は一意な有効技観測ごとにadoptionRateを掛けない `moveHit` とする。未観測のテンプレ技は分母へ含めず、不一致技は `matched=false / points=0` として内訳へ残すだけで、SCORE-004の矛盾減点を先取りしない
+- **判断:** テンプレ内の同一ポケモンにmoveId重複がある場合、またはmoveId・adoptionRateが範囲外の場合は、不正SnapshotとしてRangeErrorを返す。ポケモンと技の内訳は `seq → kind → pokemonId → moveId` の順で決定的に統合し、合算後も小数6桁への丸めと0〜100へのclampを維持する
+- **理由:** 観測技の使用者を取り違えず、重複・入力順に依存しない純粋な一致判定をSCORE-002へ合成しながら、PRODUCT_SPECの採用率加点と段階的な減点実装の境界を守るため
+- **影響:** BATTLE-002のSnapshot変換はmove観測へpokemonIdとmoveIdを必ず設定する。SCORE-004は今回の不一致技内訳を技矛盾の判定へ再利用できる
