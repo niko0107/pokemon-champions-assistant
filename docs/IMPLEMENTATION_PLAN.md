@@ -311,7 +311,7 @@
 - **前提タスク:** MASTER-001〜004
 - **対象外:** encounter_reports(ENCOUNTER-001)
 
-### ⬜ ARCHETYPE-002 構築管理 CRUD API
+### ✅ ARCHETYPE-002 構築管理 CRUD API
 
 - **目的:** GET/POST /admin/archetypes, PUT/DELETE /admin/archetypes/{id}(A-01)を実装する
 - **作業範囲:** shared スキーマ(出典 URL 必須等の品質ルール §13.2)、admin モジュール、admin 認可
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **ARCHETYPE-001(テンプレ構築スキーマ)**。
+次に着手すべきタスク: **PARTY-001(パーティのスキーマ)**。
