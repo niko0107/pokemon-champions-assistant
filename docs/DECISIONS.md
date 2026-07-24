@@ -241,3 +241,16 @@
 - **判断:** 入力形式・重複は `400 VALIDATION_ERROR`、不正なマスタ参照・整合性違反は `400 INVALID_MASTER_REFERENCE`、競合は `409 ARCHETYPE_CONFLICT`、存在しない構築は `404 NOT_FOUND` とし、すべてRFC 9457形式で返す
 - **理由:** 管理者だけが品質ルールを満たす構築を原子的に登録でき、後続の人気度管理・重複警告・公開詳細APIを先取りせず、DB制約競合やマスタ削除競合もHTTP契約へ安全に変換するため
 - **影響:** ARCHETYPE-003は専用エンドポイントで人気度とシーズン切替を扱う。ARCHETYPE-005は本CRUDの入力契約を再利用して類似警告を追加し、WEB-008は公開構築専用の取得契約を別途定義する
+
+## 2026-07-25 パーティスキーマ(PARTY-001)
+
+### D-027: パーティの正規化境界・メガ表現・削除方針
+
+- **判断:** パーティ本体・採用ポケモン・採用技を `parties` / `party_pokemons` / `party_pokemon_moves` に正規化する。パーティ名はtrim済み1〜100文字、説明は任意の非空TEXTとし、同一ユーザー内でも名前は一意にしない
+- **判断:** PRODUCT_SPEC §6.3の `can_mega` は保存せず、フォルム単位の `pokemon_id` と `Pokemon.form` / `Pokemon.isMega` を正とする。通常形態とメガ形態を別の状態フラグで重複表現しない
+- **判断:** EV・IV・実数値は仕様どおりJSONBとし、6能力オブジェクトの形状をsharedのZodで検証する。EVは各0〜252かつ合計510以下、IVは各0〜31、実数値は正の整数とする。IVのnullは全能力31の既定値として扱う
+- **判断:** パーティ内の `(party_id, slot)` と `(party_id, pokemon_id)`、採用技の `(party_pokemon_id, move_id)` と `(party_pokemon_id, slot)` を一意にする。slot範囲（パーティ1〜6、技1〜4）をDBとZodで、人数1〜6・技数1〜4および重複をZodで保証する
+- **判断:** User削除時はParty以下、Party削除時はPartyPokemon以下、PartyPokemon削除時は技をCASCADE削除する。Rule / Pokemon / Move / Item / Abilityは参照中の削除をRESTRICTする
+- **判断:** Rule.teamSizeとの一致、PokemonMove上の習得可否、Pokemon.abilitiesとAbilityの整合性、同時にactiveにできるパーティ数は、認証ユーザーとトランザクションを扱うPARTY-002で検証する。DBではフォルム単位の同一pokemonIdだけを重複禁止とする
+- **理由:** 後続の対策計算に必要な構成値を再現可能にし、正規化できる参照をJSONBへ逃がさず、明示された柔軟な能力値だけをJSONBとして扱いながら、孤児参照と構成内重複を永続層で防ぐため
+- **影響:** PARTY-002はルール人数、習得可能技、所持可能特性、active切替を保存トランザクション内で検証する。PRODUCT_SPECとの差分は、今回の要件に基づく任意descriptionの追加と `can_mega` の不採用である
