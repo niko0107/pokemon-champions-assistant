@@ -89,7 +89,7 @@ export interface MatchDetail {
   observationSeq: number;
   kind: ObservationKind;
   matched: boolean;
-  /** 加点(不一致の場合は負値) */
+  /** 一致時の加点。不一致は0、後続の矛盾判定実装後は負値になり得る。 */
   points: number;
   /** UI 表示用ラベル解決のための対象ID */
   pokemonId?: number;
@@ -111,6 +111,7 @@ export interface ScoredCandidate {
   matchRate: number;
   rawScore: number;
   maxScore: number;
+  /** 評価済み観測の一致/不一致内訳。SCORE-001で定義したプロパティ名を維持する。 */
   matched: MatchDetail[];
   /** 除外条件(ポケモン不一致3体以上 or メガ矛盾)に該当したか */
   excluded: boolean;

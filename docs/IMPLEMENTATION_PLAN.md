@@ -367,7 +367,7 @@
 - **前提タスク:** SETUP-006
 - **対象外:** 計算ロジック本体
 
-### ⬜ SCORE-002 ポケモン一致スコア
+### ✅ SCORE-002 ポケモン一致スコア
 
 - **目的:** ポケモン観測の一致判定(+pokemonHit × usage_rate)と max_score 積算を実装する
 - **作業範囲:** scoreArchetype のポケモン観測処理、is_revoked 除外、MatchDetail 生成
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **SCORE-002(採用ポケモン一致スコア)**。
+次に着手すべきタスク: **SCORE-003(技一致スコア)**。
