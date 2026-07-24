@@ -223,7 +223,7 @@
 
 ## フェーズ1: 認証(AUTH)
 
-### ⬜ AUTH-001 users スキーマ
+### ✅ AUTH-001 users スキーマ
 
 - **目的:** users テーブル(§6.3)を実装する
 - **作業範囲:** Prisma モデル+マイグレーション(email unique, role)
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **AUTH-001(users スキーマ)**。
+次に着手すべきタスク: **AUTH-002(登録・ログイン API)**。

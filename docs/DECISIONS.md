@@ -166,3 +166,15 @@
 - **判断:** 特性候補は関連テーブルを追加せず、既存の `Pokemon.abilities` JSONB（取り得る特性の日本語名リスト）をsharedのZodで検証し、一意な `Ability.nameJa`へ解決する。存在しないポケモンは候補0件の200、不正JSONまたはAbilityマスタへ解決できない名前は不完全な候補を返さず RFC 9457形式の500とする
 - **理由:** PRODUCT_SPEC §10.2の絞り込みを現行スキーマの正確な情報だけで実現し、全件返却や推測による候補を避けながら、MASTER-006と同じ検索UX・安全性・決定性を保つため
 - **影響:** PokemonとAbilityの正規化された関連テーブルが将来追加された場合、特性検索の参照元を置き換える。データ投入時は `Pokemon.abilities` の全名称に対応するAbilityマスタが必要
+
+## 2026-07-25 ユーザースキーマ(AUTH-001)
+
+### D-022: email正規化、role、認証情報のDB境界
+
+- **判断:** `users.email`には前後空白を除去して小文字化した正規形だけを保存し、通常の一意制約で重複を防ぐ。DBのCHECKでも `email = lower(btrim(email))` を保証し、citext等のPostgreSQL拡張は追加しない
+- **判断:** email形式はsharedのZodで検証し、DBは正規形・最大254文字・一意性を保証する。AUTH-002は検索・登録の双方で同じ `userEmailSchema` を通し、正規化後の値だけで照合する
+- **判断:** `role`は既存方針どおりtextとし、DB CHECKとsharedの `UserRole` / Zodで `user` / `admin` に限定する。既定値は `user` とし、role単独インデックスは低選択性で現時点の検索要件もないため追加しない
+- **判断:** `display_name`はtrim済みの1〜50文字、`password_hash`はnullまたはtrim済みの1〜255文字とする。password_hashへ書き込めるのは後続の認証サービスだけとし、平文ではなくbcryptの生成結果のみを保存する。sharedの公開用UserスキーマにはpasswordHashを含めない
+- **判断:** `created_at` / `updated_at`は `timestamptz(3)` とし、初期値を現在時刻にする。`updated_at`の更新はPrisma `@updatedAt`で行い、Prismaを経由しないSQL更新は対象外とする
+- **理由:** 大文字小文字・前後空白の差による重複アカウントを拡張なしで防ぎ、DBの永続的な整合性とAUTH-002の入力検証・bcrypt処理の責務を分離するため
+- **影響:** AUTH-002は正規化前emailで直接検索してはならず、`userEmailSchema`の出力を登録・ログイン照合に使用する。将来ハッシュ方式や最大長を変更する場合はDB制約と認証処理を同時に更新する
