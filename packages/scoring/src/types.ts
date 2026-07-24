@@ -23,8 +23,11 @@ export interface ObservationInput {
   pokemonId?: number;
   /** kind=moveで必須となる技マスタID */
   moveId?: number;
+  /** kind=itemで必須となる持ち物マスタID */
   itemId?: number;
+  /** kind=abilityで必須となる特性マスタID */
   abilityId?: number;
+  /** kind=positionで必須。SCORE-006の加点対象はleadのみ。 */
   position?: ObservationPosition;
   /** Undo 済みの観測は計算対象外 */
   isRevoked: boolean;
@@ -97,6 +100,7 @@ export interface MatchDetail {
   moveId?: number;
   itemId?: number;
   abilityId?: number;
+  position?: ObservationPosition;
 }
 
 /** 未観測ポケモンの提示(設計書 §7.4「残りの可能性が高いポケモン」) */

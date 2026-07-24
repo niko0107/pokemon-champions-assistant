@@ -26,6 +26,12 @@ function assertPositiveSafeInteger(
   }
 }
 
+function assertOptionalPositiveSafeInteger(value: number | undefined, path: string): void {
+  if (value !== undefined) {
+    assertPositiveSafeInteger(value, path);
+  }
+}
+
 function assertUsageRate(value: number, path: string): void {
   if (!Number.isFinite(value) || value < 0 || value > 1) {
     throw new RangeError(`${path} must be a finite number between 0 and 1`);
@@ -38,17 +44,47 @@ function assertAdoptionRate(value: number, path: string): void {
   }
 }
 
-function buildPokemonById(
-  pokemons: readonly ArchetypePokemonSnapshot[],
-): ReadonlyMap<number, ArchetypePokemonSnapshot> {
+interface ArchetypePokemonIndex {
+  byId: ReadonlyMap<number, ArchetypePokemonSnapshot>;
+  bySlot: ReadonlyMap<number, ArchetypePokemonSnapshot>;
+}
+
+function buildPokemonIndex(pokemons: readonly ArchetypePokemonSnapshot[]): ArchetypePokemonIndex {
   const pokemonById = new Map<number, ArchetypePokemonSnapshot>();
+  const pokemonBySlot = new Map<number, ArchetypePokemonSnapshot>();
 
   for (const [index, pokemon] of pokemons.entries()) {
+    const path = `archetype.pokemons[${index}]`;
+    assertPositiveSafeInteger(pokemon.slot, `${path}.slot`);
     assertPositiveSafeInteger(pokemon.pokemonId, `archetype.pokemons[${index}].pokemonId`);
     assertUsageRate(pokemon.usageRate, `archetype.pokemons[${index}].usageRate`);
+    assertOptionalPositiveSafeInteger(pokemon.itemId, `${path}.itemId`);
+    assertOptionalPositiveSafeInteger(pokemon.abilityId, `${path}.abilityId`);
+
+    if (typeof pokemon.isMega !== "boolean") {
+      throw new RangeError(`${path}.isMega must be a boolean`);
+    }
 
     if (pokemonById.has(pokemon.pokemonId)) {
       throw new RangeError(`archetype.pokemons contains duplicate pokemonId ${pokemon.pokemonId}`);
+    }
+    if (pokemonBySlot.has(pokemon.slot)) {
+      throw new RangeError(`archetype.pokemons contains duplicate slot ${pokemon.slot}`);
+    }
+
+    if (!Array.isArray(pokemon.itemAlternativeIds)) {
+      throw new RangeError(`${path}.itemAlternativeIds must be an array`);
+    }
+    const itemAlternativeIds = new Set<number>();
+    for (const [itemIndex, itemId] of pokemon.itemAlternativeIds.entries()) {
+      assertPositiveSafeInteger(itemId, `${path}.itemAlternativeIds[${itemIndex}]`);
+      if (itemAlternativeIds.has(itemId)) {
+        throw new RangeError(`${path}.itemAlternativeIds contains duplicate itemId ${itemId}`);
+      }
+      if (itemId === pokemon.itemId) {
+        throw new RangeError(`${path}.itemAlternativeIds contains primary itemId ${itemId}`);
+      }
+      itemAlternativeIds.add(itemId);
     }
 
     const moveIds = new Set<number>();
@@ -66,9 +102,38 @@ function buildPokemonById(
     }
 
     pokemonById.set(pokemon.pokemonId, pokemon);
+    pokemonBySlot.set(pokemon.slot, pokemon);
   }
 
-  return pokemonById;
+  return {
+    byId: pokemonById,
+    bySlot: pokemonBySlot,
+  };
+}
+
+function getPrimaryLeadPokemonId(
+  defaultLeadSlots: readonly number[],
+  pokemonBySlot: ReadonlyMap<number, ArchetypePokemonSnapshot>,
+): number | undefined {
+  if (!Array.isArray(defaultLeadSlots)) {
+    throw new RangeError("archetype.defaultLeadSlots must be an array");
+  }
+
+  const seenSlots = new Set<number>();
+
+  for (const [index, slot] of defaultLeadSlots.entries()) {
+    assertPositiveSafeInteger(slot, `archetype.defaultLeadSlots[${index}]`);
+    if (seenSlots.has(slot)) {
+      throw new RangeError(`archetype.defaultLeadSlots contains duplicate slot ${slot}`);
+    }
+    if (!pokemonBySlot.has(slot)) {
+      throw new RangeError(`archetype.defaultLeadSlots contains unknown slot ${slot}`);
+    }
+    seenSlots.add(slot);
+  }
+
+  const primaryLeadSlot = defaultLeadSlots[0];
+  return primaryLeadSlot === undefined ? undefined : pokemonBySlot.get(primaryLeadSlot)?.pokemonId;
 }
 
 /**
@@ -148,6 +213,117 @@ function uniqueActiveMoveObservations(
   );
 }
 
+type PairObservationKind = "item" | "ability";
+
+interface ActivePairObservation {
+  seq: number;
+  pokemonId: number;
+  targetId: number;
+}
+
+function uniqueActivePairObservations(
+  observations: readonly ObservationInput[],
+  kind: PairObservationKind,
+): ActivePairObservation[] {
+  const observationByPair = new Map<string, ActivePairObservation>();
+
+  for (const [index, observation] of observations.entries()) {
+    if (observation.isRevoked || observation.kind !== kind) {
+      continue;
+    }
+
+    assertPositiveSafeInteger(observation.seq, `observations[${index}].seq`);
+    assertPositiveSafeInteger(observation.pokemonId, `observations[${index}].pokemonId`);
+    const targetId = kind === "item" ? observation.itemId : observation.abilityId;
+    assertPositiveSafeInteger(targetId, `observations[${index}].${kind}Id`);
+
+    const key = `${observation.pokemonId}:${targetId}`;
+    const current = observationByPair.get(key);
+    if (current === undefined || observation.seq < current.seq) {
+      observationByPair.set(key, {
+        seq: observation.seq,
+        pokemonId: observation.pokemonId,
+        targetId,
+      });
+    }
+  }
+
+  return [...observationByPair.values()].sort(
+    (left, right) =>
+      left.seq - right.seq || left.pokemonId - right.pokemonId || left.targetId - right.targetId,
+  );
+}
+
+interface ActiveLeadObservation {
+  seq: number;
+  pokemonId: number;
+}
+
+function uniqueActiveLeadObservations(
+  observations: readonly ObservationInput[],
+): ActiveLeadObservation[] {
+  const observationByPokemonId = new Map<number, ActiveLeadObservation>();
+
+  for (const [index, observation] of observations.entries()) {
+    if (observation.isRevoked || observation.kind !== "position") {
+      continue;
+    }
+
+    assertPositiveSafeInteger(observation.seq, `observations[${index}].seq`);
+    assertPositiveSafeInteger(observation.pokemonId, `observations[${index}].pokemonId`);
+    if (observation.position !== "lead" && observation.position !== "back") {
+      throw new RangeError(`observations[${index}].position must be lead or back`);
+    }
+    if (observation.position === "back") {
+      continue;
+    }
+
+    const current = observationByPokemonId.get(observation.pokemonId);
+    if (current === undefined || observation.seq < current.seq) {
+      observationByPokemonId.set(observation.pokemonId, {
+        seq: observation.seq,
+        pokemonId: observation.pokemonId,
+      });
+    }
+  }
+
+  return [...observationByPokemonId.values()].sort(
+    (left, right) => left.seq - right.seq || left.pokemonId - right.pokemonId,
+  );
+}
+
+interface ActiveMegaObservation {
+  seq: number;
+  pokemonId: number;
+}
+
+function uniqueActiveMegaObservations(
+  observations: readonly ObservationInput[],
+): ActiveMegaObservation[] {
+  const observationByPokemonId = new Map<number, ActiveMegaObservation>();
+
+  for (const [index, observation] of observations.entries()) {
+    if (observation.isRevoked || observation.kind !== "mega") {
+      continue;
+    }
+
+    assertPositiveSafeInteger(observation.seq, `observations[${index}].seq`);
+    assertPositiveSafeInteger(observation.pokemonId, `observations[${index}].pokemonId`);
+
+    const current = observationByPokemonId.get(observation.pokemonId);
+    if (current === undefined || observation.seq < current.seq) {
+      observationByPokemonId.set(observation.pokemonId, {
+        seq: observation.seq,
+        pokemonId: observation.pokemonId,
+      });
+    }
+  }
+
+  return [...observationByPokemonId.values()].sort(
+    (left, right) => left.seq - right.seq || left.pokemonId - right.pokemonId,
+  );
+}
+
 const MATCH_DETAIL_KIND_ORDER: Readonly<Record<MatchDetail["kind"], number>> = {
   pokemon: 0,
   move: 1,
@@ -162,8 +338,16 @@ function compareMatchDetails(left: MatchDetail, right: MatchDetail): number {
     left.observationSeq - right.observationSeq ||
     MATCH_DETAIL_KIND_ORDER[left.kind] - MATCH_DETAIL_KIND_ORDER[right.kind] ||
     (left.pokemonId ?? 0) - (right.pokemonId ?? 0) ||
-    (left.moveId ?? 0) - (right.moveId ?? 0)
+    (left.moveId ?? 0) - (right.moveId ?? 0) ||
+    (left.itemId ?? 0) - (right.itemId ?? 0) ||
+    (left.abilityId ?? 0) - (right.abilityId ?? 0)
   );
+}
+
+function assertScoringWeight(value: number, path: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${path} must be a finite non-negative number`);
+  }
 }
 
 /**
@@ -171,28 +355,37 @@ function compareMatchDetails(left: MatchDetail, right: MatchDetail): number {
  *
  * 純粋関数として実装すること: 同じ入力に対して常に同じ出力を返し、副作用を持たない。
  *
- * SCORE-003では未取消のポケモン観測と技観測を扱う。持ち物等の加点、
- * 減点・除外判定、likelyUnseen / threatMoveIds の算出は後続タスクで追加する。
+ * SCORE-006では未取消の全加点対象観測を扱う。減点・除外判定、
+ * likelyUnseen / threatMoveIds の算出は後続タスクで追加する。
  */
 export function scoreArchetype(
   archetype: ArchetypeSnapshot,
   observations: readonly ObservationInput[],
   config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): ScoredCandidate {
-  if (!Number.isFinite(config.pokemonHit) || config.pokemonHit < 0) {
-    throw new RangeError("config.pokemonHit must be a finite non-negative number");
-  }
-  if (!Number.isFinite(config.moveHit) || config.moveHit < 0) {
-    throw new RangeError("config.moveHit must be a finite non-negative number");
-  }
+  assertScoringWeight(config.pokemonHit, "config.pokemonHit");
+  assertScoringWeight(config.moveHit, "config.moveHit");
+  assertScoringWeight(config.itemHit, "config.itemHit");
+  assertScoringWeight(config.itemAlternativeHit, "config.itemAlternativeHit");
+  assertScoringWeight(config.abilityHit, "config.abilityHit");
+  assertScoringWeight(config.leadHit, "config.leadHit");
+  assertScoringWeight(config.megaHit, "config.megaHit");
 
-  const pokemonById = buildPokemonById(archetype.pokemons);
+  const pokemonIndex = buildPokemonIndex(archetype.pokemons);
+  const primaryLeadPokemonId = getPrimaryLeadPokemonId(
+    archetype.defaultLeadSlots,
+    pokemonIndex.bySlot,
+  );
   const activePokemonObservations = uniqueActivePokemonObservations(observations);
   const activeMoveObservations = uniqueActiveMoveObservations(observations);
+  const activeItemObservations = uniqueActivePairObservations(observations, "item");
+  const activeAbilityObservations = uniqueActivePairObservations(observations, "ability");
+  const activeLeadObservations = uniqueActiveLeadObservations(observations);
+  const activeMegaObservations = uniqueActiveMegaObservations(observations);
 
   const pokemonDetails: MatchDetail[] = activePokemonObservations.map((observation) => {
     const pokemonId = observation.pokemonId;
-    const archetypePokemon = pokemonById.get(pokemonId);
+    const archetypePokemon = pokemonIndex.byId.get(pokemonId);
     const points =
       archetypePokemon === undefined
         ? 0
@@ -208,7 +401,7 @@ export function scoreArchetype(
   });
 
   const moveDetails: MatchDetail[] = activeMoveObservations.map((observation) => {
-    const archetypeMove = pokemonById
+    const archetypeMove = pokemonIndex.byId
       .get(observation.pokemonId)
       ?.moves.find((move) => move.moveId === observation.moveId);
     const points =
@@ -224,10 +417,77 @@ export function scoreArchetype(
     };
   });
 
-  const details = [...pokemonDetails, ...moveDetails].sort(compareMatchDetails);
+  const itemDetails: MatchDetail[] = activeItemObservations.map((observation) => {
+    const archetypePokemon = pokemonIndex.byId.get(observation.pokemonId);
+    const isPrimary = archetypePokemon?.itemId === observation.targetId;
+    const isAlternative =
+      !isPrimary && archetypePokemon?.itemAlternativeIds.includes(observation.targetId) === true;
+    const points = isPrimary ? config.itemHit : isAlternative ? config.itemAlternativeHit : 0;
+
+    return {
+      observationSeq: observation.seq,
+      kind: "item",
+      matched: isPrimary || isAlternative,
+      points: roundScore(points),
+      pokemonId: observation.pokemonId,
+      itemId: observation.targetId,
+    };
+  });
+
+  const abilityDetails: MatchDetail[] = activeAbilityObservations.map((observation) => {
+    const matched =
+      pokemonIndex.byId.get(observation.pokemonId)?.abilityId === observation.targetId;
+
+    return {
+      observationSeq: observation.seq,
+      kind: "ability",
+      matched,
+      points: matched ? roundScore(config.abilityHit) : 0,
+      pokemonId: observation.pokemonId,
+      abilityId: observation.targetId,
+    };
+  });
+
+  const leadDetails: MatchDetail[] = activeLeadObservations.map((observation) => {
+    const matched = primaryLeadPokemonId === observation.pokemonId;
+
+    return {
+      observationSeq: observation.seq,
+      kind: "position",
+      matched,
+      points: matched ? roundScore(config.leadHit) : 0,
+      pokemonId: observation.pokemonId,
+      position: "lead",
+    };
+  });
+
+  const megaDetails: MatchDetail[] = activeMegaObservations.map((observation) => {
+    const matched = pokemonIndex.byId.get(observation.pokemonId)?.isMega === true;
+
+    return {
+      observationSeq: observation.seq,
+      kind: "mega",
+      matched,
+      points: matched ? roundScore(config.megaHit) : 0,
+      pokemonId: observation.pokemonId,
+    };
+  });
+
+  const details = [
+    ...pokemonDetails,
+    ...moveDetails,
+    ...itemDetails,
+    ...abilityDetails,
+    ...leadDetails,
+    ...megaDetails,
+  ].sort(compareMatchDetails);
   const maxScore = roundScore(
     activePokemonObservations.length * config.pokemonHit +
-      activeMoveObservations.length * config.moveHit,
+      activeMoveObservations.length * config.moveHit +
+      activeItemObservations.length * config.itemHit +
+      activeAbilityObservations.length * config.abilityHit +
+      activeLeadObservations.length * config.leadHit +
+      activeMegaObservations.length * config.megaHit,
   );
   const accumulatedScore = roundScore(details.reduce((total, detail) => total + detail.points, 0));
   const rawScore = Math.min(maxScore, Math.max(0, accumulatedScore));
