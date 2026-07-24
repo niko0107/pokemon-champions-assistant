@@ -1,6 +1,5 @@
 // Pokémon Champions 対戦支援サービス — Prisma スキーマ
 //
-// 現段階は DB 接続確認に必要な最低限のモデルのみを定義する。
 // 設計書 docs/PRODUCT_SPEC.md §6 の全テーブルは、以下のタスクで段階的に追加する:
 //   MASTER-001〜004(マスタ系)/ USER-001, PARTY-001(ユーザー系)
 //   ARCHETYPE-001〜003(テンプレ構築系)/ BATTLE-001〜002(セッション系)
@@ -23,4 +22,32 @@ model SystemHealthCheck {
   checkedAt DateTime @default(now()) @map("checked_at")
 
   @@map("system_health_checks")
+}
+
+/// ポケモンマスタ。通常形態・派生形態を1行ずつ保持する。
+model Pokemon {
+  id            Int       @id @default(autoincrement())
+  dexNo         Int       @map("dex_no")
+  nameJa        String    @map("name_ja")
+  nameEn        String    @map("name_en")
+  form          String
+  type1         String
+  type2         String?
+  baseHp        Int       @map("base_hp")
+  baseAtk       Int       @map("base_atk")
+  baseDef       Int       @map("base_def")
+  baseSpa       Int       @map("base_spa")
+  baseSpd       Int       @map("base_spd")
+  baseSpe       Int       @map("base_spe")
+  abilities     Json      @db.JsonB
+  isMega        Boolean   @default(false) @map("is_mega")
+  basePokemonId Int?      @map("base_pokemon_id")
+  basePokemon   Pokemon?  @relation("PokemonForms", fields: [basePokemonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  derivedForms  Pokemon[] @relation("PokemonForms")
+
+  @@unique([dexNo, form])
+  @@index([nameJa])
+  @@index([nameEn])
+  @@index([basePokemonId])
+  @@map("pokemons")
 }
