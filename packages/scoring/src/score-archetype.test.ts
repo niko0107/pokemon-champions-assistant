@@ -1,11 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { DEFAULT_SCORING_CONFIG } from "./config";
+import { rankCandidates } from "./rank-candidates";
 import { scoreArchetype } from "./score-archetype";
 import type {
   ArchetypeMoveSnapshot,
   ArchetypePokemonSnapshot,
   ArchetypeSnapshot,
   ObservationInput,
+  RankedCandidate,
   ScoredCandidate,
 } from "./types";
 
@@ -1696,8 +1698,285 @@ describe("scoreArchetype: SCORE-004 矛盾・除外判定", () => {
   });
 });
 
-describe("rankCandidates (SCORE-005 で実装)", () => {
-  it.todo("一致度 → 人気度 → 遭遇報告数 → 更新日 の優先順でソートする");
-  it.todo("excluded な候補を除外する");
-  it.todo("上位 limit 件のみ返し rank を付与する");
+describe("rankCandidates: SCORE-005 人気度を含む並び替え", () => {
+  const createScoredCandidate = (
+    archetypeId: string,
+    overrides: Partial<Omit<ScoredCandidate, "archetypeId">> = {},
+  ): ScoredCandidate => ({
+    archetypeId,
+    matchRate: 50,
+    rawScore: 5,
+    maxScore: 10,
+    matched: [],
+    contradictions: [],
+    excluded: false,
+    exclusionCodes: [],
+    likelyUnseen: [],
+    threatMoveIds: [],
+    ...overrides,
+  });
+
+  const createRankingArchetype = (
+    id: string,
+    overrides: Partial<Omit<ArchetypeSnapshot, "id" | "name">> = {},
+  ): ArchetypeSnapshot => ({
+    ...createArchetype(),
+    id,
+    name: id,
+    ...overrides,
+  });
+
+  const createArchetypeMap = (
+    archetypes: readonly ArchetypeSnapshot[],
+  ): ReadonlyMap<string, ArchetypeSnapshot> =>
+    new Map(archetypes.map((archetype) => [archetype.id, archetype]));
+
+  it("matchRateを第一キーとし、人気度が異なる一致度を逆転させない", () => {
+    const candidates = [
+      createScoredCandidate("popular", { matchRate: 89 }),
+      createScoredCandidate("better-match", { matchRate: 90 }),
+    ];
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("popular", { popularityTier: "high", encounterCount: 1_000 }),
+      createRankingArchetype("better-match", {
+        popularityTier: "low",
+        encounterCount: 0,
+      }),
+    ]);
+
+    expect(rankCandidates(candidates, archetypes, 2).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["better-match", "popular"],
+    );
+  });
+
+  it("同じmatchRateでは手動人気度tierをhigh、mid、lowの順にする", () => {
+    const candidates = [
+      createScoredCandidate("low", { rawScore: 100, maxScore: 200 }),
+      createScoredCandidate("high", { rawScore: 1, maxScore: 2 }),
+      createScoredCandidate("mid", { rawScore: 50, maxScore: 100 }),
+    ];
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("low", { popularityTier: "low" }),
+      createRankingArchetype("high", { popularityTier: "high" }),
+      createRankingArchetype("mid", { popularityTier: "mid" }),
+    ]);
+
+    expect(rankCandidates(candidates, archetypes, 3).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["high", "mid", "low"],
+    );
+  });
+
+  it("一致度とtierが同じ場合はencounterCount降順にする", () => {
+    const candidates = [
+      createScoredCandidate("few"),
+      createScoredCandidate("many"),
+      createScoredCandidate("none"),
+    ];
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("few", { encounterCount: 2 }),
+      createRankingArchetype("many", { encounterCount: 20 }),
+      createRankingArchetype("none", { encounterCount: 0 }),
+    ]);
+
+    expect(rankCandidates(candidates, archetypes, 3).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["many", "few", "none"],
+    );
+  });
+
+  it("一致度・tier・遭遇数が同じ場合はupdatedAtの新しい順にする", () => {
+    const candidates = [
+      createScoredCandidate("old"),
+      createScoredCandidate("new"),
+      createScoredCandidate("middle"),
+    ];
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("old", { updatedAt: "2026-01-01T00:00:00Z" }),
+      createRankingArchetype("new", { updatedAt: "2026-03-01T00:00:00+00:00" }),
+      createRankingArchetype("middle", { updatedAt: "2026-02-01T09:00:00+09:00" }),
+    ]);
+
+    expect(rankCandidates(candidates, archetypes, 3).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["new", "middle", "old"],
+    );
+  });
+
+  it("popularityScoreのnull・未設定・0を順位へ使わず手動tierを正とする", () => {
+    const candidateIds = ["d-positive", "c-zero", "b-undefined", "a-null"];
+    const candidates = candidateIds.map((id) => createScoredCandidate(id));
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("d-positive", { popularityScore: 100 }),
+      createRankingArchetype("c-zero", { popularityScore: 0 }),
+      createRankingArchetype("b-undefined", { popularityScore: undefined }),
+      createRankingArchetype("a-null", { popularityScore: null }),
+    ]);
+
+    expect(rankCandidates(candidates, archetypes, 4).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["a-null", "b-undefined", "c-zero", "d-positive"],
+    );
+  });
+
+  it("完全同点ではarchetypeId昇順を最終キーとし入力順に依存しない", () => {
+    const candidates = ["candidate-c", "candidate-a", "candidate-b"].map((id) =>
+      createScoredCandidate(id),
+    );
+    const archetypes = createArchetypeMap(
+      candidates.map(({ archetypeId }) => createRankingArchetype(archetypeId)),
+    );
+    const expected = ["candidate-a", "candidate-b", "candidate-c"];
+
+    expect(rankCandidates(candidates, archetypes, 3).map(({ archetypeId }) => archetypeId)).toEqual(
+      expected,
+    );
+    expect(
+      rankCandidates([...candidates].reverse(), archetypes, 3).map(
+        ({ archetypeId }) => archetypeId,
+      ),
+    ).toEqual(expected);
+  });
+
+  it("excluded候補を除外し、limit件へ1始まりの連続rankを付ける", () => {
+    const candidates = [
+      createScoredCandidate("excluded-best", {
+        matchRate: 100,
+        excluded: true,
+        exclusionCodes: ["mega_conflict"],
+      }),
+      createScoredCandidate("third", { matchRate: 70 }),
+      createScoredCandidate("first", { matchRate: 90 }),
+      createScoredCandidate("second", { matchRate: 80 }),
+    ];
+    const archetypes = createArchetypeMap([
+      createRankingArchetype("first"),
+      createRankingArchetype("second"),
+      createRankingArchetype("third"),
+    ]);
+
+    const result = rankCandidates(candidates, archetypes, 2);
+
+    expect(result.map(({ archetypeId, rank }) => ({ archetypeId, rank }))).toEqual([
+      { archetypeId: "first", rank: 1 },
+      { archetypeId: "second", rank: 2 },
+    ]);
+    expect(result.every((candidate) => !candidate.excluded)).toBe(true);
+  });
+
+  it("候補0件・1件とlimit=0を扱う", () => {
+    const candidate = createScoredCandidate("only");
+    const archetypes = createArchetypeMap([createRankingArchetype("only")]);
+
+    expect(rankCandidates([], new Map(), 3)).toEqual([]);
+    expect(rankCandidates([candidate], archetypes, 0)).toEqual([]);
+    expect(rankCandidates([candidate], archetypes, 3)).toEqual([{ ...candidate, rank: 1 }]);
+  });
+
+  it("matchRateの0・100と小数を数値として厳密に降順比較する", () => {
+    const candidates = [
+      createScoredCandidate("zero", { matchRate: 0 }),
+      createScoredCandidate("rounded-lower", { matchRate: 50 }),
+      createScoredCandidate("hundred", { matchRate: 100 }),
+      createScoredCandidate("rounded-higher", { matchRate: 50.000001 }),
+    ];
+    const archetypes = createArchetypeMap(
+      candidates.map(({ archetypeId }) => createRankingArchetype(archetypeId)),
+    );
+
+    expect(rankCandidates(candidates, archetypes, 4).map(({ archetypeId }) => archetypeId)).toEqual(
+      ["hundred", "rounded-higher", "rounded-lower", "zero"],
+    );
+  });
+
+  it("入力候補・Snapshot・配列を変更せず新しい候補オブジェクトを返す", () => {
+    const candidates = Object.freeze([
+      createScoredCandidate("second", { matchRate: 20 }),
+      createScoredCandidate("first", { matchRate: 80 }),
+    ]);
+    const snapshots = [createRankingArchetype("first"), createRankingArchetype("second")] as const;
+    const archetypes = createArchetypeMap(snapshots);
+    const candidatesBefore = structuredClone(candidates);
+    const snapshotsBefore = structuredClone(snapshots);
+
+    const result = rankCandidates(candidates, archetypes, 2);
+
+    expect(candidates).toEqual(candidatesBefore);
+    expect(snapshots).toEqual(snapshotsBefore);
+    expect(result[0]).not.toBe(candidates[1]);
+    expectTypeOf(result).toEqualTypeOf<RankedCandidate[]>();
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])("不正なlimit=%sを拒否する", (limit) => {
+    expect(() => rankCandidates([], new Map(), limit)).toThrowError(RangeError);
+  });
+
+  it("候補重複・Snapshot欠落・不正なソート値を明示的に拒否する", () => {
+    const candidate = createScoredCandidate("candidate");
+
+    expect(() =>
+      rankCandidates(
+        [candidate, candidate],
+        createArchetypeMap([createRankingArchetype("candidate")]),
+        2,
+      ),
+    ).toThrowError(/duplicate archetypeId/u);
+    expect(() => rankCandidates([candidate], new Map(), 1)).toThrowError(/was not found/u);
+    expect(() =>
+      rankCandidates(
+        [{ ...candidate, matchRate: Number.NaN }],
+        createArchetypeMap([createRankingArchetype("candidate")]),
+        1,
+      ),
+    ).toThrowError(/matchRate/u);
+    expect(() =>
+      rankCandidates(
+        [candidate],
+        createArchetypeMap([
+          createRankingArchetype("candidate", {
+            popularityTier: "unknown" as ArchetypeSnapshot["popularityTier"],
+          }),
+        ]),
+        1,
+      ),
+    ).toThrowError(/popularityTier/u);
+    expect(() =>
+      rankCandidates(
+        [candidate],
+        createArchetypeMap([createRankingArchetype("candidate", { encounterCount: -1 })]),
+        1,
+      ),
+    ).toThrowError(/encounterCount/u);
+    expect(() =>
+      rankCandidates(
+        [candidate],
+        createArchetypeMap([createRankingArchetype("candidate", { updatedAt: "not-a-date" })]),
+        1,
+      ),
+    ).toThrowError(/updatedAt/u);
+  });
+
+  it("SCORE-002〜004・006の計算結果を再計算せず付録Aの100%を維持する", () => {
+    const archetype = createArchetype(
+      [
+        createPokemon(450, 1, false, [createMove(446)]),
+        createPokemon(887, 1, false, [createMove(113)]),
+        createPokemon(1_130, 1, true),
+        createPokemon(1_000),
+        createPokemon(730),
+        createPokemon(149),
+      ],
+      [1],
+    );
+    const scored = scoreArchetype(archetype, [
+      observePokemon(450, 1),
+      observePosition(450, "lead", 2),
+      observeMove(450, 446, 3),
+      observePokemon(887, 4),
+      observeMove(887, 113, 5),
+    ]);
+    const scoredBefore = structuredClone(scored);
+
+    const result = rankCandidates([scored], createArchetypeMap([archetype]), 1);
+
+    expect(result[0]).toEqual({ ...scored, rank: 1 });
+    expect(result[0]).toMatchObject({ rawScore: 56, maxScore: 56, matchRate: 100 });
+    expect(scored).toEqual(scoredBefore);
+  });
 });

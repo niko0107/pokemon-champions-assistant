@@ -62,7 +62,8 @@ export interface ArchetypeSnapshot {
   id: string;
   name: string;
   popularityTier: PopularityTier;
-  popularityScore?: number;
+  /** OPS-001で利用する将来用の複合人気度。未集計時はnull。 */
+  popularityScore?: number | null;
   encounterCount: number;
   /** 基本選出のスロット番号(先発が先頭) */
   defaultLeadSlots: number[];
