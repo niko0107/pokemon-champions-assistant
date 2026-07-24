@@ -3,9 +3,17 @@ import { AdminArchetypesModule } from "./modules/admin-archetypes/admin-archetyp
 import { AuthModule } from "./modules/auth/auth.module";
 import { HealthModule } from "./modules/health/health.module";
 import { MasterModule } from "./modules/master/master.module";
+import { PartiesModule } from "./modules/parties/parties.module";
 import { PrismaModule } from "./modules/prisma/prisma.module";
 
 @Module({
-  imports: [PrismaModule, HealthModule, MasterModule, AuthModule, AdminArchetypesModule],
+  imports: [
+    PrismaModule,
+    HealthModule,
+    MasterModule,
+    AuthModule,
+    AdminArchetypesModule,
+    PartiesModule,
+  ],
 })
 export class AppModule {}

@@ -254,3 +254,16 @@
 - **判断:** Rule.teamSizeとの一致、PokemonMove上の習得可否、Pokemon.abilitiesとAbilityの整合性、同時にactiveにできるパーティ数は、認証ユーザーとトランザクションを扱うPARTY-002で検証する。DBではフォルム単位の同一pokemonIdだけを重複禁止とする
 - **理由:** 後続の対策計算に必要な構成値を再現可能にし、正規化できる参照をJSONBへ逃がさず、明示された柔軟な能力値だけをJSONBとして扱いながら、孤児参照と構成内重複を永続層で防ぐため
 - **影響:** PARTY-002はルール人数、習得可能技、所持可能特性、active切替を保存トランザクション内で検証する。PRODUCT_SPECとの差分は、今回の要件に基づく任意descriptionの追加と `can_mega` の不採用である
+
+## 2026-07-25 パーティCRUD API(PARTY-002)
+
+### D-028: 所有権秘匿・PUT全置換・active排他・物理削除
+
+- **判断:** PRODUCT_SPEC §10.2どおり `GET/POST /parties` と `GET/PUT/DELETE /parties/{id}` だけを追加し、全ルートへ `JwtAuthGuard` を明示適用する。`user_id` は入力として受け取らず `CurrentUser.id` を使用し、一覧・単体・更新・削除の検索条件へ所有者IDを含める。存在しないIDと他人のIDは同じ `404 NOT_FOUND` にする
+- **判断:** POST/PUT入力はルールの `team_size` と人数を一致させ、各ポケモンは4技を必須とする。Pokemon / Item / Ability / Moveの存在、PokemonMoveの習得関係、Pokemon.abilitiesとAbility.nameJaの対応、slotがルール人数以下であることを保存と同じトランザクション内で検証する。メガ状態はPokemonのフォルムを正とし追加フラグを受け取らない
+- **判断:** `PUT` は親項目とPartyPokemon・PartyPokemonMoveの全置換とする。所有者確認後、既存子要素の削除とnested createを単一トランザクションで行い、失敗時は元のパーティを維持する
+- **判断:** active切替専用URLは仕様にないため追加せず、POST/PUTの `isActive: true` を切替操作とする。同一ユーザーの既存active解除と対象保存をSerializableトランザクションで行い、直列化競合は `409 PARTY_CONFLICT` にする。PARTY-001の `(user_id, is_active)` インデックスを利用し、新しいmigrationは追加しない。`isActive: false` やactiveパーティの削除後はactiveなしを許容し、別パーティを暗黙選択しない
+- **判断:** `DELETE` は物理削除とし、PARTY-001のCASCADEで採用ポケモンと技を削除する。一覧は `is_active DESC → updated_at DESC → name ASC → id ASC`、子要素はslotとIDで決定的に返し、userId・子UUID・内部マスタ情報は返さない
+- **判断:** 入力形式と重複は `400 VALIDATION_ERROR`、不正なマスタ参照とルール不整合は `400 INVALID_MASTER_REFERENCE`、DB・直列化競合は `409 PARTY_CONFLICT` とし、すべてRFC 9457形式とする
+- **理由:** 公開されたリソースIDから所有関係を推測させず、複合構成を部分保存せず、既存スキーマと正確なREST契約の範囲で後続の対戦処理が参照できる一意なactiveパーティを安全に管理するため
+- **影響:** 複数パーティの切替画面はU-03/WEBの後続範囲に残る。activeを必ず1件存在させる要件やDB単独での部分一意制約が必要になった場合は、別タスクでmigrationを設計する
