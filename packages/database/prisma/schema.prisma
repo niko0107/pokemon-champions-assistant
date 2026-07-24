@@ -1,7 +1,7 @@
 // Pokémon Champions 対戦支援サービス — Prisma スキーマ
 //
 // 設計書 docs/PRODUCT_SPEC.md §6 の全テーブルは、以下のタスクで段階的に追加する:
-//   MASTER-001〜004(マスタ系)/ USER-001, PARTY-001(ユーザー系)
+//   MASTER-001〜004(マスタ系)/ AUTH-001, PARTY-001(ユーザー系)
 //   ARCHETYPE-001〜003(テンプレ構築系)/ BATTLE-001〜002(セッション系)
 // マイグレーション運用は docs/DATABASE_MIGRATION_POLICY.md を参照。
 
@@ -22,6 +22,19 @@ model SystemHealthCheck {
   checkedAt DateTime @default(now()) @map("checked_at")
 
   @@map("system_health_checks")
+}
+
+/// 認証・認可の主体となるユーザー。passwordHashはOAuth専用ユーザーではnull。
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String?  @map("password_hash") @db.VarChar(255)
+  displayName  String   @map("display_name") @db.VarChar(50)
+  role         String   @default("user")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("users")
 }
 
 /// ポケモンマスタ。通常形態・派生形態を1行ずつ保持する。
