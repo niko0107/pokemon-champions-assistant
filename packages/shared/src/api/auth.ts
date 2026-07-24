@@ -4,6 +4,8 @@ import { userDisplayNameSchema, userEmailSchema, userSchema } from "../user";
 export const AUTH_PASSWORD_MIN_LENGTH = 12;
 export const AUTH_PASSWORD_MAX_BYTES = 72;
 export const AUTH_ACCESS_TOKEN_TYPE = "Bearer";
+export const AUTH_REFRESH_TOKEN_BYTES = 32;
+export const AUTH_REFRESH_TOKEN_LENGTH = 43;
 
 function utf8ByteLength(value: string): number {
   let length = 0;
@@ -69,11 +71,26 @@ export const loginRequestSchema = z
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
+export const refreshTokenSchema = z
+  .string({ required_error: "リフレッシュトークンは必須です" })
+  .length(AUTH_REFRESH_TOKEN_LENGTH, "リフレッシュトークンの形式が正しくありません")
+  .regex(/^[A-Za-z0-9_-]+$/u, "リフレッシュトークンの形式が正しくありません");
+
+export const refreshRequestSchema = z
+  .object({
+    refreshToken: refreshTokenSchema,
+  })
+  .strict();
+
+export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
+
 export const authResponseSchema = z
   .object({
     accessToken: z.string().regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u),
     tokenType: z.literal(AUTH_ACCESS_TOKEN_TYPE),
     expiresIn: z.number().int().positive(),
+    refreshToken: refreshTokenSchema,
+    refreshExpiresIn: z.number().int().positive(),
     user: userSchema,
   })
   .strict();
@@ -85,3 +102,6 @@ export type RegisterResponse = z.infer<typeof registerResponseSchema>;
 
 export const loginResponseSchema = authResponseSchema;
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
+
+export const refreshResponseSchema = authResponseSchema;
+export type RefreshResponse = z.infer<typeof refreshResponseSchema>;

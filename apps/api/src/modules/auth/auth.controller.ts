@@ -2,10 +2,14 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import {
   loginRequestSchema,
   loginResponseSchema,
+  refreshRequestSchema,
+  refreshResponseSchema,
   registerRequestSchema,
   registerResponseSchema,
   type LoginRequest,
   type LoginResponse,
+  type RefreshRequest,
+  type RefreshResponse,
   type RegisterRequest,
   type RegisterResponse,
 } from "@pokemon-champions/shared";
@@ -30,5 +34,13 @@ export class AuthController {
     @Body(new ZodValidationPipe(loginRequestSchema)) input: LoginRequest,
   ): Promise<LoginResponse> {
     return loginResponseSchema.parse(await this.authService.login(input));
+  }
+
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Body(new ZodValidationPipe(refreshRequestSchema)) input: RefreshRequest,
+  ): Promise<RefreshResponse> {
+    return refreshResponseSchema.parse(await this.authService.refresh(input));
   }
 }

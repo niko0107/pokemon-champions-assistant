@@ -26,15 +26,34 @@ model SystemHealthCheck {
 
 /// 認証・認可の主体となるユーザー。passwordHashはOAuth専用ユーザーではnull。
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique @db.VarChar(254)
-  passwordHash String?  @map("password_hash") @db.VarChar(255)
-  displayName  String   @map("display_name") @db.VarChar(50)
-  role         String   @default("user")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique @db.VarChar(254)
+  passwordHash  String?        @map("password_hash") @db.VarChar(255)
+  displayName   String         @map("display_name") @db.VarChar(50)
+  role          String         @default("user")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+/// ローテーションと再利用検出に使用するリフレッシュトークンの永続状態。
+/// tokenHashにはopaque token本体ではなくHMAC-SHA-256のhex digestだけを保存する。
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 /// ポケモンマスタ。通常形態・派生形態を1行ずつ保持する。
