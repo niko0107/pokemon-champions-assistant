@@ -51,3 +51,19 @@ model Pokemon {
   @@index([basePokemonId])
   @@map("pokemons")
 }
+
+/// 技マスタ。分類・数値性能と警戒判定用タグを保持する。
+model Move {
+  id       Int    @id @default(autoincrement())
+  nameJa   String @unique @map("name_ja")
+  nameEn   String @unique @map("name_en")
+  type     String
+  category String
+  power    Int?
+  accuracy Int?
+  priority Int    @default(0)
+  tags     Json   @db.JsonB
+
+  @@index([tags], type: Gin)
+  @@map("moves")
+}
