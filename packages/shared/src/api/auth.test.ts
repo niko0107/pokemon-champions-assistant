@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   AUTH_PASSWORD_MAX_BYTES,
   AUTH_REFRESH_TOKEN_LENGTH,
+  accessTokenPayloadSchema,
+  authenticatedUserSchema,
   authPasswordSchema,
   authResponseSchema,
   loginRequestSchema,
@@ -11,6 +13,32 @@ import {
 
 const validPassword = "correct-horse-42";
 const validRefreshToken = "a".repeat(AUTH_REFRESH_TOKEN_LENGTH);
+const validUserId = "fecccd4a-a137-4b3b-bb09-239306040706";
+
+describe("accessTokenPayloadSchema", () => {
+  const payload = {
+    sub: validUserId,
+    role: "user",
+    iat: 1_753_401_600,
+    exp: 1_753_402_500,
+  };
+
+  it("UUIDのsub、許可role、時刻claimを受理する", () => {
+    expect(accessTokenPayloadSchema.parse(payload)).toEqual(payload);
+    expect(authenticatedUserSchema.parse({ id: payload.sub, role: payload.role })).toEqual({
+      id: validUserId,
+      role: "user",
+    });
+  });
+
+  it.each([
+    ["UUIDでないsub", { ...payload, sub: "not-a-uuid" }],
+    ["未許可role", { ...payload, role: "owner" }],
+    ["expなし", { sub: payload.sub, role: payload.role, iat: payload.iat }],
+  ])("%sを拒否する", (_label, invalidPayload) => {
+    expect(accessTokenPayloadSchema.safeParse(invalidPayload).success).toBe(false);
+  });
+});
 
 describe("registerRequestSchema", () => {
   it("emailとdisplayNameを正規化し、passwordは変更しない", () => {
@@ -77,7 +105,7 @@ describe("authResponseSchema", () => {
     refreshToken: validRefreshToken,
     refreshExpiresIn: 2_592_000,
     user: {
-      id: "fecccd4a-a137-4b3b-bb09-239306040706",
+      id: validUserId,
       email: "trainer@example.com",
       displayName: "Trainer",
       role: "user",
