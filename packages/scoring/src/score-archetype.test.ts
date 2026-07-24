@@ -141,6 +141,7 @@ const observeMega = (
 
 describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
   it("観測0件では0点・最大0点・一致度0%を返す", () => {
+    // SCORE-007: 観測0件でも構築内ポケモンは全て「未観測」として likelyUnseen に載る(§7.4)。
     expect(scoreArchetype(createArchetype([createPokemon(1)]), [])).toEqual({
       archetypeId: "archetype-1",
       matchRate: 0,
@@ -150,7 +151,7 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
       contradictions: [],
       excluded: false,
       exclusionCodes: [],
-      likelyUnseen: [],
+      likelyUnseen: [{ pokemonId: 1, usageRate: 1 }],
       threatMoveIds: [],
     });
   });
@@ -1692,6 +1693,229 @@ describe("scoreArchetype: SCORE-004 矛盾・除外判定", () => {
       matchRate: 100,
       contradictions: [],
       excluded: false,
+    });
+  });
+});
+
+const taggedMove = (
+  moveId: number,
+  tags: readonly ArchetypeMoveSnapshot["tags"][number][],
+  adoptionRate = 1,
+): ArchetypeMoveSnapshot => ({
+  moveId,
+  adoptionRate,
+  tags: [...tags],
+});
+
+describe("scoreArchetype: SCORE-007 表示要素の算出", () => {
+  describe("likelyUnseen(残りの可能性が高いポケモン §7.4)", () => {
+    it("構築内の未観測ポケモンを usage_rate 降順で返す", () => {
+      const archetype = createArchetype([
+        createPokemon(10, 0.3),
+        createPokemon(20, 0.9),
+        createPokemon(30, 0.6),
+      ]);
+
+      const result = scoreArchetype(archetype, []);
+
+      expect(result.likelyUnseen).toEqual([
+        { pokemonId: 20, usageRate: 0.9 },
+        { pokemonId: 30, usageRate: 0.6 },
+        { pokemonId: 10, usageRate: 0.3 },
+      ]);
+    });
+
+    it("usage_rate 同値は pokemonId 昇順で決定的に整列する", () => {
+      const archetype = createArchetype([
+        createPokemon(30, 0.5),
+        createPokemon(10, 0.5),
+        createPokemon(20, 0.5),
+      ]);
+
+      expect(scoreArchetype(archetype, []).likelyUnseen.map((p) => p.pokemonId)).toEqual([
+        10, 20, 30,
+      ]);
+    });
+
+    it("観測済み(kind=pokemon)のポケモンは除外する", () => {
+      const archetype = createArchetype([
+        createPokemon(10, 0.9),
+        createPokemon(20, 0.8),
+        createPokemon(30, 0.7),
+      ]);
+
+      const result = scoreArchetype(archetype, [observePokemon(20, 1)]);
+
+      expect(result.likelyUnseen.map((p) => p.pokemonId)).toEqual([10, 30]);
+    });
+
+    it("Undo(取消)された観測は未観測として扱い likelyUnseen に残す", () => {
+      const archetype = createArchetype([createPokemon(10, 0.9), createPokemon(20, 0.8)]);
+
+      const result = scoreArchetype(archetype, [observePokemon(20, 1, true)]);
+
+      expect(result.likelyUnseen.map((p) => p.pokemonId)).toEqual([10, 20]);
+    });
+
+    it("構築に存在しないポケモンの観測は likelyUnseen に影響しない", () => {
+      const archetype = createArchetype([createPokemon(10, 0.9), createPokemon(20, 0.8)]);
+
+      const result = scoreArchetype(archetype, [observePokemon(999, 1)]);
+
+      expect(result.likelyUnseen.map((p) => p.pokemonId)).toEqual([10, 20]);
+    });
+
+    it("全ポケモンが観測済みなら空配列を返す", () => {
+      const archetype = createArchetype([createPokemon(10), createPokemon(20)]);
+
+      const result = scoreArchetype(archetype, [observePokemon(10, 1), observePokemon(20, 2)]);
+
+      expect(result.likelyUnseen).toEqual([]);
+    });
+  });
+
+  describe("threatMoveIds(警戒すべき技 §7.4)", () => {
+    it("警戒タグ(setup/hazard/screen/priority)を持つ未観測技のみ返す", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 1, false, [
+          taggedMove(100, ["hazard"]),
+          taggedMove(101, []),
+          taggedMove(102, ["setup"], 0.5),
+        ]),
+      ]);
+
+      const result = scoreArchetype(archetype, []);
+
+      // usage 同値 → adoption 降順(100:1.0 → 102:0.5)。101 は無タグで除外。
+      expect(result.threatMoveIds).toEqual([100, 102]);
+    });
+
+    it.each([
+      ["setup", ["setup"] as const],
+      ["hazard", ["hazard"] as const],
+      ["screen", ["screen"] as const],
+      ["priority", ["priority"] as const],
+    ])("警戒タグ %s を含む技を対象にする", (_label, tags) => {
+      const archetype = createArchetype([createPokemon(1, 1, false, [taggedMove(100, tags)])]);
+
+      expect(scoreArchetype(archetype, []).threatMoveIds).toEqual([100]);
+    });
+
+    it.each([
+      ["pivot", ["pivot"] as const],
+      ["status", ["status"] as const],
+    ])("§7.4 対象外のタグ %s のみの技は含めない", (_label, tags) => {
+      const archetype = createArchetype([createPokemon(1, 1, false, [taggedMove(100, tags)])]);
+
+      expect(scoreArchetype(archetype, []).threatMoveIds).toEqual([]);
+    });
+
+    it("観測済み(pokemon,move)の技は除外し、同ポケモンの未観測技は残す", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 1, false, [taggedMove(100, ["hazard"]), taggedMove(101, ["setup"])]),
+      ]);
+
+      const result = scoreArchetype(archetype, [observePokemon(1, 1), observeMove(1, 100, 2)]);
+
+      expect(result.threatMoveIds).toEqual([101]);
+    });
+
+    it("未観測ポケモンの技は観測済み技IDと同じでも保有元が異なれば残す", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 0.9, false, [taggedMove(100, ["hazard"])]),
+        createPokemon(2, 0.9, false, [taggedMove(100, ["hazard"])]),
+      ]);
+
+      // (1,100) は観測済みだが (2,100) は未観測 → 技100は警戒対象として残る。
+      const result = scoreArchetype(archetype, [observePokemon(1, 1), observeMove(1, 100, 2)]);
+
+      expect(result.threatMoveIds).toEqual([100]);
+    });
+
+    it("同一技IDは重複排除する", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 0.5, false, [taggedMove(200, ["screen"], 0.4)]),
+        createPokemon(2, 0.9, false, [taggedMove(200, ["screen"], 0.7)]),
+      ]);
+
+      expect(scoreArchetype(archetype, []).threatMoveIds).toEqual([200]);
+    });
+
+    it("保有ポケモンの usage_rate 降順 → adoption_rate 降順 → moveId 昇順で整列する", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 0.9, false, [taggedMove(300, ["priority"], 0.5)]),
+        createPokemon(2, 0.5, false, [
+          taggedMove(302, ["hazard"], 1),
+          taggedMove(301, ["hazard"], 1),
+        ]),
+      ]);
+
+      // usage: 300(0.9) 先頭。302/301 は usage=0.5・adoption=1.0 同値 → moveId 昇順。
+      expect(scoreArchetype(archetype, []).threatMoveIds).toEqual([300, 301, 302]);
+    });
+
+    it("Undo された技観測は未観測として警戒対象に残す", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 1, false, [taggedMove(100, ["hazard"])]),
+      ]);
+
+      const result = scoreArchetype(archetype, [
+        observePokemon(1, 1),
+        observeMove(1, 100, 2, true),
+      ]);
+
+      expect(result.threatMoveIds).toEqual([100]);
+    });
+
+    it("警戒タグを持つ技が無ければ空配列を返す", () => {
+      const archetype = createArchetype([
+        createPokemon(1, 1, false, [taggedMove(100, []), taggedMove(101, ["pivot"])]),
+      ]);
+
+      expect(scoreArchetype(archetype, []).threatMoveIds).toEqual([]);
+    });
+  });
+
+  describe("決定性・純粋性", () => {
+    const buildArchetype = (): ArchetypeSnapshot =>
+      createArchetype(
+        [
+          createPokemon(10, 0.9, false, [taggedMove(100, ["hazard"]), taggedMove(101, ["setup"])]),
+          createPokemon(20, 0.6, true, [taggedMove(200, ["screen"], 0.7)]),
+          createPokemon(30, 0.3, false, [taggedMove(300, ["priority"], 0.5)]),
+        ],
+        [1],
+      );
+
+    it("観測列の順序を入れ替えても同じ likelyUnseen / threatMoveIds を返す", () => {
+      const archetype = buildArchetype();
+      const forward = scoreArchetype(archetype, [
+        observePokemon(10, 1),
+        observeMove(10, 100, 2),
+        observePokemon(20, 3),
+      ]);
+      const reversed = scoreArchetype(archetype, [
+        observePokemon(20, 3),
+        observeMove(10, 100, 2),
+        observePokemon(10, 1),
+      ]);
+
+      expect(reversed.likelyUnseen).toEqual(forward.likelyUnseen);
+      expect(reversed.threatMoveIds).toEqual(forward.threatMoveIds);
+      expect(forward.likelyUnseen.map((p) => p.pokemonId)).toEqual([30]);
+      expect(forward.threatMoveIds).toEqual([101, 200, 300]);
+    });
+
+    it("入力の archetype / observations を変更しない", () => {
+      const archetype = buildArchetype();
+      const observations: ObservationInput[] = [observePokemon(10, 1), observeMove(10, 101, 2)];
+      const archetypeBefore = structuredClone(archetype);
+      const observationsBefore = structuredClone(observations);
+
+      scoreArchetype(archetype, observations);
+
+      expect(archetype).toEqual(archetypeBefore);
+      expect(observations).toEqual(observationsBefore);
     });
   });
 });
