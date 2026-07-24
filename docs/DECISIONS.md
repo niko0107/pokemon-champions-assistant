@@ -178,3 +178,15 @@
 - **判断:** `created_at` / `updated_at`は `timestamptz(3)` とし、初期値を現在時刻にする。`updated_at`の更新はPrisma `@updatedAt`で行い、Prismaを経由しないSQL更新は対象外とする
 - **理由:** 大文字小文字・前後空白の差による重複アカウントを拡張なしで防ぎ、DBの永続的な整合性とAUTH-002の入力検証・bcrypt処理の責務を分離するため
 - **影響:** AUTH-002は正規化前emailで直接検索してはならず、`userEmailSchema`の出力を登録・ログイン照合に使用する。将来ハッシュ方式や最大長を変更する場合はDB制約と認証処理を同時に更新する
+
+## 2026-07-25 登録・ログイン API(AUTH-002)
+
+### D-023: パスワード、JWT、認証エラーの最小構成
+
+- **判断:** パスワードは12文字以上・UTF-8で72バイト以下とし、英字と数字を各1文字以上必須、制御文字を禁止する。空白を含む入力を別のパスワードへ変えないためtrimは行わない
+- **判断:** bcryptのコスト係数は12とし、平文はPrismaへ渡さず、生成したhashだけを `password_hash` へ保存する。OAuth専用ユーザーのnull hashとユーザー不存在ではダミーhashを比較し、外部レスポンスを共通化する
+- **判断:** AUTH-002の完了条件に従い、HS256のJWTアクセストークンだけを発行する。payloadは `sub` と `role` に限定し、秘密鍵は32バイト以上の `JWT_ACCESS_SECRET`、有効期限は `JWT_ACCESS_EXPIRES_IN`（未指定時15分）から取得する
+- **判断:** レスポンスは `accessToken / tokenType / expiresIn / user` とし、userはsharedの公開スキーマを使用する。passwordとpasswordHashはレスポンス・エラー・ログ・JWT payloadのいずれにも含めない
+- **判断:** 重複登録は事前確認に加えPrisma P2002も `409 EMAIL_ALREADY_REGISTERED`へ変換する。ユーザー不存在・OAuth専用ユーザー・パスワード不一致はすべて `401 INVALID_CREDENTIALS` とし、理由を区別しない
+- **理由:** PRODUCT_SPEC §10・§14とAUTH-002の完了条件を満たし、bcryptの入力上限、登録競合、ユーザー列挙、秘密情報漏えいを最小構成で防ぐため
+- **影響:** AUTH-003は本アクセストークン契約を維持しつつ、別の秘密鍵を使うリフレッシュトークンの保存・ローテーション・失効を追加する。AUTH-004は `sub` と `role` を検証して認証・認可へ使用する

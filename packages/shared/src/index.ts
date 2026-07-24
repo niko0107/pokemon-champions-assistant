@@ -1,3 +1,4 @@
+export * from "./api/auth";
 export * from "./api/health";
 export * from "./api/master-abilities";
 export * from "./api/master-items";

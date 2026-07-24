@@ -33,6 +33,8 @@ export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
 /** アプリ固有エラーコード(必要になった時点で追加する) */
 export const APP_ERROR_CODES = [
   "VALIDATION_ERROR",
+  "EMAIL_ALREADY_REGISTERED",
+  "INVALID_CREDENTIALS",
   "UNAUTHORIZED",
   "FORBIDDEN",
   "NOT_FOUND",
