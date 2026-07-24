@@ -93,7 +93,7 @@ export interface MatchDetail {
   observationSeq: number;
   kind: ObservationKind;
   matched: boolean;
-  /** 一致時の加点。不一致は0、後続の矛盾判定実装後は負値になり得る。 */
+  /** 一致時の加点。不一致は0。矛盾減点はContradictionDetailへ分離する。 */
   points: number;
   /** UI 表示用ラベル解決のための対象ID */
   pokemonId?: number;
@@ -101,6 +101,30 @@ export interface MatchDetail {
   itemId?: number;
   abilityId?: number;
   position?: ObservationPosition;
+}
+
+/** PRODUCT_SPEC §7.2で減点対象となる矛盾の識別子。 */
+export type ContradictionCode =
+  | "pokemon_not_in_archetype"
+  | "move_not_in_archetype"
+  | "item_not_in_archetype"
+  | "ability_mismatch"
+  | "mega_not_in_archetype";
+
+/** 候補を表示対象外にするPRODUCT_SPEC §7.2の条件。 */
+export type ExclusionCode = "pokemon_miss_threshold" | "mega_conflict";
+
+/** SCORE-004で適用した矛盾減点の診断用内訳。 */
+export interface ContradictionDetail {
+  observationSeq: number;
+  kind: Exclude<ObservationKind, "position">;
+  /** rawScoreへ加算する0以下の値。 */
+  penaltyPoints: number;
+  contradictionCode: ContradictionCode;
+  pokemonId: number;
+  moveId?: number;
+  itemId?: number;
+  abilityId?: number;
 }
 
 /** 未観測ポケモンの提示(設計書 §7.4「残りの可能性が高いポケモン」) */
@@ -118,8 +142,12 @@ export interface ScoredCandidate {
   maxScore: number;
   /** 評価済み観測の一致/不一致内訳。SCORE-001で定義したプロパティ名を維持する。 */
   matched: MatchDetail[];
+  /** 矛盾として減点した観測の診断用内訳。 */
+  contradictions: ContradictionDetail[];
   /** 除外条件(ポケモン不一致3体以上 or メガ矛盾)に該当したか */
   excluded: boolean;
+  /** excluded=trueとなった条件。仕様順で決定的に返す。 */
+  exclusionCodes: ExclusionCode[];
   likelyUnseen: LikelyUnseenPokemon[];
   /** 警戒すべき技のマスタID(設計書 §7.4) */
   threatMoveIds: number[];

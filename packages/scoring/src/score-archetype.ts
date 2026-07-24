@@ -2,6 +2,8 @@ import { DEFAULT_SCORING_CONFIG } from "./config";
 import type {
   ArchetypePokemonSnapshot,
   ArchetypeSnapshot,
+  ContradictionDetail,
+  ExclusionCode,
   MatchDetail,
   ObservationInput,
   ScoredCandidate,
@@ -15,6 +17,10 @@ function roundScore(value: number): number {
     throw new RangeError("calculated score must be finite");
   }
   return Number(value.toFixed(SCORE_DECIMAL_PLACES));
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function assertPositiveSafeInteger(
@@ -344,6 +350,21 @@ function compareMatchDetails(left: MatchDetail, right: MatchDetail): number {
   );
 }
 
+function compareContradictionDetails(
+  left: ContradictionDetail,
+  right: ContradictionDetail,
+): number {
+  return (
+    left.observationSeq - right.observationSeq ||
+    MATCH_DETAIL_KIND_ORDER[left.kind] - MATCH_DETAIL_KIND_ORDER[right.kind] ||
+    (left.pokemonId ?? 0) - (right.pokemonId ?? 0) ||
+    (left.moveId ?? 0) - (right.moveId ?? 0) ||
+    (left.itemId ?? 0) - (right.itemId ?? 0) ||
+    (left.abilityId ?? 0) - (right.abilityId ?? 0) ||
+    compareStrings(left.contradictionCode, right.contradictionCode)
+  );
+}
+
 function assertScoringWeight(value: number, path: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new RangeError(`${path} must be a finite non-negative number`);
@@ -355,7 +376,8 @@ function assertScoringWeight(value: number, path: string): void {
  *
  * 純粋関数として実装すること: 同じ入力に対して常に同じ出力を返し、副作用を持たない。
  *
- * SCORE-006では未取消の全加点対象観測を扱う。減点・除外判定、
+ * SCORE-004では未取消の全観測を一致加点・矛盾減点へ合成し、
+ * PRODUCT_SPEC §7.2の条件で候補を除外する。
  * likelyUnseen / threatMoveIds の算出は後続タスクで追加する。
  */
 export function scoreArchetype(
@@ -370,6 +392,12 @@ export function scoreArchetype(
   assertScoringWeight(config.abilityHit, "config.abilityHit");
   assertScoringWeight(config.leadHit, "config.leadHit");
   assertScoringWeight(config.megaHit, "config.megaHit");
+  assertScoringWeight(config.pokemonMiss, "config.pokemonMiss");
+  assertScoringWeight(config.moveConflict, "config.moveConflict");
+  assertScoringWeight(config.itemConflict, "config.itemConflict");
+  assertScoringWeight(config.abilityConflict, "config.abilityConflict");
+  assertScoringWeight(config.megaConflict, "config.megaConflict");
+  assertPositiveSafeInteger(config.excludeMissCount, "config.excludeMissCount");
 
   const pokemonIndex = buildPokemonIndex(archetype.pokemons);
   const primaryLeadPokemonId = getPrimaryLeadPokemonId(
@@ -481,6 +509,106 @@ export function scoreArchetype(
     ...leadDetails,
     ...megaDetails,
   ].sort(compareMatchDetails);
+  const pokemonContradictions: ContradictionDetail[] = activePokemonObservations
+    .filter((observation) => !pokemonIndex.byId.has(observation.pokemonId))
+    .map((observation) => ({
+      observationSeq: observation.seq,
+      kind: "pokemon",
+      penaltyPoints: roundScore(-config.pokemonMiss),
+      contradictionCode: "pokemon_not_in_archetype",
+      pokemonId: observation.pokemonId,
+    }));
+  const moveContradictions: ContradictionDetail[] = activeMoveObservations.flatMap(
+    (observation) => {
+      const archetypePokemon = pokemonIndex.byId.get(observation.pokemonId);
+      if (
+        archetypePokemon === undefined ||
+        archetypePokemon.moves.some((move) => move.moveId === observation.moveId)
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          observationSeq: observation.seq,
+          kind: "move",
+          penaltyPoints: roundScore(-config.moveConflict),
+          contradictionCode: "move_not_in_archetype",
+          pokemonId: observation.pokemonId,
+          moveId: observation.moveId,
+        },
+      ];
+    },
+  );
+  const itemContradictions: ContradictionDetail[] = activeItemObservations.flatMap(
+    (observation) => {
+      const archetypePokemon = pokemonIndex.byId.get(observation.pokemonId);
+      if (
+        archetypePokemon === undefined ||
+        archetypePokemon.itemId === observation.targetId ||
+        archetypePokemon.itemAlternativeIds.includes(observation.targetId)
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          observationSeq: observation.seq,
+          kind: "item",
+          penaltyPoints: roundScore(-config.itemConflict),
+          contradictionCode: "item_not_in_archetype",
+          pokemonId: observation.pokemonId,
+          itemId: observation.targetId,
+        },
+      ];
+    },
+  );
+  const abilityContradictions: ContradictionDetail[] = activeAbilityObservations.flatMap(
+    (observation) => {
+      const archetypePokemon = pokemonIndex.byId.get(observation.pokemonId);
+      if (
+        archetypePokemon === undefined ||
+        archetypePokemon.abilityId === undefined ||
+        archetypePokemon.abilityId === observation.targetId
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          observationSeq: observation.seq,
+          kind: "ability",
+          penaltyPoints: roundScore(-config.abilityConflict),
+          contradictionCode: "ability_mismatch",
+          pokemonId: observation.pokemonId,
+          abilityId: observation.targetId,
+        },
+      ];
+    },
+  );
+  const megaContradictions: ContradictionDetail[] = activeMegaObservations
+    .filter((observation) => pokemonIndex.byId.get(observation.pokemonId)?.isMega !== true)
+    .map((observation) => ({
+      observationSeq: observation.seq,
+      kind: "mega",
+      penaltyPoints: roundScore(-config.megaConflict),
+      contradictionCode: "mega_not_in_archetype",
+      pokemonId: observation.pokemonId,
+    }));
+  const contradictions = [
+    ...pokemonContradictions,
+    ...moveContradictions,
+    ...itemContradictions,
+    ...abilityContradictions,
+    ...megaContradictions,
+  ].sort(compareContradictionDetails);
+  const exclusionCodes: ExclusionCode[] = [];
+  if (pokemonContradictions.length >= config.excludeMissCount) {
+    exclusionCodes.push("pokemon_miss_threshold");
+  }
+  if (megaContradictions.length > 0) {
+    exclusionCodes.push("mega_conflict");
+  }
   const maxScore = roundScore(
     activePokemonObservations.length * config.pokemonHit +
       activeMoveObservations.length * config.moveHit +
@@ -489,7 +617,10 @@ export function scoreArchetype(
       activeLeadObservations.length * config.leadHit +
       activeMegaObservations.length * config.megaHit,
   );
-  const accumulatedScore = roundScore(details.reduce((total, detail) => total + detail.points, 0));
+  const accumulatedScore = roundScore(
+    details.reduce((total, detail) => total + detail.points, 0) +
+      contradictions.reduce((total, contradiction) => total + contradiction.penaltyPoints, 0),
+  );
   const rawScore = Math.min(maxScore, Math.max(0, accumulatedScore));
   const matchRate =
     maxScore === 0 ? 0 : roundScore(Math.min(1, Math.max(0, rawScore / maxScore)) * 100);
@@ -500,7 +631,9 @@ export function scoreArchetype(
     rawScore,
     maxScore,
     matched: details,
-    excluded: false,
+    contradictions,
+    excluded: exclusionCodes.length > 0,
+    exclusionCodes,
     likelyUnseen: [],
     threatMoveIds: [],
   };
