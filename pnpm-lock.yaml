@@ -145,9 +145,15 @@ importers:
 
   packages/database:
     dependencies:
+      '@pokemon-champions/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@prisma/client':
         specifier: ^6.4.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       prisma:
         specifier: ^6.4.0

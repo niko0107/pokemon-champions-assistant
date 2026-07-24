@@ -48,8 +48,22 @@ pnpm dev
 | `pnpm db:migrate` | マイグレーション作成+適用(開発用) |
 | `pnpm db:generate` | Prisma クライアント再生成 |
 | `pnpm db:check` | DB 接続確認スクリプト |
+| `pnpm --filter @pokemon-champions/database db:seed` | 開発用サンプルマスタを検証・冪等投入 |
 | `pnpm --filter @pokemon-champions/database db:studio` | Prisma Studio |
 | `pnpm format` | Prettier 一括整形 |
+
+## 開発用サンプルマスタの投入
+
+PostgreSQLを起動し、MASTER-001〜004のmigrationを適用した状態で実行する。
+
+```bash
+pnpm db:generate
+pnpm --filter @pokemon-champions/database db:seed
+```
+
+ポケモン、技、持ち物、特性、習得可能技、シーズン、ルールの全入力をZodで検証してから、
+単一トランザクションで投入する。不正な入力や参照不整合がある場合はDBを変更しない。
+同じコマンドは再実行可能で、実行後に種類別・合計の追加、更新、変更なし件数を表示する。
 
 ## E2E(Playwright)の初回準備
 
