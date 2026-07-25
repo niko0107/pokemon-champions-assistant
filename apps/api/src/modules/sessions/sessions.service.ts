@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -11,6 +12,7 @@ import {
   rankCandidates,
   scoreArchetype,
   type ArchetypeSnapshot,
+  type ObservationInput,
   type ScoredCandidate,
 } from "@pokemon-champions/scoring";
 import {
@@ -42,6 +44,14 @@ import {
   toBattleCandidate,
   toObservationInput,
 } from "./session-candidates";
+import {
+  buildBattleCandidatesCacheKey,
+  type BattleCandidatesCacheState,
+} from "./session-candidates-cache-key";
+import {
+  BattleCandidatesCache,
+  type BattleCandidatesCalculation,
+} from "./session-candidates-cache";
 
 const OBSERVATION_TRANSACTION_MAX_ATTEMPTS = 3;
 const BATTLE_TRANSACTION_MAX_ATTEMPTS = 3;
@@ -168,6 +178,13 @@ interface CandidateCalculation {
   candidates: BattleCandidatesResponse["candidates"];
 }
 
+interface CandidateCalculationInput {
+  session: CandidateSessionRecord;
+  currentDate: Date;
+  observations: ObservationInput[];
+  snapshots: ArchetypeSnapshot[];
+}
+
 interface ValidationIssue {
   path: string;
   message: string;
@@ -175,7 +192,22 @@ interface ValidationIssue {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private static readonly bypassCandidatesCache = {
+    getOrCalculate: async (
+      _key: string,
+      _expectedSessionId: string,
+      calculation: BattleCandidatesCalculation,
+    ): Promise<BattleCandidatesResponse> => calculation(),
+  };
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(BattleCandidatesCache)
+    private readonly candidatesCache: Pick<
+      BattleCandidatesCache,
+      "getOrCalculate"
+    > = SessionsService.bypassCandidatesCache,
+  ) {}
 
   async create(userId: string, input: BattleSessionCreate): Promise<BattleSessionResponse> {
     return this.translateErrors(() =>
@@ -224,10 +256,15 @@ export class SessionsService {
 
   async getCandidates(userId: string, sessionId: string): Promise<BattleCandidatesResponse> {
     return this.translateBattleErrors(async () => {
-      const calculation = await this.calculateCandidates(this.prisma, userId, sessionId);
-      return battleCandidatesResponseSchema.parse({
-        sessionId: calculation.session.id,
-        candidates: calculation.candidates,
+      const input = await this.loadCandidateCalculationInput(this.prisma, userId, sessionId);
+      const cacheKey = buildBattleCandidatesCacheKey(this.toCandidateCacheState(input));
+
+      return this.candidatesCache.getOrCalculate(cacheKey, input.session.id, () => {
+        const calculation = this.scoreCandidates(input);
+        return battleCandidatesResponseSchema.parse({
+          sessionId: calculation.session.id,
+          candidates: calculation.candidates,
+        });
       });
     });
   }
@@ -479,6 +516,15 @@ export class SessionsService {
     userId: string,
     sessionId: string,
   ): Promise<CandidateCalculation> {
+    const input = await this.loadCandidateCalculationInput(client, userId, sessionId);
+    return this.scoreCandidates(input);
+  }
+
+  private async loadCandidateCalculationInput(
+    client: CandidateReadClient,
+    userId: string,
+    sessionId: string,
+  ): Promise<CandidateCalculationInput> {
     const session = await client.battleSession.findFirst({
       where: { id: sessionId, userId },
       select: candidateSessionSelect,
@@ -506,13 +552,23 @@ export class SessionsService {
     });
 
     const observations = session.observations.map(toObservationInput);
+    const snapshots = records.map(toArchetypeSnapshot);
+
+    return {
+      session,
+      currentDate,
+      observations,
+      snapshots,
+    };
+  }
+
+  private scoreCandidates(input: CandidateCalculationInput): CandidateCalculation {
     const snapshotById = new Map<string, ArchetypeSnapshot>();
     const scored: ScoredCandidate[] = [];
 
-    for (const record of records) {
-      const snapshot = toArchetypeSnapshot(record);
+    for (const snapshot of input.snapshots) {
       snapshotById.set(snapshot.id, snapshot);
-      scored.push(scoreArchetype(snapshot, observations));
+      scored.push(scoreArchetype(snapshot, input.observations));
     }
 
     const ranked = rankCandidates(scored, snapshotById, BATTLE_CANDIDATE_RESPONSE_LIMIT);
@@ -525,9 +581,22 @@ export class SessionsService {
     });
 
     return {
-      session,
-      currentDate,
+      session: input.session,
+      currentDate: input.currentDate,
       candidates: battleCandidatesResponseSchema.shape.candidates.parse(candidates),
+    };
+  }
+
+  private toCandidateCacheState(input: CandidateCalculationInput): BattleCandidatesCacheState {
+    return {
+      session: {
+        id: input.session.id,
+        ruleId: input.session.ruleId,
+        status: input.session.status,
+        selectedArchetypeId: input.session.selectedArchetypeId,
+      },
+      observations: input.observations,
+      archetypes: input.snapshots,
     };
   }
 

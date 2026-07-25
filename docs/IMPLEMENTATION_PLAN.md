@@ -471,7 +471,7 @@
 - **前提タスク:** BATTLE-002
 - **対象外:** counterplan(MATCHUP-008)、Redis(BATTLE-005)、レート制限(BATTLE-006)、自動アーカイブ(BATTLE-007)、履歴・WebSocket・UI
 
-### ⬜ BATTLE-005 Redis 候補キャッシュ
+### ✅ BATTLE-005 Redis 候補キャッシュ
 
 - **目的:** セッション状態・候補計算結果を Redis にキャッシュし、p95 200ms 以内(§5)を満たす
 - **作業範囲:** キャッシュキー設計、観測追加時の無効化、Redis 障害時は DB 直読みにフォールバック
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **BATTLE-005(Redis 候補キャッシュ)**。
+次に着手すべきタスク: **BATTLE-006(レート制限)**。
