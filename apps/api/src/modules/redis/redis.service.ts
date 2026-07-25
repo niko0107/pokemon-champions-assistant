@@ -5,12 +5,21 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
-import type { RedisAdapter, RedisOperationResult } from "./redis-adapter";
+import type { RedisAdapter, RedisIncrementResult, RedisOperationResult } from "./redis-adapter";
 import { REDIS_CLIENT, type RedisClient } from "./redis-client.provider";
 
 const REDIS_INITIALIZATION_WAIT_MS = 1_250;
 const REDIS_COMMAND_TIMEOUT_MS = 1_000;
 const REDIS_UNAVAILABLE = { status: "unavailable" } as const;
+const INCREMENT_WITH_TTL_SCRIPT = `
+local count = redis.call("INCR", KEYS[1])
+local ttl = redis.call("TTL", KEYS[1])
+if ttl < 0 then
+  redis.call("EXPIRE", KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return { count, ttl }
+`;
 
 class RedisCommandTimeoutError extends Error {
   constructor() {
@@ -109,9 +118,7 @@ export class RedisService implements RedisAdapter, OnModuleInit, OnModuleDestroy
     value: string,
     ttlSeconds: number,
   ): Promise<RedisOperationResult<void>> {
-    if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds <= 0) {
-      throw new RangeError("ttlSeconds must be a positive safe integer");
-    }
+    this.assertValidTtl(ttlSeconds);
 
     return this.execute(async () => {
       await this.client!.set(key, value, {
@@ -120,8 +127,49 @@ export class RedisService implements RedisAdapter, OnModuleInit, OnModuleDestroy
     });
   }
 
+  async incrementWithTtl(
+    key: string,
+    ttlSeconds: number,
+  ): Promise<RedisOperationResult<RedisIncrementResult>> {
+    this.assertValidTtl(ttlSeconds);
+
+    return this.execute(async () => {
+      const response: unknown = await this.client!.eval(INCREMENT_WITH_TTL_SCRIPT, {
+        keys: [key],
+        arguments: [String(ttlSeconds)],
+      });
+      if (!Array.isArray(response) || response.length !== 2) {
+        throw new Error("Unexpected Redis increment response");
+      }
+
+      const count: unknown = response[0];
+      const remainingTtl: unknown = response[1];
+      if (
+        typeof count !== "number" ||
+        !Number.isSafeInteger(count) ||
+        count <= 0 ||
+        typeof remainingTtl !== "number" ||
+        !Number.isSafeInteger(remainingTtl) ||
+        remainingTtl < 0
+      ) {
+        throw new Error("Unexpected Redis increment response");
+      }
+
+      return {
+        count,
+        ttlSeconds: remainingTtl,
+      };
+    });
+  }
+
   async delete(key: string): Promise<RedisOperationResult<number>> {
     return this.execute(() => this.client!.del(key));
+  }
+
+  private assertValidTtl(ttlSeconds: number): void {
+    if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds <= 0) {
+      throw new RangeError("ttlSeconds must be a positive safe integer");
+    }
   }
 
   private async execute<T>(operation: () => Promise<T>): Promise<RedisOperationResult<T>> {

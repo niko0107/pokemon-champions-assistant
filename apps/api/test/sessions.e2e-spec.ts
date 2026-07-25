@@ -28,6 +28,13 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppModule } from "../src/app.module";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
+import {
+  REDIS_ADAPTER,
+  type RedisAdapter,
+  type RedisIncrementResult,
+  type RedisOperationResult,
+} from "../src/modules/redis/redis-adapter";
+import { buildObservationRateLimitKey } from "../src/modules/sessions/battle-rate-limit.service";
 import { SessionsService } from "../src/modules/sessions/sessions.service";
 
 const TEST_ACCESS_SECRET = "battle-001-api-access-secret-at-least-32-bytes";
@@ -129,7 +136,72 @@ const endedResponse: BattleSessionEndResponse = battleSessionEndResponseSchema.p
   updatedAt: timestamp,
 });
 
-describe("BATTLE-001/002/003/004 session API", () => {
+interface RateLimitCounter {
+  count: number;
+  expiresAt: number;
+}
+
+class ApiRateLimitRedisAdapter implements RedisAdapter {
+  available = true;
+  now = 0;
+  readonly counters = new Map<string, RateLimitCounter>();
+
+  reset(): void {
+    this.available = true;
+    this.now = 0;
+    this.counters.clear();
+  }
+
+  isAvailable(): boolean {
+    return this.available;
+  }
+
+  async ping(): Promise<RedisOperationResult<"PONG">> {
+    return this.available ? { status: "ok", value: "PONG" } : { status: "unavailable" };
+  }
+
+  async get(): Promise<RedisOperationResult<string | null>> {
+    return { status: "ok", value: null };
+  }
+
+  async set(): Promise<RedisOperationResult<void>> {
+    return { status: "ok", value: undefined };
+  }
+
+  async setWithTtl(): Promise<RedisOperationResult<void>> {
+    return { status: "ok", value: undefined };
+  }
+
+  async incrementWithTtl(
+    key: string,
+    ttlSeconds: number,
+  ): Promise<RedisOperationResult<RedisIncrementResult>> {
+    if (!this.available) {
+      return { status: "unavailable" };
+    }
+
+    const current = this.counters.get(key);
+    const counter =
+      current === undefined || current.expiresAt <= this.now
+        ? { count: 0, expiresAt: this.now + ttlSeconds * 1_000 }
+        : current;
+    counter.count += 1;
+    this.counters.set(key, counter);
+    return {
+      status: "ok",
+      value: {
+        count: counter.count,
+        ttlSeconds: Math.max(0, Math.ceil((counter.expiresAt - this.now) / 1_000)),
+      },
+    };
+  }
+
+  async delete(): Promise<RedisOperationResult<number>> {
+    return { status: "ok", value: 0 };
+  }
+}
+
+describe("BATTLE-001〜006 session API", () => {
   let app: INestApplication;
   let jwt: JwtService;
   let userAToken: string;
@@ -145,6 +217,7 @@ describe("BATTLE-001/002/003/004 session API", () => {
   const end = vi.fn();
   const pokemonFindMany = vi.fn();
   const partyFindMany = vi.fn();
+  const rateLimitRedis = new ApiRateLimitRedisAdapter();
 
   beforeAll(async () => {
     process.env.JWT_ACCESS_SECRET = TEST_ACCESS_SECRET;
@@ -168,6 +241,8 @@ describe("BATTLE-001/002/003/004 session API", () => {
         selectCandidate,
         end,
       })
+      .overrideProvider(REDIS_ADAPTER)
+      .useValue(rateLimitRedis)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -190,6 +265,7 @@ describe("BATTLE-001/002/003/004 session API", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimitRedis.reset();
     create.mockImplementation((callerId: string, requestInput: { partyId: string }) => {
       if (callerId !== userAId || requestInput.partyId !== partyId) {
         return Promise.reject(notFound());
@@ -377,6 +453,122 @@ describe("BATTLE-001/002/003/004 session API", () => {
       code: "UNAUTHORIZED",
     });
     expect(addObservation).not.toHaveBeenCalled();
+    expect(rateLimitRedis.counters).toHaveLength(0);
+  });
+
+  it("観測入力はユーザー単位で60req/分まで許可し、61件目を429にする", async () => {
+    for (let requestNumber = 1; requestNumber <= 60; requestNumber += 1) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/observations`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send(observationInputs[0])
+        .expect(201);
+    }
+
+    const exceeded = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/observations`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send(observationInputs[0])
+      .expect(429);
+
+    expect(exceeded.headers["retry-after"]).toBe("60");
+    expect(problemDetailsSchema.parse(exceeded.body)).toEqual({
+      type: "about:blank",
+      title: "Too Many Requests",
+      status: 429,
+      detail: "Observation request rate limit exceeded.",
+      instance: `/api/v1/sessions/${sessionId}/observations`,
+      code: "RATE_LIMITED",
+    });
+    expect(addObservation).toHaveBeenCalledTimes(60);
+  });
+
+  it("ウィンドウ経過後は観測入力を再び許可する", async () => {
+    for (let requestNumber = 1; requestNumber <= 61; requestNumber += 1) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/observations`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send(observationInputs[0])
+        .expect(requestNumber <= 60 ? 201 : 429);
+    }
+
+    rateLimitRedis.now += 60_000;
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/observations`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send(observationInputs[0])
+      .expect(201);
+  });
+
+  it("別ユーザー・adminは同じルールの独立したカウンタを持つ", async () => {
+    for (let requestNumber = 1; requestNumber <= 60; requestNumber += 1) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/observations`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send(observationInputs[0])
+        .expect(201);
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/observations`)
+      .set("Authorization", `Bearer ${userBToken}`)
+      .send(observationInputs[0])
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/observations`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(observationInputs[0])
+      .expect(404);
+
+    expect(rateLimitRedis.counters.get(buildObservationRateLimitKey(userAId))?.count).toBe(60);
+    expect(rateLimitRedis.counters.get(buildObservationRateLimitKey(userBId))?.count).toBe(1);
+    expect(rateLimitRedis.counters.get(buildObservationRateLimitKey(adminId))?.count).toBe(1);
+  });
+
+  it("Redis未設定・停止相当でも観測入力をfail-openする", async () => {
+    rateLimitRedis.available = false;
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/observations`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send(observationInputs[0])
+      .expect(201);
+
+    expect(rateLimitRedis.counters).toHaveLength(0);
+  });
+
+  it("観測制限を超えても仕様対象外のSession APIには制限を適用しない", async () => {
+    for (let requestNumber = 1; requestNumber <= 61; requestNumber += 1) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/observations`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send(observationInputs[0])
+        .expect(requestNumber <= 60 ? 201 : 429);
+    }
+
+    await request(app.getHttpServer())
+      .post("/api/v1/sessions")
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send(input)
+      .expect(201);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/candidates`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/select`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({ archetypeId })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({ result: "win" })
+      .expect(200);
   });
 
   it("他人・admin・不存在Sessionを外部から区別できない404にする", async () => {

@@ -22,6 +22,7 @@ class ModuleRedisClient extends EventEmitter {
   ping = vi.fn(async () => "PONG");
   get = vi.fn(async () => null);
   set = vi.fn(async () => "OK");
+  eval = vi.fn(async () => [1, 60]);
   del = vi.fn(async () => 0);
 }
 

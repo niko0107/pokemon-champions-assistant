@@ -20,6 +20,12 @@ class MockRedisClient extends EventEmitter {
   ping = vi.fn(async () => "PONG");
   get = vi.fn(async (_key: string): Promise<string | null> => "value");
   set = vi.fn(async () => "OK");
+  eval = vi.fn(
+    async (
+      _script: string,
+      _options: { keys: string[]; arguments: string[] },
+    ): Promise<unknown> => [1, 30],
+  );
   del = vi.fn(async () => 1);
 }
 
@@ -48,6 +54,9 @@ describe("RedisService", () => {
     await expect(disabled.ping()).resolves.toEqual({ status: "unavailable" });
     await expect(disabled.get("missing")).resolves.toEqual({ status: "unavailable" });
     await expect(disabled.set("key", "value")).resolves.toEqual({ status: "unavailable" });
+    await expect(disabled.incrementWithTtl("key", 30)).resolves.toEqual({
+      status: "unavailable",
+    });
     await expect(disabled.delete("key")).resolves.toEqual({ status: "unavailable" });
   });
 
@@ -135,6 +144,48 @@ describe("RedisService", () => {
     client.set.mockRejectedValueOnce(new Error("set ttl failed"));
 
     await expect(service.setWithTtl("key", "value", 30)).resolves.toEqual({
+      status: "unavailable",
+    });
+  });
+
+  it("incrementと初回TTL設定を1つの原子的Redis操作で実行する", async () => {
+    await service.onModuleInit();
+    client.eval.mockResolvedValueOnce([2, 29]);
+
+    await expect(service.incrementWithTtl("rate-key", 30)).resolves.toEqual({
+      status: "ok",
+      value: { count: 2, ttlSeconds: 29 },
+    });
+    expect(client.eval).toHaveBeenCalledOnce();
+    expect(client.eval.mock.calls[0]?.[1]).toEqual({
+      keys: ["rate-key"],
+      arguments: ["30"],
+    });
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "incrementWithTtlは不正TTL %s をRedisへ送らず拒否する",
+    async (ttl) => {
+      await service.onModuleInit();
+
+      await expect(service.incrementWithTtl("rate-key", ttl)).rejects.toThrow(
+        "ttlSeconds must be a positive safe integer",
+      );
+      expect(client.eval).not.toHaveBeenCalled();
+    },
+  );
+
+  it("increment失敗・不正応答を利用不可結果へ変換する", async () => {
+    await service.onModuleInit();
+    client.eval.mockRejectedValueOnce(new Error("increment failed"));
+    await expect(service.incrementWithTtl("rate-key", 30)).resolves.toEqual({
+      status: "unavailable",
+    });
+
+    client.isReady = true;
+    client.emit("ready");
+    client.eval.mockResolvedValueOnce(["1", 30]);
+    await expect(service.incrementWithTtl("rate-key", 30)).resolves.toEqual({
       status: "unavailable",
     });
   });

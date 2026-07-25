@@ -80,6 +80,10 @@ class MemoryRedisAdapter implements RedisAdapter {
     this.values.set(key, { value, expiresAt: null });
     return { status: "ok", value: undefined };
   }
+
+  async incrementWithTtl(): Promise<RedisOperationResult<never>> {
+    return { status: "unavailable" };
+  }
 }
 
 describe("BattleCandidatesCache", () => {
