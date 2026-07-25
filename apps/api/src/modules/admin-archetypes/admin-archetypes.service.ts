@@ -8,15 +8,38 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@pokemon-champions/database";
 import {
+  type ArchetypeSnapshot,
+  rankCandidates,
+  scoreArchetype,
+  type ScoredCandidate,
+} from "@pokemon-champions/scoring";
+import {
   adminArchetypeDetailSchema,
+  adminArchetypePreviewResponseSchema,
   adminArchetypeSummarySchema,
+  archetypeDefaultLeadsSchema,
+  archetypeItemAlternativeIdsSchema,
+  archetypePokemonRoleSchema,
+  archetypePopularityTierSchema,
+  moveTagsSchema,
   pokemonAbilitiesSchema,
   type AdminArchetypeDetail,
+  type AdminArchetypePreviewCandidate,
+  type AdminArchetypePreviewRequest,
+  type AdminArchetypePreviewResponse,
   type AdminArchetypeSummary,
   type AdminArchetypeWrite,
   type ProblemDetails,
 } from "@pokemon-champions/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildPreviewObservations,
+  canonicalizeInput,
+  canonicalizeSnapshot,
+  canonicalKey,
+  findExactDuplicateId,
+  toPreviewCandidate,
+} from "./archetype-preview";
 
 const archetypeSummarySelect = {
   id: true,
@@ -86,8 +109,56 @@ const archetypeListOrder = [
   { id: "asc" },
 ] satisfies Prisma.ArchetypeOrderByWithRelationInput[];
 
+/**
+ * プレビュー比較対象の Snapshot 変換に必要な列だけを取得する select。
+ * N+1 を避けるため nested select で1回のクエリにまとめ、ポケモンの isMega と技タグまで含める。
+ */
+const archetypePreviewSelect = {
+  id: true,
+  name: true,
+  seasonId: true,
+  ruleId: true,
+  popularityTier: true,
+  popularityScore: true,
+  encounterCount: true,
+  defaultLeads: true,
+  updatedAt: true,
+  pokemons: {
+    select: {
+      slot: true,
+      pokemonId: true,
+      itemId: true,
+      itemAlternatives: true,
+      abilityId: true,
+      role: true,
+      usageRate: true,
+      pokemon: { select: { isMega: true } },
+      moves: {
+        select: {
+          moveId: true,
+          adoptionRate: true,
+          move: { select: { tags: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ArchetypeSelect;
+
+/**
+ * プレビューの比較対象件数の安全上限。§7.1 は数十〜数百件を想定するが、
+ * 異常データでも計算量が発散しないよう決定的な上限を設ける。
+ */
+const PREVIEW_MAX_CANDIDATES = 500;
+
+/** プレビューで返す類似候補の表示件数(設計書 §7.3 の LIMIT 3 に準拠)。 */
+const PREVIEW_CANDIDATE_LIMIT = 3;
+
 type ArchetypeDetailRecord = Prisma.ArchetypeGetPayload<{
   select: typeof archetypeDetailSelect;
+}>;
+
+type ArchetypePreviewRecord = Prisma.ArchetypeGetPayload<{
+  select: typeof archetypePreviewSelect;
 }>;
 
 interface ValidationIssue {
@@ -176,6 +247,94 @@ export class AdminArchetypesService {
         this.throwNotFound();
       }
     });
+  }
+
+  /**
+   * ARCHETYPE-005: 保存前構築の重複チェック・一致判定プレビュー(読み取り専用)。
+   *
+   * DB への create / update / delete / upsert / 書き込みトランザクションは行わない。
+   * マスタ参照を検証し、入力を観測列へ変換して既存 published 構築をスコアリングする。
+   * 完全重複は canonical 表現の一致で判定し、類似候補は SCORE-005 の並びで返す。
+   */
+  async preview(input: AdminArchetypePreviewRequest): Promise<AdminArchetypePreviewResponse> {
+    // マスタ参照検証は読み取りのみ。ここではトランザクションを開かず PrismaService を渡す。
+    await this.validateReferences(this.prisma, input);
+
+    const inputPokemonRecords = await this.prisma.pokemon.findMany({
+      where: { id: { in: input.pokemons.map((pokemon) => pokemon.pokemonId) } },
+      select: { id: true, isMega: true },
+    });
+    const isMegaByPokemonId = new Map(
+      inputPokemonRecords.map((pokemon) => [pokemon.id, pokemon.isMega]),
+    );
+
+    const observations = buildPreviewObservations(input, isMegaByPokemonId);
+    const inputKey = canonicalKey(canonicalizeInput(input, isMegaByPokemonId));
+
+    // 比較対象は現行 season+rule の published のみ(§7.1 / §13.2 archived は対象外)。
+    const records = await this.prisma.archetype.findMany({
+      where: { seasonId: input.seasonId, ruleId: input.ruleId, status: "published" },
+      select: archetypePreviewSelect,
+      orderBy: [{ id: "asc" }],
+      take: PREVIEW_MAX_CANDIDATES,
+    });
+
+    const snapshotById = new Map<string, ArchetypeSnapshot>();
+    const scored: ScoredCandidate[] = [];
+    const existingKeys: { archetypeId: string; canonicalKey: string }[] = [];
+
+    for (const record of records) {
+      const snapshot = this.toPreviewSnapshot(record);
+      snapshotById.set(snapshot.id, snapshot);
+      scored.push(scoreArchetype(snapshot, observations));
+      existingKeys.push({
+        archetypeId: record.id,
+        canonicalKey: canonicalKey(canonicalizeSnapshot(snapshot, record.seasonId, record.ruleId)),
+      });
+    }
+
+    const exactDuplicateArchetypeId = findExactDuplicateId(inputKey, existingKeys);
+    const ranked = rankCandidates(scored, snapshotById, PREVIEW_CANDIDATE_LIMIT);
+    const candidates: AdminArchetypePreviewCandidate[] = ranked.map((candidate) => {
+      const snapshot = snapshotById.get(candidate.archetypeId);
+      if (snapshot === undefined) {
+        this.throwMasterIntegrityError();
+      }
+      return toPreviewCandidate(candidate, snapshot);
+    });
+
+    return adminArchetypePreviewResponseSchema.parse({
+      exactDuplicate: exactDuplicateArchetypeId !== null,
+      exactDuplicateArchetypeId,
+      candidates,
+    });
+  }
+
+  private toPreviewSnapshot(record: ArchetypePreviewRecord): ArchetypeSnapshot {
+    return {
+      id: record.id,
+      name: record.name,
+      popularityTier: archetypePopularityTierSchema.parse(record.popularityTier),
+      popularityScore: record.popularityScore?.toNumber() ?? null,
+      encounterCount: record.encounterCount,
+      defaultLeadSlots: archetypeDefaultLeadsSchema.parse(record.defaultLeads),
+      updatedAt: record.updatedAt.toISOString(),
+      pokemons: record.pokemons.map((pokemon) => ({
+        slot: pokemon.slot,
+        pokemonId: pokemon.pokemonId,
+        itemId: pokemon.itemId ?? undefined,
+        itemAlternativeIds: archetypeItemAlternativeIdsSchema.parse(pokemon.itemAlternatives),
+        abilityId: pokemon.abilityId ?? undefined,
+        role: archetypePokemonRoleSchema.parse(pokemon.role),
+        usageRate: pokemon.usageRate.toNumber(),
+        isMega: pokemon.pokemon.isMega,
+        moves: pokemon.moves.map((move) => ({
+          moveId: move.moveId,
+          adoptionRate: move.adoptionRate.toNumber(),
+          tags: moveTagsSchema.parse(move.move.tags),
+        })),
+      })),
+    };
   }
 
   private buildCreateData(input: AdminArchetypeWrite): Prisma.ArchetypeCreateInput {

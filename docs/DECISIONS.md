@@ -344,3 +344,17 @@
 - **判断:** §7.4 の「および threat_notes 記載技」は、`threatNotes` が自由記述テキストで技IDを決定的に抽出できないため本タスクでは算出しない。構造化された技参照が必要になった時点で別タスクとして設計する
 - **理由:** §7.4 の定義に忠実に、UI/DB に依存しない純粋関数として決定的な出力を返すため。仕様が並び順を規定しない箇所は同節の既定原則を踏襲し、根拠のない優先度を新設しない
 - **影響:** SCORE-007 完了。`threat_notes` からの技抽出は未対応のまま残る。観測0件で全ポケモンが likelyUnseen に載る挙動に合わせ、SCORE-002 の観測0件テストの期待値を更新した(スタブの空配列 → 実値)
+
+## 2026-07-26 重複チェック・プレビュー一致判定(ARCHETYPE-005)
+
+### D-036: プレビューAPIのURL・観測変換・完全重複の正規化・DB非変更保証
+
+- **判断:** PRODUCT_SPEC にプレビュー用URLの明記がないため、既存 admin CRUD 規約に沿って `POST /api/v1/admin/archetypes/preview` を1本だけ追加する。ARCHETYPE-002 の `adminArchetypeWriteSchema` を入力にそのまま再利用し(プレビュー専用エイリアス `adminArchetypePreviewRequestSchema` を定義)、`JwtAuthGuard` / `RolesGuard` / `@Roles("admin")` を継承する。重複候補が見つかること自体は正常な 200 とし 409 にしない
+- **判断:** プレビューは読み取り専用とし、create / update / delete / upsert / 書き込みトランザクション・popularity/updatedAt の更新を一切行わない。マスタ参照検証は ARCHETYPE-002 の `validateReferences`(読み取りのみ)を `PrismaService` を渡して再利用し、比較対象は `Archetype.findMany` を1回だけ(nested select・安全上限 `take: 500`)で取得して N+1 を避ける。入力配列・取得 Snapshot は変更しない
+- **判断:** 比較対象は入力と同一 `seasonId` + `ruleId` かつ `status="published"` の構築に限定する(§7.1 の現行シーズン・ルール、§13.2 の archived=検索対象外)。season/rule が異なる構築は比較対象外となり、結果として完全重複にもならない
+- **判断:** 完全重複は純粋関数で生成する canonical 表現(seasonId, ruleId, pokemonId 昇順のポケモン {pokemonId, isMega, itemId, abilityId, 代替Item集合(昇順), 技moveId集合(昇順)}, 基本選出を slot→pokemonId へ写像した順序付きリスト)の完全一致で判定する。ポケモン・技・代替Item の入力順差は無視し、defaultLeads は順序付き(D-025 の先頭=先発)として扱う。通常形態とメガ形態は Pokemon の `isMega` で区別し、名前や basePokemonId から関係を推測しない。description / source / 日時などのメタデータは判定に含めない。複数一致時は最小 archetypeId を決定的に返す
+- **判断:** 完全重複の比較項目に採用率(usageRate / adoptionRate)は含めない。PRODUCT_SPEC が完全重複判定へ列挙するのは構築の同一性を決める要素(ポケモン・技・持ち物・特性・先発・メガ)であり、採用率は同一性ではなく統計値のため
+- **判断:** 類似候補は SCORE-001〜007 をそのまま再利用する。保存前構築を観測列へ変換し(kind=pokemon: 全採用ポケモン / move: 全採用技 / item: 確定持ち物のみ / ability: 確定特性 / mega: `Pokemon.isMega=true` / position=lead: 基本先発の先頭1体のみ)、`scoreArchetype` でスコアし `rankCandidates` で §7.3 の並び(一致度→人気度tier→遭遇数→更新日→archetypeId)に整列する。代替持ち物と先頭以外の先発は観測に含めない(`scoreArchetype` が加点しないため max_score を不当に押し上げないようにする)
+- **判断:** 仕様にない類似判定閾値(例: 90% / 80%)は追加せず、完全重複か否かと既存の `matchRate` / `rank` / 内訳をそのまま返す。表示件数は §7.3 の LIMIT 3 に準拠する。レスポンスは RankedCandidate から表示項目のみを射影し(`rawScore` / `maxScore` / `excluded` は返さない)、strict スキーマで余分な項目を拒否する。`ContradictionCode` / `ExclusionCode` は packages/scoring と同じ値を shared の `CONTRADICTION_CODES` / `EXCLUSION_CODES` へ定義してレスポンス検証に共有する(scoring 側の型は変更しない)
+- **理由:** 既存の CRUD 契約・スコアリングエンジン・認可を再利用し、保存前構築を安全に(DB を変えずに)既存構築と比較できるようにするため。並び順・完全重複判定・観測変換を決定的な純粋関数へ分離し、同じ入力と DB 状態では常に同じ結果を返す
+- **影響:** 実際の作成API(ARCHETYPE-002)での重複拒否は本タスクの対象外で未変更のまま。将来 90% 等の類似警告閾値を UI/仕様で確定する場合は、閾値の根拠を PRODUCT_SPEC へ明記してから追加する。apps/api は新たに `@pokemon-champions/scoring` へ依存する

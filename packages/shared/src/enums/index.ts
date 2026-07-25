@@ -77,3 +77,23 @@ export type BattleResult = (typeof BATTLE_RESULTS)[number];
 /** ユーザーロール(users.role) */
 export const USER_ROLES = ["user", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+/**
+ * 一致度計算で減点対象となる矛盾の識別子(設計書 §7.2)。
+ * packages/scoring の ContradictionCode と同じ値を共有し、API レスポンス検証に使う。
+ */
+export const CONTRADICTION_CODES = [
+  "pokemon_not_in_archetype",
+  "move_not_in_archetype",
+  "item_not_in_archetype",
+  "ability_mismatch",
+  "mega_not_in_archetype",
+] as const;
+export type ContradictionCodeValue = (typeof CONTRADICTION_CODES)[number];
+
+/**
+ * 候補を表示対象外にする除外条件の識別子(設計書 §7.2)。
+ * packages/scoring の ExclusionCode と同じ値を共有し、API レスポンス検証に使う。
+ */
+export const EXCLUSION_CODES = ["pokemon_miss_threshold", "mega_conflict"] as const;
+export type ExclusionCodeValue = (typeof EXCLUSION_CODES)[number];

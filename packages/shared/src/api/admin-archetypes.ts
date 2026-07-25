@@ -8,6 +8,12 @@ import {
   archetypePopularityTierSchema,
   archetypeStatusSchema,
 } from "../archetype";
+import {
+  CONTRADICTION_CODES,
+  EXCLUSION_CODES,
+  OBSERVATION_KINDS,
+  OBSERVATION_POSITIONS,
+} from "../enums";
 
 const positiveMasterIdSchema = z.number().int().positive();
 const requiredTextSchema = z.string().trim().min(1);
@@ -193,3 +199,89 @@ export const adminArchetypeListResponseSchema = z
   .strict();
 
 export type AdminArchetypeListResponse = z.infer<typeof adminArchetypeListResponseSchema>;
+
+/**
+ * ARCHETYPE-005 プレビュー(重複チェック・一致判定)。
+ *
+ * 入力は ARCHETYPE-002 の作成入力スキーマをそのまま再利用する(保存前の構築内容を
+ * 既存構築と比較するだけで、DB への保存・更新・削除は行わない)。
+ */
+export const adminArchetypePreviewRequestSchema = adminArchetypeWriteSchema;
+
+export type AdminArchetypePreviewRequest = z.infer<typeof adminArchetypePreviewRequestSchema>;
+
+const scoreValueSchema = z.number().finite();
+
+/**
+ * 一致/不一致の内訳1件(packages/scoring の MatchDetail に対応)。
+ * 余分な内部項目を返さないよう strict にし、既存スコアリング出力の意味を維持する。
+ */
+export const adminArchetypeMatchDetailSchema = z
+  .object({
+    observationSeq: positiveMasterIdSchema,
+    kind: z.enum(OBSERVATION_KINDS),
+    matched: z.boolean(),
+    points: scoreValueSchema,
+    pokemonId: positiveMasterIdSchema.optional(),
+    moveId: positiveMasterIdSchema.optional(),
+    itemId: positiveMasterIdSchema.optional(),
+    abilityId: positiveMasterIdSchema.optional(),
+    position: z.enum(OBSERVATION_POSITIONS).optional(),
+  })
+  .strict();
+
+/** 矛盾減点の診断内訳1件(packages/scoring の ContradictionDetail に対応)。 */
+export const adminArchetypeContradictionDetailSchema = z
+  .object({
+    observationSeq: positiveMasterIdSchema,
+    kind: z.enum(OBSERVATION_KINDS),
+    penaltyPoints: scoreValueSchema,
+    contradictionCode: z.enum(CONTRADICTION_CODES),
+    pokemonId: positiveMasterIdSchema,
+    moveId: positiveMasterIdSchema.optional(),
+    itemId: positiveMasterIdSchema.optional(),
+    abilityId: positiveMasterIdSchema.optional(),
+  })
+  .strict();
+
+/** 未観測ポケモンの提示1件(packages/scoring の LikelyUnseenPokemon に対応)。 */
+export const adminArchetypeLikelyUnseenSchema = z
+  .object({
+    pokemonId: positiveMasterIdSchema,
+    usageRate: rateSchema,
+  })
+  .strict();
+
+/**
+ * プレビューで返す類似候補1件。RankedCandidate から表示に必要な項目のみを射影し、
+ * rawScore / maxScore / excluded などの内部値は返さない(strict で余分な項目を拒否)。
+ */
+export const adminArchetypePreviewCandidateSchema = z
+  .object({
+    archetypeId: z.string().uuid(),
+    name: requiredTextSchema.max(100),
+    matchRate: z.number().min(0).max(100),
+    rank: positiveMasterIdSchema,
+    popularityTier: archetypePopularityTierSchema,
+    matched: z.array(adminArchetypeMatchDetailSchema),
+    contradictions: z.array(adminArchetypeContradictionDetailSchema),
+    exclusionCodes: z.array(z.enum(EXCLUSION_CODES)),
+    likelyUnseen: z.array(adminArchetypeLikelyUnseenSchema),
+    threatMoveIds: z.array(positiveMasterIdSchema),
+  })
+  .strict();
+
+export type AdminArchetypePreviewCandidate = z.infer<typeof adminArchetypePreviewCandidateSchema>;
+
+export const adminArchetypePreviewResponseSchema = z
+  .object({
+    /** 完全一致する既存構築が存在するか。存在自体は正常な200とし409にしない。 */
+    exactDuplicate: z.boolean(),
+    /** 完全重複した既存構築のID。無ければ null。複数一致時は最小IDを決定的に返す。 */
+    exactDuplicateArchetypeId: z.string().uuid().nullable(),
+    /** 一致度→人気度→遭遇数→更新日で決定的に並べた類似候補(除外候補は含めない)。 */
+    candidates: z.array(adminArchetypePreviewCandidateSchema),
+  })
+  .strict();
+
+export type AdminArchetypePreviewResponse = z.infer<typeof adminArchetypePreviewResponseSchema>;

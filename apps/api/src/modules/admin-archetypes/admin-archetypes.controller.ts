@@ -14,10 +14,14 @@ import {
   adminArchetypeDetailSchema,
   adminArchetypeIdParamsSchema,
   adminArchetypeListResponseSchema,
+  adminArchetypePreviewRequestSchema,
+  adminArchetypePreviewResponseSchema,
   adminArchetypeWriteSchema,
   type AdminArchetypeDetail,
   type AdminArchetypeIdParams,
   type AdminArchetypeListResponse,
+  type AdminArchetypePreviewRequest,
+  type AdminArchetypePreviewResponse,
   type AdminArchetypeWrite,
 } from "@pokemon-champions/shared";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
@@ -51,6 +55,15 @@ export class AdminArchetypesController {
     @Body(new ZodValidationPipe(adminArchetypeWriteSchema)) input: AdminArchetypeWrite,
   ): Promise<AdminArchetypeDetail> {
     return adminArchetypeDetailSchema.parse(await this.archetypes.create(input));
+  }
+
+  @Post("preview")
+  @HttpCode(HttpStatus.OK)
+  async preview(
+    @Body(new ZodValidationPipe(adminArchetypePreviewRequestSchema))
+    input: AdminArchetypePreviewRequest,
+  ): Promise<AdminArchetypePreviewResponse> {
+    return adminArchetypePreviewResponseSchema.parse(await this.archetypes.preview(input));
   }
 
   @Put(":id")
