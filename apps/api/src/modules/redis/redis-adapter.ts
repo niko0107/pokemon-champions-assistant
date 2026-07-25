@@ -4,12 +4,25 @@
  */
 export type RedisOperationResult<T> = { status: "ok"; value: T } | { status: "unavailable" };
 
+export interface RedisIncrementResult {
+  count: number;
+  ttlSeconds: number;
+}
+
 export interface RedisAdapter {
   isAvailable(): boolean;
   ping(): Promise<RedisOperationResult<"PONG">>;
   get(key: string): Promise<RedisOperationResult<string | null>>;
   set(key: string, value: string): Promise<RedisOperationResult<void>>;
   setWithTtl(key: string, value: string, ttlSeconds: number): Promise<RedisOperationResult<void>>;
+  /**
+   * キーを原子的にincrementし、TTLがない場合だけ指定TTLを設定する。
+   * countとその時点の残りTTLを同じRedis操作から返す。
+   */
+  incrementWithTtl(
+    key: string,
+    ttlSeconds: number,
+  ): Promise<RedisOperationResult<RedisIncrementResult>>;
   delete(key: string): Promise<RedisOperationResult<number>>;
 }
 

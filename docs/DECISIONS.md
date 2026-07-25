@@ -453,3 +453,15 @@
 - **判断:** SETUP-010のglobal `RedisModule`、`REDIS_ADAPTER` token、`RedisAdapter` interface、`isAvailable / get / setWithTtl / delete`だけを再利用する。Redis未設定・停止・timeout・get/set/delete失敗ではHTTPエラーへ変換せずDB計算結果を返す。破損エントリはbest-effortで削除し、削除失敗も正常レスポンスへ影響させない。stampede対策、分散ロック、Pub/Sub、明示的な全キー走査は追加しない
 - **理由:** 候補APIの契約と決定的なscoring結果を変えず、状態変化や管理更新による明示的invalidation漏れを防ぎながら、Redisを単一障害点にせず同一状態の高コスト計算だけを省略するため
 - **影響:** キャッシュhitでも所有権確認と2件のDB読取は行われ、改善対象はSnapshot以降のscoring/rankingとレスポンス構築である。旧versionキーは最大TTLまで残るが参照されず、30秒後にRedisが削除する。より長いTTLやDB読取自体の省略が必要になった場合は、管理更新を含む世代管理を別タスクで設計する
+
+## 2026-07-26 観測入力レート制限(BATTLE-006)
+
+### D-044: 観測入力だけを対象にしたRedis fixed window・60req/分・fail-open
+
+- **判断:** PRODUCT_SPEC §14、API_CONVENTIONS、IMPLEMENTATION_PLANの明記を優先し、レート制限対象は`POST /api/v1/sessions/:id/observations`だけとする。Session作成、Undo、候補取得、選択、終了、およびauth / master / party / admin APIへは適用しない。Controllerの既存`JwtAuthGuard`実行後に、観測追加methodへだけ`BattleRateLimitGuard`を適用し、JWT検証済みの`CurrentUser`と同じuserIdを利用する
+- **判断:** アルゴリズムは最初の許可リクエストから60秒で失効するfixed window counterとし、既定上限を60件とする。Redisキーは`battle:rate:v1:{userId}:observations`とし、access token、IP、Session ID、route parameter実値を含めない。同一ユーザーはSessionを切り替えても同じ観測入力枠を共有し、別ユーザーと複数APIインスタンスはRedis上で独立・共有可能にする
+- **判断:** SETUP-010の`RedisAdapter`へ、カウンタincrementとTTL未設定時のexpireを同一Lua script内で実行し、その時点のcount / 残りTTLを返す汎用`incrementWithTtl`だけを追加する。node-redisとscriptはadapter内へ隠し、Sessions側は`REDIS_ADAPTER` tokenと抽象結果型だけへ依存する。これにより並行リクエストのlost updateと、increment成功・expire失敗による無期限キーを防ぐ
+- **判断:** 60件目までは許可し、61件目以降は`429`、`code=RATE_LIMITED`のRFC 9457 Problem Detailsと、残りウィンドウ秒を正の整数にした`Retry-After`を返す。拒否時もcounterはincrementするがTTLは延長しないため、最初のwindow終了時に必ず回復する。残回数等の未定義ヘッダーは追加しない
+- **判断:** `BATTLE_RATE_LIMIT` / `BATTLE_RATE_LIMIT_WINDOW_SECONDS`で開発・運用時に変更可能とし、未設定・空値・0以下・小数・非数・安全整数超過は起動失敗にせず仕様既定値60へフォールバックする。Redis未設定、停止、timeout、操作失敗、予期しない応答では429へ変換せずfail-openし、Redis復旧後は同じadapterで制限を再開する。Redis URL、key、userId、tokenをエラー本文へ含めない
+- **理由:** 仕様が対象と数値を明確に限定しているため不要な全体制限を避け、MVPで説明・検証しやすいfixed windowを採用しつつ、Redisの原子操作で分散環境の同時実行安全性とTTL保証を満たすため。Redisは補助基盤というSETUP-010の可用性方針も維持する
+- **影響:** window境界付近ではfixed window固有のburstが起こり得る。より平滑な制限、authブルートフォース対策、IP制限、プラン別上限が必要になった場合は、対象・数値・アルゴリズムを別タスクで仕様化する

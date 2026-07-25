@@ -39,6 +39,7 @@ import {
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { BattleRateLimitGuard } from "./battle-rate-limit.guard";
 import { SessionsService } from "./sessions.service";
 
 @Controller("sessions")
@@ -56,6 +57,7 @@ export class SessionsController {
   }
 
   @Post(":id/observations")
+  @UseGuards(BattleRateLimitGuard)
   @HttpCode(HttpStatus.CREATED)
   async addObservation(
     @CurrentUser() user: AuthenticatedUser,
