@@ -399,3 +399,16 @@
 - **判断:** BATTLE-001のObservationモデルはUUID、kind別payload CHECK、`(session_id, seq)`一意制約、Session削除CASCADE、Pokemon/Move/Item/Ability削除RESTRICTをすでに備えるため、schema変更とmigration追加は行わない。Prisma 6.19.3を維持する
 - **理由:** 今回指定された観測追記だけを、既存の永続制約・認証契約・マスタデータを再利用して原子的かつ所有者限定で提供し、Undo・候補計算・キャッシュ等を先取りしないため
 - **影響:** 候補計算とPRODUCT_SPEC §10.3形式のレスポンスは未実装のため、別タスクとして範囲を確定する必要がある。BATTLE-003は本APIが保存した`isRevoked=false`の観測を対象にUndoを実装できる
+
+## 2026-07-26 観測情報Undo(BATTLE-003)
+
+### D-040: 正式DELETE URL・直近観測限定・条件付き論理更新
+
+- **判断:** PRODUCT_SPEC §10.2とIMPLEMENTATION_PLANに明記された `DELETE /api/v1/sessions/:id/observations/:obsId` を1本だけ追加する。今回の明示要件である「直近の有効な観測だけをUndo」と両立させるため、`obsId`は任意の過去観測を選ぶ指定ではなく、現在の直近有効Observationを確認する競合防止トークンとして扱う。最大seqの未取消Observationと一致しない`obsId`は更新しない
+- **判断:** URL paramsはSession UUIDとObservation UUIDだけのstrictなsharedスキーマで検証し、body・userId・seqを受け取らない。既存sessions APIと同じ `JwtAuthGuard` / `@CurrentUser()`を使い、Sessionを`id + userId`で検索する。他人・adminが所有しないSessionと不存在Sessionは同じ`404 NOT_FOUND`、`ended / archived`は`400 INVALID_SESSION_STATE`にする
+- **判断:** Session確認、`isRevoked=false`かつ最大seqのObservation取得、`id + sessionId + seq + isRevoked=false`による条件付き`updateMany`をSerializableな単一Prisma transactionで行う。P2034はtransaction全体を最大3回再試行する。再試行後は同じ`obsId`が次の有効観測と一致しないため、同時Undoで別の観測まで連続して取り消さない。更新件数が1でない場合も`409 OBSERVATION_CONFLICT`とする。生SQLは使用しない
+- **判断:** 有効Observationが0件、既にUndo済みの`obsId`、直近以外の`obsId`は、SessionやURL形式の不存在ではなく現在状態に対して操作を適用できない競合なので`409 OBSERVATION_CONFLICT`へ統一する。Observationは物理削除せず`isRevoked`だけをfalseからtrueへ変更し、seq・kind・payload・observedAtは維持する。BATTLE-002の採番は取消済みを含む最大seq+1のまま変更せず、seqを再利用しない
+- **判断:** 成功レスポンスは取消したObservationの `id / sessionId / seq / kind / pokemonId / moveId / itemId / abilityId / position / isRevoked / createdAt`だけとし、専用strictスキーマで`isRevoked=true`を保証する。userId・認証情報は返さない。PRODUCT_SPECと従来IMPLEMENTATION_PLANはUndo時の候補再計算を記載するが、今回の明示要件では候補計算・`scoreArchetype`・`rankCandidates`が対象外のため、Observation単体レスポンスまでに限定する
+- **判断:** SCORE側は既に`isRevoked=true`の観測を計算対象外にしているため変更せず、Undo APIからscoringを呼ばない。既存Observationモデルと制約だけで実現できるため、Prisma schemaとmigrationは変更せず6.19.3を維持する
+- **理由:** 正式なREST契約を維持しつつ、誤操作や同時リクエストで複数観測を取り消すことを防ぎ、追記型の観測履歴と所有権秘匿を壊さずにBATTLE-003だけを完結させるため
+- **影響:** PRODUCT_SPECに記載されたUndo直後の候補レスポンスは未実装のまま残る。候補計算の責務はBATTLE-004以降で確定する。WEB-004は表示中の直近有効Observation IDを本URLの`obsId`へ渡す必要がある

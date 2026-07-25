@@ -116,3 +116,20 @@ export const observationResponseSchema = z
   .strict();
 
 export type ObservationResponse = z.infer<typeof observationResponseSchema>;
+
+export const undoObservationParamsSchema = z
+  .object({
+    id: z.string().uuid(),
+    obsId: z.string().uuid(),
+  })
+  .strict();
+
+export type UndoObservationParams = z.infer<typeof undoObservationParamsSchema>;
+
+export const undoObservationResponseSchema = observationResponseSchema
+  .extend({
+    isRevoked: z.literal(true),
+  })
+  .strict();
+
+export type UndoObservationResponse = z.infer<typeof undoObservationResponseSchema>;

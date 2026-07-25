@@ -16,7 +16,9 @@ import {
   type ObservationCreate,
   type ObservationResponse,
   type ProblemDetails,
+  type UndoObservationResponse,
   observationResponseSchema,
+  undoObservationResponseSchema,
 } from "@pokemon-champions/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -201,6 +203,69 @@ export class SessionsService {
           continue;
         }
         this.translateObservationError(error);
+      }
+    }
+
+    return this.throwObservationConflict();
+  }
+
+  async undoObservation(
+    userId: string,
+    sessionId: string,
+    observationId: string,
+  ): Promise<UndoObservationResponse> {
+    for (let attempt = 1; attempt <= OBSERVATION_TRANSACTION_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (transaction) => {
+            const session = await transaction.battleSession.findFirst({
+              where: { id: sessionId, userId },
+              select: { id: true, status: true },
+            });
+            if (!session) {
+              this.throwNotFound();
+            }
+            if (session.status !== "active") {
+              this.throwInvalidSessionState();
+            }
+
+            const latest = await transaction.observation.findFirst({
+              where: {
+                sessionId: session.id,
+                isRevoked: false,
+              },
+              orderBy: { seq: "desc" },
+              select: observationSelect,
+            });
+            if (!latest || latest.id !== observationId) {
+              this.throwObservationConflict();
+            }
+
+            const updated = await transaction.observation.updateMany({
+              where: {
+                id: latest.id,
+                sessionId: session.id,
+                seq: latest.seq,
+                isRevoked: false,
+              },
+              data: { isRevoked: true },
+            });
+            if (updated.count !== 1) {
+              this.throwObservationConflict();
+            }
+
+            return this.serializeUndoObservation({
+              ...latest,
+              isRevoked: true,
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error: unknown) {
+        if (this.isRetryableUndoConflict(error) && attempt < OBSERVATION_TRANSACTION_MAX_ATTEMPTS) {
+          continue;
+        }
+        this.translateUndoError(error);
       }
     }
 
@@ -397,6 +462,22 @@ export class SessionsService {
     });
   }
 
+  private serializeUndoObservation(observation: ObservationRecord): UndoObservationResponse {
+    return undoObservationResponseSchema.parse({
+      id: observation.id,
+      sessionId: observation.sessionId,
+      seq: observation.seq,
+      kind: observation.kind,
+      pokemonId: observation.pokemonId,
+      moveId: observation.moveId,
+      itemId: observation.itemId,
+      abilityId: observation.abilityId,
+      position: observation.position,
+      isRevoked: observation.isRevoked,
+      createdAt: observation.observedAt.toISOString(),
+    });
+  }
+
   private isRetryableObservationConflict(error: unknown): boolean {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -418,6 +499,23 @@ export class SessionsService {
       if (error.code === "P2025") {
         this.throwNotFound();
       }
+    }
+    this.throwInternalError();
+  }
+
+  private isRetryableUndoConflict(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+  }
+
+  private translateUndoError(error: unknown): never {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    if (this.isRetryableUndoConflict(error)) {
+      this.throwObservationConflict();
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      this.throwNotFound();
     }
     this.throwInternalError();
   }
@@ -468,7 +566,7 @@ export class SessionsService {
       title: "Invalid Session State",
       status: 400,
       code: "INVALID_SESSION_STATE",
-      errors: [{ path: "id", message: "activeなセッションにのみ観測を追加できます" }],
+      errors: [{ path: "id", message: "activeなセッションでのみ操作できます" }],
     };
     throw new BadRequestException(problem);
   }
