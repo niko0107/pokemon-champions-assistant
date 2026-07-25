@@ -371,3 +371,18 @@
 - **判断:** シーズン・ルール作成入力は MASTER-004 の `seasonMasterSchema`(期間の前後関係)/`ruleMasterSchema`(pickSize<=teamSize)を再利用する。これらは他用途と共有する非 strict スキーマのため未知キーは黙って除去され、レスポンス側スキーマは strict で検証する。name の一意制約違反(P2002)は `SEASON_CONFLICT` / `RULE_CONFLICT`(shared の APP_ERROR_CODES に追加)へ 409 変換する。draft は現行スキーマ(published/archived のみ)に存在しないため扱わない
 - **理由:** 仕様に定義された管理項目だけを最小構成で追加し、人気度の自動計算や重複エンドポイントを先取りせず、既存の認可・エラー設計・スコアリング参照データ形式を壊さないため
 - **影響:** 遭遇報告(ENCOUNTER)・候補選択集計(BATTLE)・人気度数値スコア(OPS-001)を実装する際、encounterCount/pickCount/popularityScore の更新責務が自動集計側へ移る可能性がある。シーズン/ルールの編集(PUT)や削除が必要になった場合は仕様追記の上で別タスクとして追加する。apps/api の admin-archetypes モジュールに season/rule 用の controller/service を追加した
+
+## 2026-07-26 対戦セッション作成(BATTLE-001)
+
+### D-038: セッションURL・状態・Party検証・削除方針
+
+- **判断:** PRODUCT_SPEC §10.2 と IMPLEMENTATION_PLAN に明記された `POST /api/v1/sessions` と `GET /api/v1/sessions/:id` を実装する。依頼で代替候補として示された `/api/v1/battles` は、仕様にURLが存在するため採用しない。BATTLE-002以降の観測追加・候補取得・終了用URLは追加しない
+- **判断:** 作成入力は strict な `partyId`(UUID)と`ruleId`(正の整数)だけとし、`userId`は受け取らず`@CurrentUser()`の認証ユーザーIDを使う。レスポンスは `id / partyId / ruleId / status / startedAt / endedAt / createdAt / updatedAt`だけとし、userId・認証情報・将来用の選択候補や結果は返さない
+- **判断:** `battle_sessions.status`は既存のtext+shared Zod+DB CHECK方針に合わせ、`active / ended / archived`へ限定する。BATTLE-001の作成値は常に`active`で、終了・アーカイブへの遷移はBATTLE-004/BATTLE-007へ残す。仕様に同一ユーザーの進行中セッション数制限がないため、一意制約や`BATTLE_CONFLICT`は追加しない
+- **判断:** セッション作成時はPartyを`id + userId`で検索し、他人のPartyと不存在Partyを同じ`404 NOT_FOUND`にする。adminも通常APIでは自分のPartyだけを使える。Partyは「現在使用中」を表す`isActive=true`を開始可能条件とし、入力ruleIdとParty.ruleIdの一致、PartyPokemon数とRule.teamSizeの一致、各ポケモン4技、能力値JSON、習得可能技、所持可能特性を保存前に検証する。不整合は`400 INVALID_PARTY_STATE`にする
+- **判断:** 所有権・Party状態の読取とBattleSession作成は単一Prisma transactionで行い、生SQLは使わない。予期しない失敗は秘密情報を含まない`500 INTERNAL_ERROR`へ変換する。作成と取得は`JwtAuthGuard`を明示適用し、セッション取得も`id + userId`で所有権を秘匿する
+- **判断:** `battle_sessions`はPRODUCT_SPEC §6.5のuser/party/rule/selected_archetype/result/start/endに、依頼で求められたstatusとcreated_at/updated_atを追加する。90日アーカイブ対象を後続で効率的に選べるよう`(status, started_at)`、所有者状態・各FKにindexを置く。User削除時とParty削除時はセッションをCASCADE削除し、既存Party物理削除APIの意味を維持する。Rule削除はRESTRICT、選択済みArchetypeが物理削除された場合はSET NULLとする
+- **判断:** IMPLEMENTATION_PLANのBATTLE-001作業範囲に明記されたため、`observations`もPRODUCT_SPEC §6.5の最小構造だけ追加する。セッション削除時はCASCADE、マスタ削除はRESTRICT、`(session_id, seq)`を一意にし、kind/position/payloadをDB CHECKで制約する。観測の作成・採番・Undo・scoring呼び出しは一切実装せずBATTLE-002以降へ残す
+- **判断:** Prisma生成migration適用後にtext許可値のCHECK制約を追加する必要が判明したため、適用済みmigrationを書き換えず、同じBATTLE-001内の前進migrationとして`battle_001_constraints`を追加する。Prismaと`@prisma/client`はlockfileどおり6.19.3を維持する
+- **理由:** 正式仕様のURLと既存の認証・所有権・RFC 9457契約を保ち、壊れたPartyや他人のリソースからセッションを開始させず、後続タスクに必要な永続構造だけを安全に準備するため
+- **影響:** Partyを非activeのまま選択した場合は開始できないため、WEB-006は開始前に選択Partyをactiveへ切り替える。BATTLE-002は既存Observationモデルへ追記し、BATTLE-004/BATTLE-007は既存statusを遷移させる。同一ユーザーの複数activeセッションは許可されたまま

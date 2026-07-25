@@ -74,6 +74,10 @@ export type AbilityTag = (typeof ABILITY_TAGS)[number];
 export const BATTLE_RESULTS = ["win", "lose", "unknown"] as const;
 export type BattleResult = (typeof BATTLE_RESULTS)[number];
 
+/** 対戦セッションの状態(battle_sessions.status) */
+export const BATTLE_SESSION_STATUSES = ["active", "ended", "archived"] as const;
+export type BattleSessionStatus = (typeof BATTLE_SESSION_STATUSES)[number];
+
 /** ユーザーロール(users.role) */
 export const USER_ROLES = ["user", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];

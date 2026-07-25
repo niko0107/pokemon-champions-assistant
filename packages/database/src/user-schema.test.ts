@@ -46,6 +46,7 @@ describe("AUTH-001 User Prisma model", () => {
       "updatedAt",
       "refreshTokens",
       "parties",
+      "battleSessions",
     ]);
     expect(fields).toMatchObject({
       id: { type: "String", required: true, id: true },
