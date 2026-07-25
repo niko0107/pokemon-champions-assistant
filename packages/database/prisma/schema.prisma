@@ -26,15 +26,16 @@ model SystemHealthCheck {
 
 /// 認証・認可の主体となるユーザー。passwordHashはOAuth専用ユーザーではnull。
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique @db.VarChar(254)
-  passwordHash  String?        @map("password_hash") @db.VarChar(255)
-  displayName   String         @map("display_name") @db.VarChar(50)
-  role          String         @default("user")
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  refreshTokens RefreshToken[]
-  parties       Party[]
+  id             String          @id @default(uuid()) @db.Uuid
+  email          String          @unique @db.VarChar(254)
+  passwordHash   String?         @map("password_hash") @db.VarChar(255)
+  displayName    String          @map("display_name") @db.VarChar(50)
+  role           String          @default("user")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  refreshTokens  RefreshToken[]
+  parties        Party[]
+  battleSessions BattleSession[]
 
   @@map("users")
 }
@@ -80,6 +81,7 @@ model Pokemon {
   learnableMoves   PokemonMove[]
   archetypeEntries ArchetypePokemon[]
   partyEntries     PartyPokemon[]
+  observations     Observation[]
 
   @@unique([dexNo, form])
   @@index([nameJa])
@@ -102,6 +104,7 @@ model Move {
   learnedBy        PokemonMove[]
   archetypeEntries ArchetypePokemonMove[]
   partyEntries     PartyPokemonMove[]
+  observations     Observation[]
 
   @@index([tags], type: Gin)
   @@map("moves")
@@ -115,6 +118,7 @@ model Item {
   effectTags       Json               @map("effect_tags") @db.JsonB
   archetypeEntries ArchetypePokemon[]
   partyEntries     PartyPokemon[]
+  observations     Observation[]
 
   @@index([effectTags], type: Gin)
   @@map("items")
@@ -128,6 +132,7 @@ model Ability {
   effectTags       Json               @map("effect_tags") @db.JsonB
   archetypeEntries ArchetypePokemon[]
   partyEntries     PartyPokemon[]
+  observations     Observation[]
 
   @@index([effectTags], type: Gin)
   @@map("abilities")
@@ -159,29 +164,31 @@ model Season {
 
 /// 対戦時のチーム人数・選出人数を持つルールマスタ。
 model Rule {
-  id         Int         @id @default(autoincrement())
-  name       String      @unique
-  teamSize   Int         @map("team_size")
-  pickSize   Int         @map("pick_size")
-  archetypes Archetype[]
-  parties    Party[]
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  teamSize       Int             @map("team_size")
+  pickSize       Int             @map("pick_size")
+  archetypes     Archetype[]
+  battleSessions BattleSession[]
+  parties        Party[]
 
   @@map("rules")
 }
 
 /// ユーザーが保存する自分のパーティ本体。
 model Party {
-  id          String         @id @default(uuid()) @db.Uuid
-  userId      String         @map("user_id") @db.Uuid
-  name        String         @db.VarChar(100)
-  description String?
-  ruleId      Int            @map("rule_id")
-  isActive    Boolean        @default(false) @map("is_active")
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  rule        Rule           @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  pokemons    PartyPokemon[]
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  name           String          @db.VarChar(100)
+  description    String?
+  ruleId         Int             @map("rule_id")
+  isActive       Boolean         @default(false) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  rule           Rule            @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  pokemons       PartyPokemon[]
+  battleSessions BattleSession[]
 
   @@index([userId, isActive])
   @@index([ruleId])
@@ -231,25 +238,26 @@ model PartyPokemonMove {
 
 /// シーズン・ルール単位のテンプレ構築本体。
 model Archetype {
-  id              String             @id @default(uuid()) @db.Uuid
-  name            String             @db.VarChar(100)
-  description     String
-  seasonId        Int                @map("season_id")
-  ruleId          Int                @map("rule_id")
-  popularityTier  String             @default("mid") @map("popularity_tier")
-  popularityScore Decimal?           @map("popularity_score") @db.Decimal(7, 4)
-  encounterCount  Int                @default(0) @map("encounter_count")
-  pickCount       Int                @default(0) @map("pick_count")
-  defaultLeads    Json               @map("default_leads") @db.JsonB
-  playstyleNotes  String             @map("playstyle_notes")
-  status          String             @default("published")
-  publishedAt     DateTime           @default(now()) @map("published_at") @db.Timestamptz(3)
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  season          Season             @relation(fields: [seasonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  rule            Rule               @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  pokemons        ArchetypePokemon[]
-  sources         ArchetypeSource[]
+  id                       String             @id @default(uuid()) @db.Uuid
+  name                     String             @db.VarChar(100)
+  description              String
+  seasonId                 Int                @map("season_id")
+  ruleId                   Int                @map("rule_id")
+  popularityTier           String             @default("mid") @map("popularity_tier")
+  popularityScore          Decimal?           @map("popularity_score") @db.Decimal(7, 4)
+  encounterCount           Int                @default(0) @map("encounter_count")
+  pickCount                Int                @default(0) @map("pick_count")
+  defaultLeads             Json               @map("default_leads") @db.JsonB
+  playstyleNotes           String             @map("playstyle_notes")
+  status                   String             @default("published")
+  publishedAt              DateTime           @default(now()) @map("published_at") @db.Timestamptz(3)
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  season                   Season             @relation(fields: [seasonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  rule                     Rule               @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  pokemons                 ArchetypePokemon[]
+  sources                  ArchetypeSource[]
+  selectedInBattleSessions BattleSession[]
 
   @@index([seasonId, ruleId, status])
   @@index([popularityTier, encounterCount, updatedAt])
@@ -310,4 +318,58 @@ model ArchetypeSource {
 
   @@unique([archetypeId, url])
   @@map("archetype_sources")
+}
+
+/// 1回の対戦に対応するセッション。終了・アーカイブ処理は後続BATTLEタスクで行う。
+model BattleSession {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @map("user_id") @db.Uuid
+  partyId             String        @map("party_id") @db.Uuid
+  ruleId              Int           @map("rule_id")
+  status              String        @default("active")
+  selectedArchetypeId String?       @map("selected_archetype_id") @db.Uuid
+  result              String?
+  startedAt           DateTime      @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt             DateTime?     @map("ended_at") @db.Timestamptz(3)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  party               Party         @relation(fields: [partyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  rule                Rule          @relation(fields: [ruleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  selectedArchetype   Archetype?    @relation(fields: [selectedArchetypeId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  observations        Observation[]
+
+  @@index([userId, status])
+  @@index([partyId])
+  @@index([ruleId])
+  @@index([selectedArchetypeId])
+  @@index([status, startedAt])
+  @@map("battle_sessions")
+}
+
+/// セッション中の追記型観測。BATTLE-001では永続構造のみを用意し、書き込みAPIは追加しない。
+model Observation {
+  id         String        @id @default(uuid()) @db.Uuid
+  sessionId  String        @map("session_id") @db.Uuid
+  seq        Int
+  kind       String
+  pokemonId  Int?          @map("pokemon_id")
+  moveId     Int?          @map("move_id")
+  itemId     Int?          @map("item_id")
+  abilityId  Int?          @map("ability_id")
+  position   String?
+  isRevoked  Boolean       @default(false) @map("is_revoked")
+  observedAt DateTime      @default(now()) @map("observed_at") @db.Timestamptz(3)
+  session    BattleSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  pokemon    Pokemon?      @relation(fields: [pokemonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  move       Move?         @relation(fields: [moveId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  item       Item?         @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  ability    Ability?      @relation(fields: [abilityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([sessionId, seq])
+  @@index([pokemonId])
+  @@index([moveId])
+  @@index([itemId])
+  @@index([abilityId])
+  @@map("observations")
 }

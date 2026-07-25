@@ -431,7 +431,7 @@
 
 ## フェーズ2: 対戦セッション(BATTLE)
 
-### ⬜ BATTLE-001 対戦セッション作成
+### ✅ BATTLE-001 対戦セッション作成
 
 - **目的:** battle_sessions / observations スキーマ(§6.5)と POST /sessions, GET /sessions/{id} を実装する
 - **作業範囲:** Prisma モデル+マイグレーション+ §6.6 インデックス、shared スキーマ、sessions モジュール、所有者チェック
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **SCORE-007(表示要素の算出)**。
+次に着手すべきタスク: **BATTLE-002(観測情報追加)**。
