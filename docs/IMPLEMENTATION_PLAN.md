@@ -441,15 +441,15 @@
 - **前提タスク:** PARTY-002, AUTH-004
 - **対象外:** 観測追加(BATTLE-002)
 
-### ⬜ BATTLE-002 観測情報追加
+### ✅ BATTLE-002 観測情報追加
 
-- **目的:** POST /sessions/{id}/observations で観測を追記し、scoring を呼んで最新候補を返す(B-02〜B-05)
-- **作業範囲:** 観測の追記保存(seq 採番)、DB → ArchetypeSnapshot 変換、rankCandidates 呼び出し、§10.3 形式のレスポンス
+- **目的:** POST /sessions/{id}/observations で観測を1件ずつ追記する(B-02〜B-03)
+- **作業範囲:** kind別の厳密な入力検証、マスタ参照検証、追記保存(seq 採番)、作成したObservationのレスポンス
 - **変更予定パッケージ:** packages/shared, apps/api
-- **完了条件:** 観測を追加するたび §10.3 のレスポンス形式で上位3件が返る
-- **必要なテスト:** API テスト(候補返却・形式)+ Snapshot 変換の単体テスト
+- **完了条件:** 自分のactiveなSessionへ6種の観測を同時追加でも重複しないseqで追記できる
+- **必要なテスト:** sharedスキーマ、Service/APIテスト(6種・所有権・状態・マスタ参照・同時採番)
 - **前提タスク:** BATTLE-001, SCORE-005, SCORE-007, ARCHETYPE-001
-- **対象外:** Redis キャッシュ(BATTLE-005)、レート制限(BATTLE-007)
+- **対象外:** 候補計算・Snapshot変換・scoring呼び出し、Undo(BATTLE-003)、Redis キャッシュ(BATTLE-005)、レート制限(BATTLE-006)
 
 ### ⬜ BATTLE-003 Undo
 
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **BATTLE-002(観測情報追加)**。
+次に着手すべきタスク: **BATTLE-003(Undo)**。
