@@ -398,7 +398,7 @@ function computeLikelyUnseen(
 /**
  * threatMoveIds のソート・重複排除に使う候補。
  * §7.4 は列挙順を規定しないため、§7.4 の likelyUnseen と同じ「出現しやすさ」の原則
- * (保有ポケモンの usage_rate、次に技の adoption_rate)で降順に整列する(DECISIONS D-034)。
+ * (保有ポケモンの usage_rate、次に技の adoption_rate)で降順に整列する(DECISIONS D-035)。
  */
 interface ThreatMoveCandidate {
   moveId: number;
