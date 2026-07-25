@@ -15,6 +15,7 @@ import {
 } from "@pokemon-champions/scoring";
 import {
   adminArchetypeDetailSchema,
+  adminArchetypePopularitySchema,
   adminArchetypePreviewResponseSchema,
   adminArchetypeSummarySchema,
   archetypeDefaultLeadsSchema,
@@ -24,6 +25,8 @@ import {
   moveTagsSchema,
   pokemonAbilitiesSchema,
   type AdminArchetypeDetail,
+  type AdminArchetypePopularity,
+  type AdminArchetypePopularityUpdate,
   type AdminArchetypePreviewCandidate,
   type AdminArchetypePreviewRequest,
   type AdminArchetypePreviewResponse,
@@ -246,6 +249,50 @@ export class AdminArchetypesService {
       if (result.count !== 1) {
         this.throwNotFound();
       }
+    });
+  }
+
+  /**
+   * ARCHETYPE-003 A-02: 人気度の手動調整(PRODUCT_SPEC §8.1)。
+   *
+   * popularityTier は必須。popularityScore / encounterCount / pickCount は入力にある場合だけ更新し、
+   * popularityScore は null で明示的にクリアできる。単一行の更新なのでトランザクションは不要。
+   * 存在しない構築は Prisma P2025 経由で 404 に変換する。updatedAt は Prisma が自動更新する。
+   */
+  async updatePopularity(
+    id: string,
+    input: AdminArchetypePopularityUpdate,
+  ): Promise<AdminArchetypePopularity> {
+    return this.translatePrismaErrors(async () => {
+      const data: Prisma.ArchetypeUpdateInput = { popularityTier: input.popularityTier };
+      if (input.popularityScore !== undefined) {
+        data.popularityScore = input.popularityScore;
+      }
+      if (input.encounterCount !== undefined) {
+        data.encounterCount = input.encounterCount;
+      }
+      if (input.pickCount !== undefined) {
+        data.pickCount = input.pickCount;
+      }
+
+      const record = await this.prisma.archetype.update({
+        where: { id },
+        data,
+        select: {
+          id: true,
+          popularityTier: true,
+          popularityScore: true,
+          encounterCount: true,
+          pickCount: true,
+          updatedAt: true,
+        },
+      });
+
+      return adminArchetypePopularitySchema.parse({
+        ...record,
+        popularityScore: record.popularityScore?.toNumber() ?? null,
+        updatedAt: record.updatedAt.toISOString(),
+      });
     });
   }
 

@@ -358,3 +358,16 @@
 - **判断:** 仕様にない類似判定閾値(例: 90% / 80%)は追加せず、完全重複か否かと既存の `matchRate` / `rank` / 内訳をそのまま返す。表示件数は §7.3 の LIMIT 3 に準拠する。レスポンスは RankedCandidate から表示項目のみを射影し(`rawScore` / `maxScore` / `excluded` は返さない)、strict スキーマで余分な項目を拒否する。`ContradictionCode` / `ExclusionCode` は packages/scoring と同じ値を shared の `CONTRADICTION_CODES` / `EXCLUSION_CODES` へ定義してレスポンス検証に共有する(scoring 側の型は変更しない)
 - **理由:** 既存の CRUD 契約・スコアリングエンジン・認可を再利用し、保存前構築を安全に(DB を変えずに)既存構築と比較できるようにするため。並び順・完全重複判定・観測変換を決定的な純粋関数へ分離し、同じ入力と DB 状態では常に同じ結果を返す
 - **影響:** 実際の作成API(ARCHETYPE-002)での重複拒否は本タスクの対象外で未変更のまま。将来 90% 等の類似警告閾値を UI/仕様で確定する場合は、閾値の根拠を PRODUCT_SPEC へ明記してから追加する。apps/api は新たに `@pokemon-champions/scoring` へ依存する
+
+## 2026-07-26 人気度・シーズン管理API(ARCHETYPE-003)
+
+### D-037: 人気度手動更新・シーズン/ルール管理・一括アーカイブのAPI設計
+
+- **判断:** PRODUCT_SPEC §10.2 の A-02/A-03 どおり `PUT /admin/archetypes/:id/popularity`、`GET/POST /admin/seasons`、`GET/POST /admin/rules` を既存 admin-archetypes モジュールへ追加する。全ルートへ `JwtAuthGuard` / `RolesGuard` / `@Roles("admin")` を適用し、認証なし401・userロール403・RFC 9457 を維持する。シーズン・ルールは仕様が GET/POST のみのため PUT/DELETE は追加しない
+- **判断:** 完了条件「シーズン切替(一括アーカイブ)」(§13.2)の URL が §10.2 に明記されていないため、season スコープの最小アクションとして `POST /admin/seasons/:id/archive-archetypes` を1本だけ追加する。指定シーズンの `status="published"` 構築のみを `archived` にし、`{ seasonId, archivedCount }` を返す。存在確認と `updateMany` を単一トランザクションに閉じ込め、存在しないシーズンは404で更新しない
+- **判断:** 人気度更新は §8.1 MVP の手動運用に合わせ、`popularityTier`(high/mid/low)を必須、`popularityScore`(0〜100, nullable)/`encounterCount`/`pickCount`(0以上・int4上限以内の整数)を任意の部分更新とする。省略項目は変更せず、`popularityScore` は null 明示でクリアできる。NaN/Infinity/負数/小数/int4超過を zod で拒否する。人気度の数値スコア自動計算(OPS-001)・遭遇/選択の自動集計(ENCOUNTER/BATTLE)は先取りせず、ここでは手動値のみ扱う。`pickCount` と `encounterCount` の大小関係は PRODUCT_SPEC に定義がないため制約を追加しない
+- **判断:** 単一行更新の人気度APIはトランザクション不要とし、`archetype.update` の Prisma P2025 を既存 `translatePrismaErrors` で404へ変換する。レスポンスは SCORE-005 が参照する `popularityTier`/`encounterCount`/`updatedAt` を含む人気度関連項目のみ(`id`/`popularityScore`/`pickCount` 含む)を strict スキーマで返し、構築本文などの内部情報は返さない。`updatedAt` は Prisma `@updatedAt` が自動更新する
+- **判断:** 構築の season/rule 再割り当ては既存 `PUT /admin/archetypes/:id`(全置換)が `adminArchetypeWriteSchema` で seasonId/ruleId を受け取り、`validateReferences` が Rule.teamSize=採用数・Rule.pickSize=defaultLeads 数の整合をトランザクション内で検証済みのため、`/season` 系の重複エンドポイントは追加しない(責務分担)。不整合な season/rule 変更や部分更新防止は既存 CRUD のテストで担保する
+- **判断:** シーズン・ルール作成入力は MASTER-004 の `seasonMasterSchema`(期間の前後関係)/`ruleMasterSchema`(pickSize<=teamSize)を再利用する。これらは他用途と共有する非 strict スキーマのため未知キーは黙って除去され、レスポンス側スキーマは strict で検証する。name の一意制約違反(P2002)は `SEASON_CONFLICT` / `RULE_CONFLICT`(shared の APP_ERROR_CODES に追加)へ 409 変換する。draft は現行スキーマ(published/archived のみ)に存在しないため扱わない
+- **理由:** 仕様に定義された管理項目だけを最小構成で追加し、人気度の自動計算や重複エンドポイントを先取りせず、既存の認可・エラー設計・スコアリング参照データ形式を壊さないため
+- **影響:** 遭遇報告(ENCOUNTER)・候補選択集計(BATTLE)・人気度数値スコア(OPS-001)を実装する際、encounterCount/pickCount/popularityScore の更新責務が自動集計側へ移る可能性がある。シーズン/ルールの編集(PUT)や削除が必要になった場合は仕様追記の上で別タスクとして追加する。apps/api の admin-archetypes モジュールに season/rule 用の controller/service を追加した
