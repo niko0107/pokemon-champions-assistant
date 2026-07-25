@@ -1,9 +1,11 @@
+import type { MoveTag } from "@pokemon-champions/shared";
 import { DEFAULT_SCORING_CONFIG } from "./config";
 import type {
   ArchetypePokemonSnapshot,
   ArchetypeSnapshot,
   ContradictionDetail,
   ExclusionCode,
+  LikelyUnseenPokemon,
   MatchDetail,
   ObservationInput,
   ScoredCandidate,
@@ -372,13 +374,98 @@ function assertScoringWeight(value: number, path: string): void {
 }
 
 /**
+ * PRODUCT_SPEC §7.4「警戒すべき技」で列挙対象となる技タグ。
+ * §7.4 は setup / hazard / screen / priority を指定する(§9.5 相性エンジンが加える
+ * status タグは対象外。SCORE-007 は一致度エンジンの §7.4 のみを扱う)。
+ */
+const THREAT_MOVE_TAGS: ReadonlySet<MoveTag> = new Set(["setup", "hazard", "screen", "priority"]);
+
+/**
+ * PRODUCT_SPEC §7.4「残りの可能性が高いポケモン」。
+ * 構築内で未観測(kind=pokemon の観測に現れない)のポケモンを usage_rate 降順で返す。
+ * usage_rate 同値は pokemonId 昇順で決定的に整列する。入力は変更しない。
+ */
+function computeLikelyUnseen(
+  archetype: ArchetypeSnapshot,
+  observedPokemonIds: ReadonlySet<number>,
+): LikelyUnseenPokemon[] {
+  return archetype.pokemons
+    .filter((pokemon) => !observedPokemonIds.has(pokemon.pokemonId))
+    .map((pokemon) => ({ pokemonId: pokemon.pokemonId, usageRate: pokemon.usageRate }))
+    .sort((left, right) => right.usageRate - left.usageRate || left.pokemonId - right.pokemonId);
+}
+
+/**
+ * threatMoveIds のソート・重複排除に使う候補。
+ * §7.4 は列挙順を規定しないため、§7.4 の likelyUnseen と同じ「出現しやすさ」の原則
+ * (保有ポケモンの usage_rate、次に技の adoption_rate)で降順に整列する(DECISIONS D-035)。
+ */
+interface ThreatMoveCandidate {
+  moveId: number;
+  usageRate: number;
+  adoptionRate: number;
+}
+
+function compareThreatMoveCandidates(
+  left: ThreatMoveCandidate,
+  right: ThreatMoveCandidate,
+): number {
+  return (
+    right.usageRate - left.usageRate ||
+    right.adoptionRate - left.adoptionRate ||
+    left.moveId - right.moveId
+  );
+}
+
+/**
+ * PRODUCT_SPEC §7.4「警戒すべき技」。
+ * 未観測ポケモンの技+観測済みポケモンの未観測技(= (pokemonId, moveId) が観測されていない
+ * 構築内の技)のうち、THREAT_MOVE_TAGS を含む技のマスタIDを返す。
+ * 同一技IDは重複排除し、最も出現しやすい保有元の指標で代表させる。
+ *
+ * 注: §7.4 は「および threat_notes 記載技」も対象とするが、threatNotes は自由記述テキストで
+ * 技IDを決定的に抽出できないため本タスクでは扱わない(算出不能項目として報告)。
+ */
+function computeThreatMoveIds(
+  archetype: ArchetypeSnapshot,
+  observedMovePairs: ReadonlySet<string>,
+): number[] {
+  const bestByMoveId = new Map<number, ThreatMoveCandidate>();
+
+  for (const pokemon of archetype.pokemons) {
+    for (const move of pokemon.moves) {
+      if (observedMovePairs.has(`${pokemon.pokemonId}:${move.moveId}`)) {
+        continue;
+      }
+      if (!move.tags.some((tag) => THREAT_MOVE_TAGS.has(tag))) {
+        continue;
+      }
+
+      const candidate: ThreatMoveCandidate = {
+        moveId: move.moveId,
+        usageRate: pokemon.usageRate,
+        adoptionRate: move.adoptionRate,
+      };
+      const existing = bestByMoveId.get(move.moveId);
+      if (existing === undefined || compareThreatMoveCandidates(candidate, existing) < 0) {
+        bestByMoveId.set(move.moveId, candidate);
+      }
+    }
+  }
+
+  return [...bestByMoveId.values()]
+    .sort(compareThreatMoveCandidates)
+    .map((candidate) => candidate.moveId);
+}
+
+/**
  * 1つのテンプレ構築を観測列に対してスコアリングする(設計書 §7.2・§7.5)。
  *
  * 純粋関数として実装すること: 同じ入力に対して常に同じ出力を返し、副作用を持たない。
  *
  * SCORE-004では未取消の全観測を一致加点・矛盾減点へ合成し、
  * PRODUCT_SPEC §7.2の条件で候補を除外する。
- * likelyUnseen / threatMoveIds の算出は後続タスクで追加する。
+ * SCORE-007では PRODUCT_SPEC §7.4 の表示要素(likelyUnseen / threatMoveIds)を算出する。
  */
 export function scoreArchetype(
   archetype: ArchetypeSnapshot,
@@ -625,6 +712,15 @@ export function scoreArchetype(
   const matchRate =
     maxScore === 0 ? 0 : roundScore(Math.min(1, Math.max(0, rawScore / maxScore)) * 100);
 
+  const observedPokemonIds = new Set(
+    activePokemonObservations.map((observation) => observation.pokemonId),
+  );
+  const observedMovePairs = new Set(
+    activeMoveObservations.map((observation) => `${observation.pokemonId}:${observation.moveId}`),
+  );
+  const likelyUnseen = computeLikelyUnseen(archetype, observedPokemonIds);
+  const threatMoveIds = computeThreatMoveIds(archetype, observedMovePairs);
+
   return {
     archetypeId: archetype.id,
     matchRate,
@@ -634,7 +730,7 @@ export function scoreArchetype(
     contradictions,
     excluded: exclusionCodes.length > 0,
     exclusionCodes,
-    likelyUnseen: [],
-    threatMoveIds: [],
+    likelyUnseen,
+    threatMoveIds,
   };
 }

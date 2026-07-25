@@ -417,7 +417,7 @@
 - **前提タスク:** SCORE-003
 - **対象外:** 減点(SCORE-004 側で統合)
 
-### ⬜ SCORE-007 表示要素の算出
+### ✅ SCORE-007 表示要素の算出
 
 - **目的:** §7.4 の「残りの可能性が高いポケモン」「警戒すべき技」を算出する
 - **作業範囲:** likelyUnseen(未観測を usage_rate 降順)、threatMoveIds(setup/hazard/screen/priority タグ+threat_notes)
