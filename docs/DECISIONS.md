@@ -441,3 +441,15 @@
 - **判断:** `setWithTtl`は正の安全な整数秒だけを受け付け、不正値はRedisへ送らず`RangeError`にする。JSON helperは型安全性を保証できず、保存対象ごとのZod schema検証をadapterへ持ち込むと基盤が利用機能へ依存するため追加しない。利用側がserialize / deserializeとZod検証を担当する
 - **理由:** Redisを必須DBやAPI起動の単一障害点にせず、接続・ライフサイクル・障害判定だけを一箇所へ閉じ込め、BATTLE-005等が安全にフォールバックできる最小の再利用基盤を用意するため
 - **影響:** BATTLE-005は`REDIS_ADAPTER`を注入して候補レスポンス固有のJSON/Zod検証・キー・TTL・invalidationを実装する。キャッシュ、レート制限、Pub/Sub、WebSocket、分散ロックは本タスクでは未実装のまま
+
+## 2026-07-26 Redis候補キャッシュ(BATTLE-005)
+
+### D-043: 最終レスポンスキャッシュ・状態versionキー・30秒TTL
+
+- **判断:** `GET /api/v1/sessions/:id/candidates`のshared Zod検証済み最終レスポンス全体だけをJSONでキャッシュする。読込後も同じ`battleCandidatesResponseSchema`でstrictに検証し、sessionId不一致、不正JSON、schema不一致はキャッシュmissとして破棄する。`rawScore / maxScore / excluded / userId`等の内部情報は保存しない
+- **判断:** Redisキーは`battle:candidates:v1:{sessionId}:{SHA-256 version}`とする。version入力にはSessionの`id / ruleId / status / selectedArchetypeId`、seq順に正規化した全Observationのkind別payloadと`isRevoked`、ID順に正規化した現行Season・同一Rule・published Archetypeの全`ArchetypeSnapshot`を含める。Snapshotには候補内容、`updatedAt`、`popularityTier / popularityScore / encounterCount`を含むため、観測追加・Undo・順序変更・候補選択・Session状態変更・構築CRUD・人気度更新・Season archive後は別キーとなる
+- **判断:** 所有者を含むSession検索とactive状態検証、候補対象Archetypeの読込・Snapshot検証はRedis参照より前に毎回行う。キャッシュhit時だけ`scoreArchetype / rankCandidates`を含む計算callbackを省略する。候補選択の妥当性確認はSerializable transaction内で最新状態を使う既存の非キャッシュ計算を維持する
+- **判断:** TTLは仕様に定義がないため既定30秒とし、`BATTLE_CANDIDATES_CACHE_TTL_SECONDS`で変更可能にする。正の安全な整数だけを採用し、未設定・空値・0以下・小数・非数・安全整数超過はAPI起動を妨げず30秒へフォールバックする。version変更で参照されなくなった旧キーは、prefix走査やRedis固有APIを追加せず短いTTLで自動削除する
+- **判断:** SETUP-010のglobal `RedisModule`、`REDIS_ADAPTER` token、`RedisAdapter` interface、`isAvailable / get / setWithTtl / delete`だけを再利用する。Redis未設定・停止・timeout・get/set/delete失敗ではHTTPエラーへ変換せずDB計算結果を返す。破損エントリはbest-effortで削除し、削除失敗も正常レスポンスへ影響させない。stampede対策、分散ロック、Pub/Sub、明示的な全キー走査は追加しない
+- **理由:** 候補APIの契約と決定的なscoring結果を変えず、状態変化や管理更新による明示的invalidation漏れを防ぎながら、Redisを単一障害点にせず同一状態の高コスト計算だけを省略するため
+- **影響:** キャッシュhitでも所有権確認と2件のDB読取は行われ、改善対象はSnapshot以降のscoring/rankingとレスポンス構築である。旧versionキーは最大TTLまで残るが参照されず、30秒後にRedisが削除する。より長いTTLやDB読取自体の省略が必要になった場合は、管理更新を含む世代管理を別タスクで設計する
