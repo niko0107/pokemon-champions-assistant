@@ -1,6 +1,7 @@
 import { Prisma } from "@pokemon-champions/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../prisma/prisma.service";
+import type { BattleCandidatesCache } from "./session-candidates-cache";
 import { SessionsService } from "./sessions.service";
 
 const userId = "fecccd4a-a137-4b3b-bb09-239306040706";
@@ -291,6 +292,24 @@ describe("SessionsService.getCandidates", () => {
     expect(archetypeFindMany).not.toHaveBeenCalled();
   });
 
+  it("キャッシュが存在しても所有権確認を先行し、他人のSessionを404にする", async () => {
+    sessionFindFirst.mockResolvedValue(null);
+    const getOrCalculate = vi.fn();
+    const cachedService = new SessionsService(
+      {
+        battleSession: { findFirst: sessionFindFirst },
+        archetype: { findMany: archetypeFindMany },
+      } as unknown as PrismaService,
+      { getOrCalculate } as Pick<BattleCandidatesCache, "getOrCalculate">,
+    );
+
+    await expect(cachedService.getCandidates(otherUserId, sessionId)).rejects.toMatchObject({
+      status: 404,
+      response: { code: "NOT_FOUND" },
+    });
+    expect(getOrCalculate).not.toHaveBeenCalled();
+  });
+
   it.each(["ended", "archived"])("%s Sessionの候補取得を400にする", async (status) => {
     sessionFindFirst.mockResolvedValue({
       id: sessionId,
@@ -304,6 +323,30 @@ describe("SessionsService.getCandidates", () => {
       status: 400,
       response: { code: "INVALID_SESSION_STATE" },
     });
+  });
+
+  it("キャッシュhit判定より前にSession状態を検証する", async () => {
+    sessionFindFirst.mockResolvedValue({
+      id: sessionId,
+      ruleId: 1,
+      status: "ended",
+      selectedArchetypeId: null,
+      observations: [],
+    });
+    const getOrCalculate = vi.fn();
+    const cachedService = new SessionsService(
+      {
+        battleSession: { findFirst: sessionFindFirst },
+        archetype: { findMany: archetypeFindMany },
+      } as unknown as PrismaService,
+      { getOrCalculate } as Pick<BattleCandidatesCache, "getOrCalculate">,
+    );
+
+    await expect(cachedService.getCandidates(userId, sessionId)).rejects.toMatchObject({
+      status: 400,
+      response: { code: "INVALID_SESSION_STATE" },
+    });
+    expect(getOrCalculate).not.toHaveBeenCalled();
   });
 
   it("不正なDB状態を候補から黙って落とさず安全な500にする", async () => {
