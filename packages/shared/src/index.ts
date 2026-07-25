@@ -1,4 +1,5 @@
 export * from "./api/admin-archetypes";
+export * from "./api/admin-seasons-rules";
 export * from "./api/auth";
 export * from "./api/health";
 export * from "./api/master-abilities";

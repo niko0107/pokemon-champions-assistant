@@ -321,7 +321,7 @@
 - **前提タスク:** ARCHETYPE-001, AUTH-004
 - **対象外:** 管理画面 UI、重複チェック(ARCHETYPE-005)
 
-### ⬜ ARCHETYPE-003 人気度・シーズン管理 API
+### ✅ ARCHETYPE-003 人気度・シーズン管理 API
 
 - **目的:** PUT /admin/archetypes/{id}/popularity(A-02)、/admin/seasons, /admin/rules(A-03)を実装する
 - **作業範囲:** 人気度 Tier(high/mid/low)更新、シーズン・ルール CRUD、シーズン終了時の一括 archived

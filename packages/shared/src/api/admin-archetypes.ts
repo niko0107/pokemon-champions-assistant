@@ -285,3 +285,44 @@ export const adminArchetypePreviewResponseSchema = z
   .strict();
 
 export type AdminArchetypePreviewResponse = z.infer<typeof adminArchetypePreviewResponseSchema>;
+
+/** popularity_score / encounter_count / pick_count の int4 上限(PostgreSQL int)。 */
+const INT4_MAX = 2_147_483_647;
+
+const popularityScoreSchema = z.number().finite().min(0).max(100);
+const aggregateCountSchema = z.number().int().min(0).max(INT4_MAX);
+
+/**
+ * ARCHETYPE-003 A-02: 人気度の手動調整入力(PRODUCT_SPEC §8.1「管理者が high/mid/low を手動設定」)。
+ *
+ * MVP では popularityTier の手動設定が主。popularityScore / encounterCount / pickCount は
+ * 省略時は変更しない(部分更新)。popularityScore は null を明示すると値をクリアできる。
+ * 人気度の数値スコア自動計算(OPS-001)は本タスクの対象外で、ここでは手動値のみ扱う。
+ */
+export const adminArchetypePopularityUpdateSchema = z
+  .object({
+    popularityTier: archetypePopularityTierSchema,
+    popularityScore: popularityScoreSchema.nullable().optional(),
+    encounterCount: aggregateCountSchema.optional(),
+    pickCount: aggregateCountSchema.optional(),
+  })
+  .strict();
+
+export type AdminArchetypePopularityUpdate = z.infer<typeof adminArchetypePopularityUpdateSchema>;
+
+/**
+ * 人気度更新のレスポンス。SCORE-005 の並び替えが参照する popularityTier / encounterCount /
+ * updatedAt を含む人気度関連項目のみを返し、構築本文などの内部情報は返さない。
+ */
+export const adminArchetypePopularitySchema = z
+  .object({
+    id: z.string().uuid(),
+    popularityTier: archetypePopularityTierSchema,
+    popularityScore: popularityScoreSchema.nullable(),
+    encounterCount: z.number().int().nonnegative(),
+    pickCount: z.number().int().nonnegative(),
+    updatedAt: timestampSchema,
+  })
+  .strict();
+
+export type AdminArchetypePopularity = z.infer<typeof adminArchetypePopularitySchema>;

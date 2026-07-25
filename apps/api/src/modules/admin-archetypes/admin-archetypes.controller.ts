@@ -14,12 +14,16 @@ import {
   adminArchetypeDetailSchema,
   adminArchetypeIdParamsSchema,
   adminArchetypeListResponseSchema,
+  adminArchetypePopularitySchema,
+  adminArchetypePopularityUpdateSchema,
   adminArchetypePreviewRequestSchema,
   adminArchetypePreviewResponseSchema,
   adminArchetypeWriteSchema,
   type AdminArchetypeDetail,
   type AdminArchetypeIdParams,
   type AdminArchetypeListResponse,
+  type AdminArchetypePopularity,
+  type AdminArchetypePopularityUpdate,
   type AdminArchetypePreviewRequest,
   type AdminArchetypePreviewResponse,
   type AdminArchetypeWrite,
@@ -72,6 +76,17 @@ export class AdminArchetypesController {
     @Body(new ZodValidationPipe(adminArchetypeWriteSchema)) input: AdminArchetypeWrite,
   ): Promise<AdminArchetypeDetail> {
     return adminArchetypeDetailSchema.parse(await this.archetypes.update(params.id, input));
+  }
+
+  @Put(":id/popularity")
+  async updatePopularity(
+    @Param(new ZodValidationPipe(adminArchetypeIdParamsSchema)) params: AdminArchetypeIdParams,
+    @Body(new ZodValidationPipe(adminArchetypePopularityUpdateSchema))
+    input: AdminArchetypePopularityUpdate,
+  ): Promise<AdminArchetypePopularity> {
+    return adminArchetypePopularitySchema.parse(
+      await this.archetypes.updatePopularity(params.id, input),
+    );
   }
 
   @Delete(":id")
