@@ -1,4 +1,9 @@
-import { BadRequestException, type INestApplication, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  type INestApplication,
+  NotFoundException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import {
@@ -8,6 +13,7 @@ import {
   observationResponseSchema,
   partyListResponseSchema,
   problemDetailsSchema,
+  undoObservationResponseSchema,
   type BattleSessionResponse,
   type ObservationCreate,
   type ObservationResponse,
@@ -66,6 +72,13 @@ function makeObservation(input: ObservationCreate, seq = 1): ObservationResponse
   });
 }
 
+function makeRevokedObservation(): ObservationResponse {
+  return {
+    ...makeObservation({ kind: "move", pokemonId: 1, moveId: 2 }, 3),
+    isRevoked: true,
+  };
+}
+
 function notFound(): NotFoundException {
   return new NotFoundException({
     type: "about:blank",
@@ -75,7 +88,7 @@ function notFound(): NotFoundException {
   });
 }
 
-describe("BATTLE-001/002 session API", () => {
+describe("BATTLE-001/002/003 session API", () => {
   let app: INestApplication;
   let jwt: JwtService;
   let userAToken: string;
@@ -85,6 +98,7 @@ describe("BATTLE-001/002 session API", () => {
   const create = vi.fn();
   const get = vi.fn();
   const addObservation = vi.fn();
+  const undoObservation = vi.fn();
   const pokemonFindMany = vi.fn();
   const partyFindMany = vi.fn();
 
@@ -101,7 +115,7 @@ describe("BATTLE-001/002 session API", () => {
         party: { findMany: partyFindMany },
       })
       .overrideProvider(SessionsService)
-      .useValue({ create, get, addObservation })
+      .useValue({ create, get, addObservation, undoObservation })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -137,6 +151,14 @@ describe("BATTLE-001/002 session API", () => {
       (callerId: string, requestedSessionId: string, requestInput: ObservationCreate) =>
         callerId === userAId && requestedSessionId === sessionId
           ? Promise.resolve(makeObservation(requestInput))
+          : Promise.reject(notFound()),
+    );
+    undoObservation.mockImplementation(
+      (callerId: string, requestedSessionId: string, requestedObservationId: string) =>
+        callerId === userAId &&
+        requestedSessionId === sessionId &&
+        requestedObservationId === observationId
+          ? Promise.resolve(makeRevokedObservation())
           : Promise.reject(notFound()),
     );
     pokemonFindMany.mockResolvedValue([]);
@@ -367,6 +389,134 @@ describe("BATTLE-001/002 session API", () => {
       status: 400,
       code: "INVALID_MASTER_REFERENCE",
     });
+  });
+
+  it("自分のSessionの直近ObservationをUndoできる", async () => {
+    const response = await request(app.getHttpServer())
+      .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(200);
+
+    expect(undoObservationResponseSchema.parse(response.body)).toEqual(makeRevokedObservation());
+    expect(response.body).not.toHaveProperty("userId");
+    expect(response.body).not.toHaveProperty("passwordHash");
+    expect(response.body).not.toHaveProperty("accessToken");
+    expect(undoObservation).toHaveBeenCalledWith(userAId, sessionId, observationId);
+  });
+
+  it("UndoのAuthorizationなしはRFC 9457形式の401にする", async () => {
+    const response = await request(app.getHttpServer())
+      .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+      .expect(401);
+
+    expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+    expect(undoObservation).not.toHaveBeenCalled();
+  });
+
+  it("Undoでも他人・admin・不存在Sessionを外部から区別できない404にする", async () => {
+    for (const [token, requestedSessionId] of [
+      [userBToken, sessionId],
+      [adminToken, sessionId],
+      [userAToken, missingSessionId],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .delete(`/api/v1/sessions/${requestedSessionId}/observations/${observationId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(404);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 404,
+        code: "NOT_FOUND",
+      });
+    }
+  });
+
+  it("Undo paramsの不正UUIDを400 VALIDATION_ERRORにする", async () => {
+    for (const path of [
+      `/api/v1/sessions/not-a-uuid/observations/${observationId}`,
+      `/api/v1/sessions/${sessionId}/observations/not-a-uuid`,
+    ]) {
+      const response = await request(app.getHttpServer())
+        .delete(path)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .expect(400);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 400,
+        code: "VALIDATION_ERROR",
+      });
+    }
+    expect(undoObservation).not.toHaveBeenCalled();
+  });
+
+  it("ended/archived SessionのUndoを400 INVALID_SESSION_STATEにする", async () => {
+    undoObservation.mockRejectedValue(
+      new BadRequestException({
+        type: "about:blank",
+        title: "Invalid Session State",
+        status: 400,
+        code: "INVALID_SESSION_STATE",
+      }),
+    );
+
+    for (const _status of ["ended", "archived"]) {
+      const response = await request(app.getHttpServer())
+        .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .expect(400);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 400,
+        code: "INVALID_SESSION_STATE",
+      });
+    }
+  });
+
+  it("有効観測0件・二重Undoを409 OBSERVATION_CONFLICTにする", async () => {
+    undoObservation.mockRejectedValue(
+      new ConflictException({
+        type: "about:blank",
+        title: "Observation Conflict",
+        status: 409,
+        code: "OBSERVATION_CONFLICT",
+      }),
+    );
+
+    const response = await request(app.getHttpServer())
+      .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(409);
+    expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+      status: 409,
+      code: "OBSERVATION_CONFLICT",
+    });
+  });
+
+  it("同じObservationへの同時Undoは1件だけ成功する", async () => {
+    let revoked = false;
+    undoObservation.mockImplementation(async () => {
+      if (revoked) {
+        throw new ConflictException({
+          type: "about:blank",
+          title: "Observation Conflict",
+          status: 409,
+          code: "OBSERVATION_CONFLICT",
+        });
+      }
+      revoked = true;
+      return makeRevokedObservation();
+    });
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+        .set("Authorization", `Bearer ${userAToken}`),
+      request(app.getHttpServer())
+        .delete(`/api/v1/sessions/${sessionId}/observations/${observationId}`)
+        .set("Authorization", `Bearer ${userAToken}`),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
   });
 
   it("既存health・Party一覧・公開マスタ検索を壊さない", async () => {

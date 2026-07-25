@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -14,12 +15,16 @@ import {
   battleSessionResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
+  undoObservationParamsSchema,
+  undoObservationResponseSchema,
   type AuthenticatedUser,
   type BattleSessionCreate,
   type BattleSessionIdParams,
   type BattleSessionResponse,
   type ObservationCreate,
   type ObservationResponse,
+  type UndoObservationParams,
+  type UndoObservationResponse,
 } from "@pokemon-champions/shared";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
@@ -49,6 +54,16 @@ export class SessionsController {
   ): Promise<ObservationResponse> {
     return observationResponseSchema.parse(
       await this.sessions.addObservation(user.id, params.id, input),
+    );
+  }
+
+  @Delete(":id/observations/:obsId")
+  async undoObservation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(undoObservationParamsSchema)) params: UndoObservationParams,
+  ): Promise<UndoObservationResponse> {
+    return undoObservationResponseSchema.parse(
+      await this.sessions.undoObservation(user.id, params.id, params.obsId),
     );
   }
 

@@ -451,15 +451,15 @@
 - **前提タスク:** BATTLE-001, SCORE-005, SCORE-007, ARCHETYPE-001
 - **対象外:** 候補計算・Snapshot変換・scoring呼び出し、Undo(BATTLE-003)、Redis キャッシュ(BATTLE-005)、レート制限(BATTLE-006)
 
-### ⬜ BATTLE-003 Undo
+### ✅ BATTLE-003 Undo
 
-- **目的:** DELETE /sessions/{id}/observations/{obsId}(B-11)で観測を論理削除し、候補を再計算する
-- **作業範囲:** is_revoked 更新(物理削除しない)、再計算レスポンス
+- **目的:** DELETE /sessions/{id}/observations/{obsId}(B-11)で直近の有効な観測を論理Undoする
+- **作業範囲:** strictなURL params検証、直近有効Observationの確認、is_revokedの条件付き更新、取消済みObservationレスポンス
 - **変更予定パッケージ:** packages/shared, apps/api
-- **完了条件:** Undo 後の候補が「その観測がなかった状態」と一致する
-- **必要なテスト:** API テスト(Undo→再計算の一致・二重 Undo・他人 404)
+- **完了条件:** 自分のactiveなSessionで最大seqの未取消Observationだけを物理削除・seq再利用なしでUndoでき、同時Undoが二重成功しない
+- **必要なテスト:** sharedスキーマ、Service/APIテスト(直近Undo・取消済み除外・二重/同時Undo・所有権・状態)
 - **前提タスク:** BATTLE-002
-- **対象外:** Redo
+- **対象外:** 候補再計算・Snapshot変換・scoring呼び出し、Redo、任意の過去Observation指定、Redis、UI
 
 ### ⬜ BATTLE-004 候補取得・選択・終了
 
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **BATTLE-003(Undo)**。
+次に着手すべきタスク: **BATTLE-004(候補取得)**。

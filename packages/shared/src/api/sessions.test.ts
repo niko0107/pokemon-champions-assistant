@@ -6,6 +6,8 @@ import {
   observationCreateSchema,
   observationKindSchema,
   observationResponseSchema,
+  undoObservationParamsSchema,
+  undoObservationResponseSchema,
 } from "./sessions";
 
 const partyId = "8b0c1732-e931-41d0-b3d0-b9b62ed506b9";
@@ -170,5 +172,84 @@ describe("BATTLE-002 shared API schemas", () => {
 
   it("不正なkindを拒否する", () => {
     expect(observationKindSchema.safeParse("result").success).toBe(false);
+  });
+});
+
+describe("BATTLE-003 shared API schemas", () => {
+  it("正常なUndo paramsを受理する", () => {
+    expect(
+      undoObservationParamsSchema.parse({
+        id: sessionId,
+        obsId: observationId,
+      }),
+    ).toEqual({
+      id: sessionId,
+      obsId: observationId,
+    });
+  });
+
+  it.each([
+    { id: "not-a-uuid", obsId: observationId },
+    { id: sessionId, obsId: "not-a-uuid" },
+  ])("不正なUUIDを拒否する", (params) => {
+    expect(undoObservationParamsSchema.safeParse(params).success).toBe(false);
+  });
+
+  it("strict paramsとして契約外フィールドを拒否する", () => {
+    expect(
+      undoObservationParamsSchema.safeParse({
+        id: sessionId,
+        obsId: observationId,
+        userId: "fecccd4a-a137-4b3b-bb09-239306040706",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("isRevoked=trueの正常レスポンスを受理する", () => {
+    const response = {
+      id: observationId,
+      sessionId,
+      seq: 3,
+      kind: "move",
+      pokemonId: 1,
+      moveId: 2,
+      itemId: null,
+      abilityId: null,
+      position: null,
+      isRevoked: true,
+      createdAt: timestamp,
+    };
+
+    expect(undoObservationResponseSchema.parse(response)).toEqual(response);
+  });
+
+  it("isRevoked=falseと内部情報をレスポンスとして拒否する", () => {
+    const response = {
+      id: observationId,
+      sessionId,
+      seq: 3,
+      kind: "pokemon",
+      pokemonId: 1,
+      moveId: null,
+      itemId: null,
+      abilityId: null,
+      position: null,
+      isRevoked: true,
+      createdAt: timestamp,
+    };
+
+    expect(
+      undoObservationResponseSchema.safeParse({
+        ...response,
+        isRevoked: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      undoObservationResponseSchema.safeParse({
+        ...response,
+        userId: "fecccd4a-a137-4b3b-bb09-239306040706",
+        accessToken: "secret",
+      }).success,
+    ).toBe(false);
   });
 });
