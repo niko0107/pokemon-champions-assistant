@@ -34,6 +34,7 @@ function knownError(code: string): Prisma.PrismaClientKnownRequestError {
 
 describe("SessionsService.undoObservation", () => {
   const sessionFindFirst = vi.fn();
+  const sessionUpdateMany = vi.fn();
   const observationFindFirst = vi.fn();
   const observationUpdateMany = vi.fn();
   const observationDelete = vi.fn();
@@ -41,7 +42,10 @@ describe("SessionsService.undoObservation", () => {
   const observationCreate = vi.fn();
   const pokemonFindUnique = vi.fn();
   const transaction = {
-    battleSession: { findFirst: sessionFindFirst },
+    battleSession: {
+      findFirst: sessionFindFirst,
+      updateMany: sessionUpdateMany,
+    },
     pokemon: { findUnique: pokemonFindUnique },
     observation: {
       findFirst: observationFindFirst,
@@ -64,6 +68,7 @@ describe("SessionsService.undoObservation", () => {
       async (operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction),
     );
     sessionFindFirst.mockResolvedValue({ id: sessionId, status: "active" });
+    sessionUpdateMany.mockResolvedValue({ count: 1 });
     observationFindFirst.mockResolvedValue(latestObservation);
     observationUpdateMany.mockResolvedValue({ count: 1 });
     observationAggregate.mockResolvedValue({ _max: { seq: 3 } });
@@ -93,6 +98,10 @@ describe("SessionsService.undoObservation", () => {
     expect(sessionFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: sessionId, userId } }),
     );
+    expect(sessionUpdateMany).toHaveBeenCalledWith({
+      where: { id: sessionId, userId, status: "active" },
+      data: { updatedAt: expect.any(Date) },
+    });
     expect(observationFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { sessionId, isRevoked: false },
@@ -227,6 +236,7 @@ describe("SessionsService.undoObservation", () => {
     const concurrentTransaction = {
       battleSession: {
         findFirst: vi.fn().mockResolvedValue({ id: sessionId, status: "active" }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       observation: {
         findFirst: vi.fn(async () => {
@@ -287,5 +297,16 @@ describe("SessionsService.undoObservation", () => {
     });
     expect(latestObservation.isRevoked).toBe(false);
     expect(observationDelete).not.toHaveBeenCalled();
+  });
+
+  it("archiveとの競合でactive Sessionを更新できなければObservationを変更しない", async () => {
+    sessionUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.undoObservation(userId, sessionId, observationId)).rejects.toMatchObject({
+      status: 409,
+      response: { code: "OBSERVATION_CONFLICT" },
+    });
+    expect(observationFindFirst).not.toHaveBeenCalled();
+    expect(observationUpdateMany).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,7 @@ function knownError(code: string): Prisma.PrismaClientKnownRequestError {
 
 describe("SessionsService.addObservation", () => {
   const sessionFindFirst = vi.fn();
+  const sessionUpdateMany = vi.fn();
   const pokemonFindUnique = vi.fn();
   const moveFindUnique = vi.fn();
   const pokemonMoveFindUnique = vi.fn();
@@ -27,7 +28,10 @@ describe("SessionsService.addObservation", () => {
   const observationAggregate = vi.fn();
   const observationCreate = vi.fn();
   const transaction = {
-    battleSession: { findFirst: sessionFindFirst },
+    battleSession: {
+      findFirst: sessionFindFirst,
+      updateMany: sessionUpdateMany,
+    },
     pokemon: { findUnique: pokemonFindUnique },
     move: { findUnique: moveFindUnique },
     pokemonMove: { findUnique: pokemonMoveFindUnique },
@@ -51,6 +55,7 @@ describe("SessionsService.addObservation", () => {
       async (operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction),
     );
     sessionFindFirst.mockResolvedValue({ id: sessionId, status: "active" });
+    sessionUpdateMany.mockResolvedValue({ count: 1 });
     pokemonFindUnique.mockResolvedValue({ abilities: ["いかく"], isMega: true });
     moveFindUnique.mockResolvedValue({ id: 2 });
     pokemonMoveFindUnique.mockResolvedValue({ pokemonId: 1 });
@@ -93,6 +98,10 @@ describe("SessionsService.addObservation", () => {
       expect(sessionFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: sessionId, userId } }),
       );
+      expect(sessionUpdateMany).toHaveBeenCalledWith({
+        where: { id: sessionId, userId, status: "active" },
+        data: { updatedAt: expect.any(Date) },
+      });
       expect(observationCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: {
@@ -314,5 +323,17 @@ describe("SessionsService.addObservation", () => {
     });
     expect(runTransaction).toHaveBeenCalledOnce();
     expect(observationCreate).toHaveBeenCalledOnce();
+  });
+
+  it("archiveとの競合でactive Sessionを更新できなければ観測を保存しない", async () => {
+    sessionUpdateMany.mockResolvedValue({ count: 0 });
+    const input = observationCreateSchema.parse({ kind: "pokemon", pokemonId: 1 });
+
+    await expect(service.addObservation(userId, sessionId, input)).rejects.toMatchObject({
+      status: 409,
+      response: { code: "OBSERVATION_CONFLICT" },
+    });
+    expect(pokemonFindUnique).not.toHaveBeenCalled();
+    expect(observationCreate).not.toHaveBeenCalled();
   });
 });

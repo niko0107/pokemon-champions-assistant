@@ -414,6 +414,14 @@ export class SessionsService {
               this.throwInvalidSessionState();
             }
 
+            const touched = await transaction.battleSession.updateMany({
+              where: { id: session.id, userId, status: "active" },
+              data: { updatedAt: new Date() },
+            });
+            if (touched.count !== 1) {
+              this.throwObservationConflict();
+            }
+
             await this.validateObservationReferences(transaction, input);
 
             const latest = await transaction.observation.aggregate({
@@ -466,6 +474,14 @@ export class SessionsService {
             }
             if (session.status !== "active") {
               this.throwInvalidSessionState();
+            }
+
+            const touched = await transaction.battleSession.updateMany({
+              where: { id: session.id, userId, status: "active" },
+              data: { updatedAt: new Date() },
+            });
+            if (touched.count !== 1) {
+              this.throwObservationConflict();
             }
 
             const latest = await transaction.observation.findFirst({

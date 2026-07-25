@@ -465,3 +465,16 @@
 - **判断:** `BATTLE_RATE_LIMIT` / `BATTLE_RATE_LIMIT_WINDOW_SECONDS`で開発・運用時に変更可能とし、未設定・空値・0以下・小数・非数・安全整数超過は起動失敗にせず仕様既定値60へフォールバックする。Redis未設定、停止、timeout、操作失敗、予期しない応答では429へ変換せずfail-openし、Redis復旧後は同じadapterで制限を再開する。Redis URL、key、userId、tokenをエラー本文へ含めない
 - **理由:** 仕様が対象と数値を明確に限定しているため不要な全体制限を避け、MVPで説明・検証しやすいfixed windowを採用しつつ、Redisの原子操作で分散環境の同時実行安全性とTTL保証を満たすため。Redisは補助基盤というSETUP-010の可用性方針も維持する
 - **影響:** window境界付近ではfixed window固有のburstが起こり得る。より平滑な制限、authブルートフォース対策、IP制限、プラン別上限が必要になった場合は、対象・数値・アルゴリズムを別タスクで仕様化する
+
+## 2026-07-26 セッション自動アーカイブ(BATTLE-007)
+
+### D-045: 状態別の最終活動時刻・90日閾値・NestJSライフサイクル内scheduler
+
+- **判断:** PRODUCT_SPEC §5と付録Bの`session.archive_days=90`をactive/ended双方の既定保持期間とする。activeは対戦中の最終活動を表す`updatedAt`、endedは終了時点を表す`endedAt`が、それぞれ現在時刻から90日より前（境界ちょうどを除く）なら対象にする。`BATTLE_ACTIVE_ARCHIVE_AFTER_SECONDS` / `BATTLE_ENDED_ARCHIVE_AFTER_SECONDS`で状態別に独立変更でき、正の安全な整数でない値は既定値へフォールバックする。activeをarchiveしても終了操作とは扱わず`endedAt`はnullのままにする
+- **判断:** 既存のcron・scheduler基盤がなく、外部cron用HTTP APIやジョブキューも仕様にないため、追加依存なしの`setInterval`をNestJSの`OnApplicationBootstrap / OnModuleDestroy`で管理する。実行間隔は`BATTLE_ARCHIVE_INTERVAL_SECONDS`で変更でき、仕様未定義の既定値は90日の保持期間に対して十分短くDB負荷を抑える1時間とする。起動時はintervalを登録し、初回実行は1 interval後とする。Node.js timer上限を超える値を含む不正値は1時間へフォールバックする
+- **判断:** Serviceはactiveの`status + updatedAt`条件とendedの`status + endedAt IS NOT NULL`条件をORにした単一Prisma `updateMany`で、対象を`archived`へ一括更新して処理件数を返す。statusと時刻条件を更新時に再確認するため、複数APIインスタンスが同時実行しても最初の更新後は後続処理の対象外となる。分散ロック・生SQLは追加しない。同一プロセス内ではschedulerの実行中フラグで重複起動をスキップし、例外後も必ずフラグを解除して次回実行可能にする
+- **判断:** Observation追加とUndoはactive Sessionの`updatedAt`を既存Serializable transaction内の所有者・status条件付きupdateで先に更新する。これにより、観測処理が成功したSessionを古い活動時刻のままarchiveせず、archiveとの競合では一方が条件不成立または直列化競合になって部分保存しない。候補選択と終了は既存処理がBattleSession自体を更新するため追加変更しない
+- **判断:** archive更新は`status`以外を変更せず、`result / selectedArchetypeId / endedAt / Observation / Party / Archetype`を維持する。候補取得・観測追加・Undoは既存のactive状態検証によりarchive後も`400 INVALID_SESSION_STATE`となる。BATTLE-005の候補キーはSession statusをversionへ含み、旧キーは30秒TTLで自然失効するため、Redis削除やRedis依存をarchive処理へ追加しない。Redis停止中もDB処理だけで完了する
+- **判断:** 新しい公開HTTP APIとhealth項目は追加しない。schedulerは開始・完了・処理件数だけを集約ログへ記録し、失敗時はSession ID・userId・接続情報・例外内容を含めない固定メッセージを記録して次回実行を継続する。現行BattleSessionモデルだけで完了できるため、Prisma schemaとmigrationは変更せず6.19.3を維持する
+- **理由:** 90日の保持仕様を、対戦中の実際の更新と終了時刻に対応させ、HTTPやRedisを新たな障害点にせず、単一・複数プロセスの双方で冪等かつ競合に安全な最小バッチとして実現するため
+- **影響:** 現行DBの複合indexは`(status, startedAt)`であり、本タスクが使用する`updatedAt / endedAt`向けindexはDB変更禁止に従い追加していない。データ量増加後に実行計画上の問題が出た場合は、前進migrationを別タスクで検討する
