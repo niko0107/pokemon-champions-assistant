@@ -428,3 +428,16 @@
 - **判断:** 既存BattleSessionモデルに`selectedArchetypeId / result / status / endedAt`、Archetypeに`pickCount`が存在するため、Prisma schemaとmigrationは変更せず6.19.3を維持する。Redis・候補固定保存・counterplan・自動アーカイブ・履歴・WebSocket・UIは追加しない
 - **理由:** 現行DBと完了済みscoringを唯一の計算根拠として、候補表示・選択集計・終了を所有者限定かつ決定的・原子的に提供し、後続のキャッシュ・対策・履歴機能を先取りしないため
 - **影響:** PRODUCT_SPECにある観測追加・Undoレスポンス内の最新候補は引き続きObservation単体レスポンスのままで、クライアントは本GETを呼んで候補を更新する。再選択や終了済みSessionの候補閲覧が必要になった場合は、pickCountの補正・履歴契約と合わせて別タスクで仕様化する
+
+## 2026-07-26 Redisアダプター基盤(SETUP-010)
+
+### D-042: 公式node-redis・任意接続・フォールバック可能な操作結果
+
+- **判断:** Redis 7向けクライアントは、Redis公式Node.jsクライアントでありNode.js 20以降に対応する`redis` 6.1.0(node-redis)を1つだけ採用する。`ioredis`も自動再接続等を備える一般的な候補だが、現行のNode.js 22 / NestJS 11 / TypeScript構成では公式クライアントで要件を満たせるため併用しない
+- **判断:** root `AppModule`がglobalな`RedisModule`を1回importし、利用側には`REDIS_ADAPTER` tokenと`RedisAdapter` interfaceだけを公開する。node-redisのclientと生成providerはモジュール内部へ隠し、後続機能が具体クライアントAPIへ直接依存しないようにする。SETUP-010では新しいHTTP APIやhealthレスポンス項目を追加しない
+- **判断:** `REDIS_URL`は任意とし、未設定・空値ならclientを生成せずRedisを無効化する。不正URLは`redis:` / `rediss:` schemeとhostnameを検証して無効化し、URL・passwordを含まない警告だけを記録する。`.env.example`のlocalhost値は開発用の例として維持する
+- **判断:** module初期化時に明示的に`connect()`し、接続待ちは上限1.25秒としてAPI起動を阻害しない。接続timeoutは1秒、再接続は250msから指数的に増加させ5秒で上限、command queueは1000件を上限とし、無限高速再試行と無制限なメモリ増加を避ける。`ready / reconnecting / end / error`で利用可否を追跡し、Redis復旧時は同じadapterを再利用可能にする。module終了時はopenなclientを`destroy()`する
+- **判断:** adapterは`isAvailable / ping / get / set / setWithTtl / delete`だけを提供する。操作結果は`{ status: "ok", value } | { status: "unavailable" }`とし、`get`成功時の`null`(キー不存在)と接続・command失敗を区別して、後続機能がDBへフォールバックできるようにする。Redis障害をRFC 9457 HTTPエラーへ直接変換せず、同一障害中の警告は抑制して秘密情報を出さない
+- **判断:** `setWithTtl`は正の安全な整数秒だけを受け付け、不正値はRedisへ送らず`RangeError`にする。JSON helperは型安全性を保証できず、保存対象ごとのZod schema検証をadapterへ持ち込むと基盤が利用機能へ依存するため追加しない。利用側がserialize / deserializeとZod検証を担当する
+- **理由:** Redisを必須DBやAPI起動の単一障害点にせず、接続・ライフサイクル・障害判定だけを一箇所へ閉じ込め、BATTLE-005等が安全にフォールバックできる最小の再利用基盤を用意するため
+- **影響:** BATTLE-005は`REDIS_ADAPTER`を注入して候補レスポンス固有のJSON/Zod検証・キー・TTL・invalidationを実装する。キャッシュ、レート制限、Pub/Sub、WebSocket、分散ロックは本タスクでは未実装のまま

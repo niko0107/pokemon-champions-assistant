@@ -105,7 +105,7 @@
 - **前提タスク:** SETUP-005
 - **対象外:** 業務クエリ、health への DB 状態追加
 
-### ⬜ SETUP-010 Redis アダプター基盤
+### ✅ SETUP-010 Redis アダプター基盤
 
 - **目的:** Redis 接続の共通基盤(アダプター)を作る(キャッシュ処理本体は対象外)
 - **作業範囲:** apps/api に RedisModule(接続・切断・ping)、設定は REDIS_URL
