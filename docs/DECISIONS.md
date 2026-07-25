@@ -412,3 +412,19 @@
 - **判断:** SCORE側は既に`isRevoked=true`の観測を計算対象外にしているため変更せず、Undo APIからscoringを呼ばない。既存Observationモデルと制約だけで実現できるため、Prisma schemaとmigrationは変更せず6.19.3を維持する
 - **理由:** 正式なREST契約を維持しつつ、誤操作や同時リクエストで複数観測を取り消すことを防ぎ、追記型の観測履歴と所有権秘匿を壊さずにBATTLE-003だけを完結させるため
 - **影響:** PRODUCT_SPECに記載されたUndo直後の候補レスポンスは未実装のまま残る。候補計算の責務はBATTLE-004以降で確定する。WEB-004は表示中の直近有効Observation IDを本URLの`obsId`へ渡す必要がある
+
+## 2026-07-26 候補取得・選択・終了(BATTLE-004)
+
+### D-041: 現行シーズン候補・表示候補限定選択・単一選択集計・終了遷移
+
+- **判断:** PRODUCT_SPEC §10.2とIMPLEMENTATION_PLANに明記された `GET /api/v1/sessions/:id/candidates`、`POST /api/v1/sessions/:id/select`、`POST /api/v1/sessions/:id/end` の3本だけを追加する。全ルートへ既存sessions controllerの`JwtAuthGuard`と`@CurrentUser()`を適用し、Sessionを`id + userId`で検索する。他人・adminが所有しないSessionと不存在Sessionは同じ`404 NOT_FOUND`にする
+- **判断:** 候補取得・選択・終了は対戦中操作として`status=active`だけを許可し、`ended / archived`は`400 INVALID_SESSION_STATE`とする。PRODUCT_SPECは終了済みSessionの候補再取得を明記せず、対戦履歴はHISTORY-001のため、本タスクでは終了後の読み取り用途を追加しない
+- **判断:** 候補対象はSessionの`ruleId`と一致し、現在のUTC日付がSeasonの`startsAt <= currentDate <= endsAt`に含まれ、`status=published`の構築に限定する。SessionにはseasonIdがないため、日付範囲をPRODUCT_SPEC §7.1の「現行シーズン」の判定根拠とする。重複期間のSeasonが存在する場合は条件を満たす全published構築を対象にする
+- **判断:** SessionとObservationは所有者条件付きで1回、Archetypeはポケモン・メガ状態・技タグまでnested selectした1回のクエリで取得し、N+1を避ける。Observationは取消済みを含めseq昇順でkind別の必須・禁止payloadを検証して`ObservationInput`へ変換し、`isRevoked=true`の除外は既存`scoreArchetype`に委ねる。ArchetypeのDecimal・JSONB・日時は全件を`ArchetypeSnapshot`へ厳密に変換し、不正な永続状態は黙って候補から落とさず`500 INTERNAL_ERROR`とする
+- **判断:** 異常件数による計算量発散を避けるため、published構築の取得上限はARCHETYPE-005と同じ500件、表示件数はPRODUCT_SPEC §7.3・付録Bどおり3件とする。各Snapshotへ既存`scoreArchetype`を実行し、既存`rankCandidates`でexcluded除外と一致度→人気度tier→遭遇数→更新日→archetypeIdの決定的順序を適用する。独自スコア・閾値・補正は追加しない
+- **判断:** 候補レスポンスは`sessionId / candidates`とし、候補は`rank / archetypeId / name / matchRate / popularityTier / matched / contradictions / exclusionCodes / likelyUnseen / threatMoveIds`だけを返す。ARCHETYPE-005のstrictな表示候補スキーマを再利用し、`rawScore / maxScore / excluded / userId`等の内部値は返さない。対象構築または非除外候補が0件なら200の空配列とする
+- **判断:** 選択できるのは同じ時点の候補計算で返る上位3件だけとし、別Rule・archived・現行Season外・excluded・上位外は`400 INVALID_ARCHETYPE_SELECTION`とする。Sessionの`selectedArchetypeId IS NULL`条件付き更新と対象Archetypeの`pickCount + 1`をSerializable transactionで原子的に実行し、P2034は最大3回再試行する。PRODUCT_SPECに再選択・候補変更時の集計仕様がないため、二重加算を防ぐ目的で一度選択済みのSessionは同一候補・別候補とも`409 BATTLE_CONFLICT`とし、既存pickCountを変更しない
+- **判断:** 終了入力はstrictな任意`result`（`win / lose / unknown`）とし、省略時はDBのnullable表現を維持する。`selectedArchetypeId`は仕様・DBともnullableなので未選択でも終了可能とする。所有者込みでactive状態を確認後、`status=ended / endedAt=現在時刻 / 任意result`をSerializable transaction内の条件付きupdateで保存し、selectedArchetypeIdは維持する。既にended/archivedの再終了は400、同時終了の条件付き更新・直列化競合は`409 BATTLE_CONFLICT`とする
+- **判断:** 既存BattleSessionモデルに`selectedArchetypeId / result / status / endedAt`、Archetypeに`pickCount`が存在するため、Prisma schemaとmigrationは変更せず6.19.3を維持する。Redis・候補固定保存・counterplan・自動アーカイブ・履歴・WebSocket・UIは追加しない
+- **理由:** 現行DBと完了済みscoringを唯一の計算根拠として、候補表示・選択集計・終了を所有者限定かつ決定的・原子的に提供し、後続のキャッシュ・対策・履歴機能を先取りしないため
+- **影響:** PRODUCT_SPECにある観測追加・Undoレスポンス内の最新候補は引き続きObservation単体レスポンスのままで、クライアントは本GETを呼んで候補を更新する。再選択や終了済みSessionの候補閲覧が必要になった場合は、pickCountの補正・履歴契約と合わせて別タスクで仕様化する

@@ -8,10 +8,24 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@pokemon-champions/database";
 import {
+  rankCandidates,
+  scoreArchetype,
+  type ArchetypeSnapshot,
+  type ScoredCandidate,
+} from "@pokemon-champions/scoring";
+import {
+  battleCandidateSelectResponseSchema,
+  battleCandidatesResponseSchema,
+  battleSessionEndResponseSchema,
   battleSessionResponseSchema,
   partyDetailSchema,
   pokemonAbilitiesSchema,
+  type BattleCandidateSelect,
+  type BattleCandidateSelectResponse,
+  type BattleCandidatesResponse,
   type BattleSessionCreate,
+  type BattleSessionEnd,
+  type BattleSessionEndResponse,
   type BattleSessionResponse,
   type ObservationCreate,
   type ObservationResponse,
@@ -21,8 +35,18 @@ import {
   undoObservationResponseSchema,
 } from "@pokemon-champions/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  candidateArchetypeSelect,
+  candidateObservationSelect,
+  toArchetypeSnapshot,
+  toBattleCandidate,
+  toObservationInput,
+} from "./session-candidates";
 
 const OBSERVATION_TRANSACTION_MAX_ATTEMPTS = 3;
+const BATTLE_TRANSACTION_MAX_ATTEMPTS = 3;
+const BATTLE_CANDIDATE_QUERY_LIMIT = 500;
+const BATTLE_CANDIDATE_RESPONSE_LIMIT = 3;
 
 const sessionSelect = {
   id: true,
@@ -48,6 +72,33 @@ const observationSelect = {
   isRevoked: true,
   observedAt: true,
 } satisfies Prisma.ObservationSelect;
+
+const candidateSessionSelect = {
+  id: true,
+  ruleId: true,
+  status: true,
+  selectedArchetypeId: true,
+  observations: {
+    select: candidateObservationSelect,
+    orderBy: [{ seq: "asc" }],
+  },
+} satisfies Prisma.BattleSessionSelect;
+
+const selectedSessionSelect = {
+  id: true,
+  status: true,
+  selectedArchetypeId: true,
+  updatedAt: true,
+} satisfies Prisma.BattleSessionSelect;
+
+const endedSessionSelect = {
+  id: true,
+  status: true,
+  selectedArchetypeId: true,
+  result: true,
+  endedAt: true,
+  updatedAt: true,
+} satisfies Prisma.BattleSessionSelect;
 
 const partyStateSelect = {
   id: true,
@@ -100,6 +151,22 @@ const partyStateSelect = {
 type SessionRecord = Prisma.BattleSessionGetPayload<{ select: typeof sessionSelect }>;
 type PartyStateRecord = Prisma.PartyGetPayload<{ select: typeof partyStateSelect }>;
 type ObservationRecord = Prisma.ObservationGetPayload<{ select: typeof observationSelect }>;
+type CandidateSessionRecord = Prisma.BattleSessionGetPayload<{
+  select: typeof candidateSessionSelect;
+}>;
+type SelectedSessionRecord = Prisma.BattleSessionGetPayload<{
+  select: typeof selectedSessionSelect;
+}>;
+type EndedSessionRecord = Prisma.BattleSessionGetPayload<{
+  select: typeof endedSessionSelect;
+}>;
+type CandidateReadClient = Pick<Prisma.TransactionClient, "battleSession" | "archetype">;
+
+interface CandidateCalculation {
+  session: CandidateSessionRecord;
+  currentDate: Date;
+  candidates: BattleCandidatesResponse["candidates"];
+}
 
 interface ValidationIssue {
   path: string;
@@ -153,6 +220,141 @@ export class SessionsService {
 
       return this.serialize(session);
     });
+  }
+
+  async getCandidates(userId: string, sessionId: string): Promise<BattleCandidatesResponse> {
+    return this.translateBattleErrors(async () => {
+      const calculation = await this.calculateCandidates(this.prisma, userId, sessionId);
+      return battleCandidatesResponseSchema.parse({
+        sessionId: calculation.session.id,
+        candidates: calculation.candidates,
+      });
+    });
+  }
+
+  async selectCandidate(
+    userId: string,
+    sessionId: string,
+    input: BattleCandidateSelect,
+  ): Promise<BattleCandidateSelectResponse> {
+    for (let attempt = 1; attempt <= BATTLE_TRANSACTION_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (transaction) => {
+            const calculation = await this.calculateCandidates(transaction, userId, sessionId);
+            if (calculation.session.selectedArchetypeId !== null) {
+              this.throwBattleConflict();
+            }
+            if (
+              !calculation.candidates.some(
+                (candidate) => candidate.archetypeId === input.archetypeId,
+              )
+            ) {
+              this.throwInvalidArchetypeSelection();
+            }
+
+            const selected = await transaction.battleSession.updateMany({
+              where: {
+                id: calculation.session.id,
+                userId,
+                status: "active",
+                selectedArchetypeId: null,
+              },
+              data: { selectedArchetypeId: input.archetypeId },
+            });
+            if (selected.count !== 1) {
+              this.throwBattleConflict();
+            }
+
+            const incremented = await transaction.archetype.updateMany({
+              where: {
+                id: input.archetypeId,
+                ruleId: calculation.session.ruleId,
+                status: "published",
+                season: {
+                  startsAt: { lte: calculation.currentDate },
+                  endsAt: { gte: calculation.currentDate },
+                },
+              },
+              data: { pickCount: { increment: 1 } },
+            });
+            if (incremented.count !== 1) {
+              this.throwInvalidArchetypeSelection();
+            }
+
+            const session = await transaction.battleSession.findUnique({
+              where: { id: calculation.session.id },
+              select: selectedSessionSelect,
+            });
+            if (!session || session.selectedArchetypeId === null) {
+              this.throwInternalError();
+            }
+
+            return this.serializeSelectedSession(session, session.selectedArchetypeId);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error: unknown) {
+        if (
+          this.isBattleSerializationConflict(error) &&
+          attempt < BATTLE_TRANSACTION_MAX_ATTEMPTS
+        ) {
+          continue;
+        }
+        this.translateBattleMutationError(error);
+      }
+    }
+
+    return this.throwBattleConflict();
+  }
+
+  async end(
+    userId: string,
+    sessionId: string,
+    input: BattleSessionEnd,
+  ): Promise<BattleSessionEndResponse> {
+    try {
+      return await this.prisma.$transaction(
+        async (transaction) => {
+          const existing = await transaction.battleSession.findFirst({
+            where: { id: sessionId, userId },
+            select: endedSessionSelect,
+          });
+          if (!existing) {
+            this.throwNotFound();
+          }
+          if (existing.status !== "active") {
+            this.throwInvalidSessionState();
+          }
+
+          const endedAt = new Date();
+          const updated = await transaction.battleSession.updateMany({
+            where: { id: existing.id, userId, status: "active" },
+            data: {
+              status: "ended",
+              endedAt,
+              ...(input.result === undefined ? {} : { result: input.result }),
+            },
+          });
+          if (updated.count !== 1) {
+            this.throwBattleConflict();
+          }
+
+          const session = await transaction.battleSession.findUnique({
+            where: { id: existing.id },
+            select: endedSessionSelect,
+          });
+          if (!session || session.status !== "ended" || session.endedAt === null) {
+            this.throwInternalError();
+          }
+
+          return this.serializeEndedSession(session);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error: unknown) {
+      this.translateBattleMutationError(error);
+    }
   }
 
   async addObservation(
@@ -270,6 +472,68 @@ export class SessionsService {
     }
 
     return this.throwObservationConflict();
+  }
+
+  private async calculateCandidates(
+    client: CandidateReadClient,
+    userId: string,
+    sessionId: string,
+  ): Promise<CandidateCalculation> {
+    const session = await client.battleSession.findFirst({
+      where: { id: sessionId, userId },
+      select: candidateSessionSelect,
+    });
+    if (!session) {
+      this.throwNotFound();
+    }
+    if (session.status !== "active") {
+      this.throwInvalidSessionState();
+    }
+
+    const currentDate = this.currentCalendarDate();
+    const records = await client.archetype.findMany({
+      where: {
+        ruleId: session.ruleId,
+        status: "published",
+        season: {
+          startsAt: { lte: currentDate },
+          endsAt: { gte: currentDate },
+        },
+      },
+      select: candidateArchetypeSelect,
+      orderBy: [{ id: "asc" }],
+      take: BATTLE_CANDIDATE_QUERY_LIMIT,
+    });
+
+    const observations = session.observations.map(toObservationInput);
+    const snapshotById = new Map<string, ArchetypeSnapshot>();
+    const scored: ScoredCandidate[] = [];
+
+    for (const record of records) {
+      const snapshot = toArchetypeSnapshot(record);
+      snapshotById.set(snapshot.id, snapshot);
+      scored.push(scoreArchetype(snapshot, observations));
+    }
+
+    const ranked = rankCandidates(scored, snapshotById, BATTLE_CANDIDATE_RESPONSE_LIMIT);
+    const candidates = ranked.map((candidate) => {
+      const snapshot = snapshotById.get(candidate.archetypeId);
+      if (!snapshot) {
+        this.throwInternalError();
+      }
+      return toBattleCandidate(candidate, snapshot);
+    });
+
+    return {
+      session,
+      currentDate,
+      candidates: battleCandidatesResponseSchema.shape.candidates.parse(candidates),
+    };
+  }
+
+  private currentCalendarDate(): Date {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
   private async validateObservationReferences(
@@ -478,6 +742,29 @@ export class SessionsService {
     });
   }
 
+  private serializeSelectedSession(
+    session: SelectedSessionRecord,
+    selectedArchetypeId: string,
+  ): BattleCandidateSelectResponse {
+    return battleCandidateSelectResponseSchema.parse({
+      sessionId: session.id,
+      selectedArchetypeId,
+      status: session.status,
+      updatedAt: session.updatedAt.toISOString(),
+    });
+  }
+
+  private serializeEndedSession(session: EndedSessionRecord): BattleSessionEndResponse {
+    return battleSessionEndResponseSchema.parse({
+      sessionId: session.id,
+      selectedArchetypeId: session.selectedArchetypeId,
+      status: session.status,
+      result: session.result,
+      endedAt: session.endedAt?.toISOString() ?? null,
+      updatedAt: session.updatedAt.toISOString(),
+    });
+  }
+
   private isRetryableObservationConflict(error: unknown): boolean {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -505,6 +792,42 @@ export class SessionsService {
 
   private isRetryableUndoConflict(error: unknown): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+  }
+
+  private isBattleSerializationConflict(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+  }
+
+  private translateBattleMutationError(error: unknown): never {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    if (this.isBattleSerializationConflict(error)) {
+      this.throwBattleConflict();
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        this.throwNotFound();
+      }
+      if (error.code === "P2003") {
+        this.throwInvalidArchetypeSelection();
+      }
+    }
+    this.throwInternalError();
+  }
+
+  private async translateBattleErrors<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        this.throwNotFound();
+      }
+      this.throwInternalError();
+    }
   }
 
   private translateUndoError(error: unknown): never {
@@ -571,6 +894,17 @@ export class SessionsService {
     throw new BadRequestException(problem);
   }
 
+  private throwInvalidArchetypeSelection(): never {
+    const problem: ProblemDetails = {
+      type: "about:blank",
+      title: "Invalid Archetype Selection",
+      status: 400,
+      code: "INVALID_ARCHETYPE_SELECTION",
+      errors: [{ path: "archetypeId", message: "現在の候補から構築を選択してください" }],
+    };
+    throw new BadRequestException(problem);
+  }
+
   private throwInvalidMasterReference(path: string, message: string): never {
     const problem: ProblemDetails = {
       type: "about:blank",
@@ -588,6 +922,16 @@ export class SessionsService {
       title: "Observation Conflict",
       status: 409,
       code: "OBSERVATION_CONFLICT",
+    };
+    throw new ConflictException(problem);
+  }
+
+  private throwBattleConflict(): never {
+    const problem: ProblemDetails = {
+      type: "about:blank",
+      title: "Battle Conflict",
+      status: 409,
+      code: "BATTLE_CONFLICT",
     };
     throw new ConflictException(problem);
   }

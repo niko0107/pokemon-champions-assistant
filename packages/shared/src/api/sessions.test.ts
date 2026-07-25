@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  battleCandidateSelectResponseSchema,
+  battleCandidateSelectSchema,
+  battleCandidatesResponseSchema,
+  battleSessionEndResponseSchema,
+  battleSessionEndSchema,
   battleSessionCreateSchema,
   battleSessionResponseSchema,
   battleSessionStatusSchema,
@@ -248,6 +253,112 @@ describe("BATTLE-003 shared API schemas", () => {
       undoObservationResponseSchema.safeParse({
         ...response,
         userId: "fecccd4a-a137-4b3b-bb09-239306040706",
+        accessToken: "secret",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("BATTLE-004 shared API schemas", () => {
+  const archetypeId = "e7e7a0d4-5e2d-4f3d-9f09-8576ca1ca94e";
+  const candidate = {
+    archetypeId,
+    name: "展開構築",
+    matchRate: 100,
+    rank: 1,
+    popularityTier: "high",
+    matched: [
+      {
+        observationSeq: 1,
+        kind: "pokemon",
+        matched: true,
+        points: 10,
+        pokemonId: 1,
+      },
+    ],
+    contradictions: [],
+    exclusionCodes: [],
+    likelyUnseen: [{ pokemonId: 2, usageRate: 1 }],
+    threatMoveIds: [3],
+  };
+
+  it("候補0件と候補1〜3件のレスポンスを受理する", () => {
+    expect(battleCandidatesResponseSchema.parse({ sessionId, candidates: [] })).toEqual({
+      sessionId,
+      candidates: [],
+    });
+
+    const candidates = [1, 2, 3].map((rank) => ({ ...candidate, rank }));
+    expect(battleCandidatesResponseSchema.parse({ sessionId, candidates })).toEqual({
+      sessionId,
+      candidates,
+    });
+  });
+
+  it("候補4件とcandidateの契約外フィールドを拒否する", () => {
+    expect(
+      battleCandidatesResponseSchema.safeParse({
+        sessionId,
+        candidates: [1, 2, 3, 4].map((rank) => ({ ...candidate, rank })),
+      }).success,
+    ).toBe(false);
+    expect(
+      battleCandidatesResponseSchema.safeParse({
+        sessionId,
+        candidates: [{ ...candidate, rawScore: 10, userId: "internal" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("候補選択入力とレスポンスをstrictに検証する", () => {
+    expect(battleCandidateSelectSchema.parse({ archetypeId })).toEqual({ archetypeId });
+    expect(battleCandidateSelectSchema.safeParse({ archetypeId, userId: "internal" }).success).toBe(
+      false,
+    );
+    expect(
+      battleCandidateSelectResponseSchema.parse({
+        sessionId,
+        selectedArchetypeId: archetypeId,
+        status: "active",
+        updatedAt: timestamp,
+      }),
+    ).toEqual({
+      sessionId,
+      selectedArchetypeId: archetypeId,
+      status: "active",
+      updatedAt: timestamp,
+    });
+  });
+
+  it("終了入力は空または任意resultを受理し、契約外フィールドを拒否する", () => {
+    expect(battleSessionEndSchema.parse({})).toEqual({});
+    expect(battleSessionEndSchema.parse({ result: "win" })).toEqual({ result: "win" });
+    expect(battleSessionEndSchema.safeParse({ result: "draw" }).success).toBe(false);
+    expect(battleSessionEndSchema.safeParse({ result: "lose", userId: "internal" }).success).toBe(
+      false,
+    );
+  });
+
+  it("ended status・timestamp・nullable選択を持つ終了レスポンスだけを受理する", () => {
+    const response = {
+      sessionId,
+      selectedArchetypeId: archetypeId,
+      status: "ended",
+      result: "unknown",
+      endedAt: timestamp,
+      updatedAt: timestamp,
+    };
+    expect(battleSessionEndResponseSchema.parse(response)).toEqual(response);
+    expect(
+      battleSessionEndResponseSchema.safeParse({
+        ...response,
+        status: "active",
+      }).success,
+    ).toBe(false);
+    expect(
+      battleSessionEndResponseSchema.safeParse({
+        ...response,
+        userId: "internal",
         accessToken: "secret",
       }).success,
     ).toBe(false);
