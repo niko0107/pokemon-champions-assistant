@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -12,9 +13,14 @@ import {
   pokemonAbilitiesSchema,
   type BattleSessionCreate,
   type BattleSessionResponse,
+  type ObservationCreate,
+  type ObservationResponse,
   type ProblemDetails,
+  observationResponseSchema,
 } from "@pokemon-champions/shared";
 import { PrismaService } from "../prisma/prisma.service";
+
+const OBSERVATION_TRANSACTION_MAX_ATTEMPTS = 3;
 
 const sessionSelect = {
   id: true,
@@ -26,6 +32,20 @@ const sessionSelect = {
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.BattleSessionSelect;
+
+const observationSelect = {
+  id: true,
+  sessionId: true,
+  seq: true,
+  kind: true,
+  pokemonId: true,
+  moveId: true,
+  itemId: true,
+  abilityId: true,
+  position: true,
+  isRevoked: true,
+  observedAt: true,
+} satisfies Prisma.ObservationSelect;
 
 const partyStateSelect = {
   id: true,
@@ -77,6 +97,7 @@ const partyStateSelect = {
 
 type SessionRecord = Prisma.BattleSessionGetPayload<{ select: typeof sessionSelect }>;
 type PartyStateRecord = Prisma.PartyGetPayload<{ select: typeof partyStateSelect }>;
+type ObservationRecord = Prisma.ObservationGetPayload<{ select: typeof observationSelect }>;
 
 interface ValidationIssue {
   path: string;
@@ -130,6 +151,143 @@ export class SessionsService {
 
       return this.serialize(session);
     });
+  }
+
+  async addObservation(
+    userId: string,
+    sessionId: string,
+    input: ObservationCreate,
+  ): Promise<ObservationResponse> {
+    for (let attempt = 1; attempt <= OBSERVATION_TRANSACTION_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (transaction) => {
+            const session = await transaction.battleSession.findFirst({
+              where: { id: sessionId, userId },
+              select: { id: true, status: true },
+            });
+            if (!session) {
+              this.throwNotFound();
+            }
+            if (session.status !== "active") {
+              this.throwInvalidSessionState();
+            }
+
+            await this.validateObservationReferences(transaction, input);
+
+            const latest = await transaction.observation.aggregate({
+              where: { sessionId: session.id },
+              _max: { seq: true },
+            });
+            const seq = (latest._max.seq ?? 0) + 1;
+            if (!Number.isSafeInteger(seq)) {
+              this.throwObservationConflict();
+            }
+
+            const observation = await transaction.observation.create({
+              data: this.buildObservationData(session.id, seq, input),
+              select: observationSelect,
+            });
+
+            return this.serializeObservation(observation);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error: unknown) {
+        if (
+          this.isRetryableObservationConflict(error) &&
+          attempt < OBSERVATION_TRANSACTION_MAX_ATTEMPTS
+        ) {
+          continue;
+        }
+        this.translateObservationError(error);
+      }
+    }
+
+    return this.throwObservationConflict();
+  }
+
+  private async validateObservationReferences(
+    transaction: Prisma.TransactionClient,
+    input: ObservationCreate,
+  ): Promise<void> {
+    const pokemon = await transaction.pokemon.findUnique({
+      where: { id: input.pokemonId },
+      select: { abilities: true, isMega: true },
+    });
+    if (!pokemon) {
+      this.throwInvalidMasterReference("pokemonId", "存在しないポケモンです");
+    }
+
+    if (input.kind === "move") {
+      const [move, pokemonMove] = await Promise.all([
+        transaction.move.findUnique({
+          where: { id: input.moveId },
+          select: { id: true },
+        }),
+        transaction.pokemonMove.findUnique({
+          where: {
+            pokemonId_moveId: {
+              pokemonId: input.pokemonId,
+              moveId: input.moveId,
+            },
+          },
+          select: { pokemonId: true },
+        }),
+      ]);
+      if (!move || !pokemonMove) {
+        this.throwInvalidMasterReference(
+          "moveId",
+          move ? "対象ポケモンが習得できない技です" : "存在しない技です",
+        );
+      }
+    }
+
+    if (input.kind === "item") {
+      const item = await transaction.item.findUnique({
+        where: { id: input.itemId },
+        select: { id: true },
+      });
+      if (!item) {
+        this.throwInvalidMasterReference("itemId", "存在しない持ち物です");
+      }
+    }
+
+    if (input.kind === "ability") {
+      const ability = await transaction.ability.findUnique({
+        where: { id: input.abilityId },
+        select: { nameJa: true },
+      });
+      const abilities = pokemonAbilitiesSchema.safeParse(pokemon.abilities);
+      if (!ability || !abilities.success || !abilities.data.includes(ability.nameJa)) {
+        this.throwInvalidMasterReference(
+          "abilityId",
+          ability ? "対象ポケモンが持てない特性です" : "存在しない特性です",
+        );
+      }
+    }
+
+    if (input.kind === "mega" && !pokemon.isMega) {
+      this.throwInvalidMasterReference("pokemonId", "メガ形態ではないポケモンです");
+    }
+  }
+
+  private buildObservationData(
+    sessionId: string,
+    seq: number,
+    input: ObservationCreate,
+  ): Prisma.ObservationUncheckedCreateInput {
+    return {
+      sessionId,
+      seq,
+      kind: input.kind,
+      pokemonId: input.pokemonId,
+      moveId: input.kind === "move" ? input.moveId : null,
+      itemId: input.kind === "item" ? input.itemId : null,
+      abilityId: input.kind === "ability" ? input.abilityId : null,
+      position: input.kind === "position" ? input.position : null,
+      isRevoked: false,
+    };
   }
 
   private validatePartyState(party: PartyStateRecord, input: BattleSessionCreate): void {
@@ -223,6 +381,47 @@ export class SessionsService {
     });
   }
 
+  private serializeObservation(observation: ObservationRecord): ObservationResponse {
+    return observationResponseSchema.parse({
+      id: observation.id,
+      sessionId: observation.sessionId,
+      seq: observation.seq,
+      kind: observation.kind,
+      pokemonId: observation.pokemonId,
+      moveId: observation.moveId,
+      itemId: observation.itemId,
+      abilityId: observation.abilityId,
+      position: observation.position,
+      isRevoked: observation.isRevoked,
+      createdAt: observation.observedAt.toISOString(),
+    });
+  }
+
+  private isRetryableObservationConflict(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2002" || error.code === "P2034")
+    );
+  }
+
+  private translateObservationError(error: unknown): never {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    if (this.isRetryableObservationConflict(error)) {
+      this.throwObservationConflict();
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003" || error.code === "P2004") {
+        this.throwInvalidMasterReference("observation", "観測対象のマスタ参照が不正です");
+      }
+      if (error.code === "P2025") {
+        this.throwNotFound();
+      }
+    }
+    this.throwInternalError();
+  }
+
   private async translateErrors<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
@@ -261,6 +460,38 @@ export class SessionsService {
       errors,
     };
     throw new BadRequestException(problem);
+  }
+
+  private throwInvalidSessionState(): never {
+    const problem: ProblemDetails = {
+      type: "about:blank",
+      title: "Invalid Session State",
+      status: 400,
+      code: "INVALID_SESSION_STATE",
+      errors: [{ path: "id", message: "activeなセッションにのみ観測を追加できます" }],
+    };
+    throw new BadRequestException(problem);
+  }
+
+  private throwInvalidMasterReference(path: string, message: string): never {
+    const problem: ProblemDetails = {
+      type: "about:blank",
+      title: "Invalid Master Reference",
+      status: 400,
+      code: "INVALID_MASTER_REFERENCE",
+      errors: [{ path, message }],
+    };
+    throw new BadRequestException(problem);
+  }
+
+  private throwObservationConflict(): never {
+    const problem: ProblemDetails = {
+      type: "about:blank",
+      title: "Observation Conflict",
+      status: 409,
+      code: "OBSERVATION_CONFLICT",
+    };
+    throw new ConflictException(problem);
   }
 
   private throwInternalError(): never {

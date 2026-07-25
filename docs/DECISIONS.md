@@ -386,3 +386,16 @@
 - **判断:** Prisma生成migration適用後にtext許可値のCHECK制約を追加する必要が判明したため、適用済みmigrationを書き換えず、同じBATTLE-001内の前進migrationとして`battle_001_constraints`を追加する。Prismaと`@prisma/client`はlockfileどおり6.19.3を維持する
 - **理由:** 正式仕様のURLと既存の認証・所有権・RFC 9457契約を保ち、壊れたPartyや他人のリソースからセッションを開始させず、後続タスクに必要な永続構造だけを安全に準備するため
 - **影響:** Partyを非activeのまま選択した場合は開始できないため、WEB-006は開始前に選択Partyをactiveへ切り替える。BATTLE-002は既存Observationモデルへ追記し、BATTLE-004/BATTLE-007は既存statusを遷移させる。同一ユーザーの複数activeセッションは許可されたまま
+
+## 2026-07-26 観測情報追加(BATTLE-002)
+
+### D-039: Observation単体追記API・整合性検証・競合時再試行
+
+- **判断:** PRODUCT_SPEC §10.2に明記された `POST /api/v1/sessions/:id/observations` を1本だけ追加する。既存のsessions APIと同じ `JwtAuthGuard` / `@CurrentUser()`を使い、Sessionは`id + userId`で検索する。他人・adminが所有しないSessionと不存在Sessionは同じ`404 NOT_FOUND`、`ended / archived`は`400 INVALID_SESSION_STATE`にする
+- **判断:** 入力は `pokemon / move / item / ability / position / mega` のstrictなdiscriminated unionとし、各マスタIDは正の安全な整数とする。`userId / sessionId / seq / isRevoked / createdAt`は受け取らない。レスポンスは作成したObservationの `id / sessionId / seq / kind / pokemonId / moveId / itemId / abilityId / position / isRevoked / createdAt`だけを返し、DBの仕様名`observedAt`をAPIの作成時刻`createdAt`へ写像する
+- **判断:** 全kindでPokemonの存在を確認し、moveはMoveの存在とPokemonMove上の習得関係、itemはItemの存在、abilityはAbilityの存在とsharedで検証した`Pokemon.abilities`への包含、megaは`Pokemon.isMega=true`を保存前に検証する。候補テンプレとの一致可否は検証しない。不正は`400 INVALID_MASTER_REFERENCE`に統一する。positionはsharedの`lead / back`だけを入力スキーマで許可する
+- **判断:** Session確認・マスタ検証・`max(seq) + 1`の採番・Observation作成をSerializableな単一Prisma transactionで行う。既存の`(session_id, seq)`一意制約を競合検出に使い、P2034/P2002はtransaction全体を最大3回再試行する。競合が継続した場合だけ`409 OBSERVATION_CONFLICT`を返す。生SQLは使用しない
+- **判断:** PRODUCT_SPECは観測追加時に最新候補を返し、IMPLEMENTATION_PLANの従来記述はSnapshot変換とscoring呼び出しまでBATTLE-002に含めていたが、今回の明示要件では候補計算・`scoreArchetype`・`rankCandidates`が対象外である。そのためBATTLE-002はObservation単体レスポンスまでに限定し、候補レスポンスとの差は未実装として残す。重複観測を禁止する仕様はないため、同じ内容も別seqで追記できる
+- **判断:** BATTLE-001のObservationモデルはUUID、kind別payload CHECK、`(session_id, seq)`一意制約、Session削除CASCADE、Pokemon/Move/Item/Ability削除RESTRICTをすでに備えるため、schema変更とmigration追加は行わない。Prisma 6.19.3を維持する
+- **理由:** 今回指定された観測追記だけを、既存の永続制約・認証契約・マスタデータを再利用して原子的かつ所有者限定で提供し、Undo・候補計算・キャッシュ等を先取りしないため
+- **影響:** 候補計算とPRODUCT_SPEC §10.3形式のレスポンスは未実装のため、別タスクとして範囲を確定する必要がある。BATTLE-003は本APIが保存した`isRevoked=false`の観測を対象にUndoを実装できる

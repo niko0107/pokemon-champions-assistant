@@ -12,10 +12,14 @@ import {
   battleSessionCreateSchema,
   battleSessionIdParamsSchema,
   battleSessionResponseSchema,
+  observationCreateSchema,
+  observationResponseSchema,
   type AuthenticatedUser,
   type BattleSessionCreate,
   type BattleSessionIdParams,
   type BattleSessionResponse,
+  type ObservationCreate,
+  type ObservationResponse,
 } from "@pokemon-champions/shared";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
@@ -34,6 +38,18 @@ export class SessionsController {
     @Body(new ZodValidationPipe(battleSessionCreateSchema)) input: BattleSessionCreate,
   ): Promise<BattleSessionResponse> {
     return battleSessionResponseSchema.parse(await this.sessions.create(user.id, input));
+  }
+
+  @Post(":id/observations")
+  @HttpCode(HttpStatus.CREATED)
+  async addObservation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(battleSessionIdParamsSchema)) params: BattleSessionIdParams,
+    @Body(new ZodValidationPipe(observationCreateSchema)) input: ObservationCreate,
+  ): Promise<ObservationResponse> {
+    return observationResponseSchema.parse(
+      await this.sessions.addObservation(user.id, params.id, input),
+    );
   }
 
   @Get(":id")
