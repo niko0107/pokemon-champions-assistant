@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { BATTLE_SESSION_STATUSES, OBSERVATION_KINDS, OBSERVATION_POSITIONS } from "../enums";
+import {
+  BATTLE_RESULTS,
+  BATTLE_SESSION_STATUSES,
+  OBSERVATION_KINDS,
+  OBSERVATION_POSITIONS,
+} from "../enums";
+import { adminArchetypePreviewCandidateSchema } from "./admin-archetypes";
 
 const timestampSchema = z.string().datetime({ offset: true });
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
@@ -133,3 +139,58 @@ export const undoObservationResponseSchema = observationResponseSchema
   .strict();
 
 export type UndoObservationResponse = z.infer<typeof undoObservationResponseSchema>;
+
+export const battleCandidateSchema = adminArchetypePreviewCandidateSchema;
+
+export type BattleCandidate = z.infer<typeof battleCandidateSchema>;
+
+export const battleCandidatesResponseSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    candidates: z.array(battleCandidateSchema).max(3),
+  })
+  .strict();
+
+export type BattleCandidatesResponse = z.infer<typeof battleCandidatesResponseSchema>;
+
+export const battleCandidateSelectSchema = z
+  .object({
+    archetypeId: z.string().uuid(),
+  })
+  .strict();
+
+export type BattleCandidateSelect = z.infer<typeof battleCandidateSelectSchema>;
+
+export const battleCandidateSelectResponseSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    selectedArchetypeId: z.string().uuid(),
+    status: z.literal("active"),
+    updatedAt: timestampSchema,
+  })
+  .strict();
+
+export type BattleCandidateSelectResponse = z.infer<typeof battleCandidateSelectResponseSchema>;
+
+export const battleResultSchema = z.enum(BATTLE_RESULTS);
+
+export const battleSessionEndSchema = z
+  .object({
+    result: battleResultSchema.optional(),
+  })
+  .strict();
+
+export type BattleSessionEnd = z.infer<typeof battleSessionEndSchema>;
+
+export const battleSessionEndResponseSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    selectedArchetypeId: z.string().uuid().nullable(),
+    status: z.literal("ended"),
+    result: battleResultSchema.nullable(),
+    endedAt: timestampSchema,
+    updatedAt: timestampSchema,
+  })
+  .strict();
+
+export type BattleSessionEndResponse = z.infer<typeof battleSessionEndResponseSchema>;

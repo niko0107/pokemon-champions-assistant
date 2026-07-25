@@ -461,15 +461,15 @@
 - **前提タスク:** BATTLE-002
 - **対象外:** 候補再計算・Snapshot変換・scoring呼び出し、Redo、任意の過去Observation指定、Redis、UI
 
-### ⬜ BATTLE-004 候補取得・選択・終了
+### ✅ BATTLE-004 候補取得・選択・終了
 
 - **目的:** GET /sessions/{id}/candidates, POST /sessions/{id}/select, POST /sessions/{id}/end(B-06)を実装する
-- **作業範囲:** 候補一覧、selected_archetype_id 保存+pick_count 加算、終了(結果は任意入力)
+- **作業範囲:** 現行Season・同一Ruleのpublished構築を既存scoringで上位3件へ算出、表示候補のselected_archetype_id保存+pick_count加算、active Sessionの終了(結果は任意入力)
 - **変更予定パッケージ:** packages/shared, apps/api
-- **完了条件:** 選択で pick_count が増え、セッションが終了できる
-- **必要なテスト:** API テスト
+- **完了条件:** 自分のactive Sessionで決定的な候補を取得でき、表示候補の選択でpick_countが1回だけ増え、status=ended・ended_at設定で終了できる
+- **必要なテスト:** sharedスキーマ、変換・Service/APIテスト(候補順・除外・所有権・選択集計・同時選択/終了・既存API回帰)
 - **前提タスク:** BATTLE-002
-- **対象外:** counterplan(MATCHUP-008)
+- **対象外:** counterplan(MATCHUP-008)、Redis(BATTLE-005)、レート制限(BATTLE-006)、自動アーカイブ(BATTLE-007)、履歴・WebSocket・UI
 
 ### ⬜ BATTLE-005 Redis 候補キャッシュ
 
@@ -792,4 +792,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **BATTLE-004(候補取得)**。
+次に着手すべきタスク: **BATTLE-005(Redis 候補キャッシュ)**。

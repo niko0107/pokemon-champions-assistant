@@ -10,7 +10,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  battleCandidateSelectResponseSchema,
+  battleCandidateSelectSchema,
+  battleCandidatesResponseSchema,
   battleSessionCreateSchema,
+  battleSessionEndResponseSchema,
+  battleSessionEndSchema,
   battleSessionIdParamsSchema,
   battleSessionResponseSchema,
   observationCreateSchema,
@@ -18,7 +23,12 @@ import {
   undoObservationParamsSchema,
   undoObservationResponseSchema,
   type AuthenticatedUser,
+  type BattleCandidateSelect,
+  type BattleCandidateSelectResponse,
+  type BattleCandidatesResponse,
   type BattleSessionCreate,
+  type BattleSessionEnd,
+  type BattleSessionEndResponse,
   type BattleSessionIdParams,
   type BattleSessionResponse,
   type ObservationCreate,
@@ -65,6 +75,38 @@ export class SessionsController {
     return undoObservationResponseSchema.parse(
       await this.sessions.undoObservation(user.id, params.id, params.obsId),
     );
+  }
+
+  @Get(":id/candidates")
+  async getCandidates(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(battleSessionIdParamsSchema)) params: BattleSessionIdParams,
+  ): Promise<BattleCandidatesResponse> {
+    return battleCandidatesResponseSchema.parse(
+      await this.sessions.getCandidates(user.id, params.id),
+    );
+  }
+
+  @Post(":id/select")
+  @HttpCode(HttpStatus.OK)
+  async selectCandidate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(battleSessionIdParamsSchema)) params: BattleSessionIdParams,
+    @Body(new ZodValidationPipe(battleCandidateSelectSchema)) input: BattleCandidateSelect,
+  ): Promise<BattleCandidateSelectResponse> {
+    return battleCandidateSelectResponseSchema.parse(
+      await this.sessions.selectCandidate(user.id, params.id, input),
+    );
+  }
+
+  @Post(":id/end")
+  @HttpCode(HttpStatus.OK)
+  async end(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(battleSessionIdParamsSchema)) params: BattleSessionIdParams,
+    @Body(new ZodValidationPipe(battleSessionEndSchema)) input: BattleSessionEnd,
+  ): Promise<BattleSessionEndResponse> {
+    return battleSessionEndResponseSchema.parse(await this.sessions.end(user.id, params.id, input));
   }
 
   @Get(":id")

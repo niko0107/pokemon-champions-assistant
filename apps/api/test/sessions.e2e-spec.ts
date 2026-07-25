@@ -8,6 +8,9 @@ import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import {
   API_PREFIX,
+  battleCandidateSelectResponseSchema,
+  battleCandidatesResponseSchema,
+  battleSessionEndResponseSchema,
   battleSessionCreateSchema,
   battleSessionResponseSchema,
   observationResponseSchema,
@@ -15,6 +18,9 @@ import {
   problemDetailsSchema,
   undoObservationResponseSchema,
   type BattleSessionResponse,
+  type BattleCandidatesResponse,
+  type BattleCandidateSelectResponse,
+  type BattleSessionEndResponse,
   type ObservationCreate,
   type ObservationResponse,
 } from "@pokemon-champions/shared";
@@ -33,6 +39,7 @@ const missingPartyId = "ff1b9151-ae43-4241-b227-ca878a0f31e5";
 const sessionId = "0a6de75e-3972-47e2-b1fe-e599b330c52f";
 const missingSessionId = "a97f085e-72fc-49e4-a860-a871587309d7";
 const observationId = "86ce163f-9d78-4776-b00b-34598734a7cd";
+const archetypeId = "e7e7a0d4-5e2d-4f3d-9f09-8576ca1ca94e";
 const timestamp = "2026-07-26T00:00:00.000Z";
 
 const input = battleSessionCreateSchema.parse({ partyId, ruleId: 1 });
@@ -88,7 +95,41 @@ function notFound(): NotFoundException {
   });
 }
 
-describe("BATTLE-001/002/003 session API", () => {
+const candidatesResponse: BattleCandidatesResponse = battleCandidatesResponseSchema.parse({
+  sessionId,
+  candidates: [
+    {
+      archetypeId,
+      name: "展開構築",
+      matchRate: 100,
+      rank: 1,
+      popularityTier: "high",
+      matched: [],
+      contradictions: [],
+      exclusionCodes: [],
+      likelyUnseen: [{ pokemonId: 2, usageRate: 1 }],
+      threatMoveIds: [3],
+    },
+  ],
+});
+
+const selectedResponse: BattleCandidateSelectResponse = battleCandidateSelectResponseSchema.parse({
+  sessionId,
+  selectedArchetypeId: archetypeId,
+  status: "active",
+  updatedAt: timestamp,
+});
+
+const endedResponse: BattleSessionEndResponse = battleSessionEndResponseSchema.parse({
+  sessionId,
+  selectedArchetypeId: archetypeId,
+  status: "ended",
+  result: "win",
+  endedAt: timestamp,
+  updatedAt: timestamp,
+});
+
+describe("BATTLE-001/002/003/004 session API", () => {
   let app: INestApplication;
   let jwt: JwtService;
   let userAToken: string;
@@ -99,6 +140,9 @@ describe("BATTLE-001/002/003 session API", () => {
   const get = vi.fn();
   const addObservation = vi.fn();
   const undoObservation = vi.fn();
+  const getCandidates = vi.fn();
+  const selectCandidate = vi.fn();
+  const end = vi.fn();
   const pokemonFindMany = vi.fn();
   const partyFindMany = vi.fn();
 
@@ -115,7 +159,15 @@ describe("BATTLE-001/002/003 session API", () => {
         party: { findMany: partyFindMany },
       })
       .overrideProvider(SessionsService)
-      .useValue({ create, get, addObservation, undoObservation })
+      .useValue({
+        create,
+        get,
+        addObservation,
+        undoObservation,
+        getCandidates,
+        selectCandidate,
+        end,
+      })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -160,6 +212,24 @@ describe("BATTLE-001/002/003 session API", () => {
         requestedObservationId === observationId
           ? Promise.resolve(makeRevokedObservation())
           : Promise.reject(notFound()),
+    );
+    getCandidates.mockImplementation((callerId: string, requestedSessionId: string) =>
+      callerId === userAId && requestedSessionId === sessionId
+        ? Promise.resolve(candidatesResponse)
+        : Promise.reject(notFound()),
+    );
+    selectCandidate.mockImplementation(
+      (callerId: string, requestedSessionId: string, requestInput: { archetypeId: string }) =>
+        callerId === userAId &&
+        requestedSessionId === sessionId &&
+        requestInput.archetypeId === archetypeId
+          ? Promise.resolve(selectedResponse)
+          : Promise.reject(notFound()),
+    );
+    end.mockImplementation((callerId: string, requestedSessionId: string) =>
+      callerId === userAId && requestedSessionId === sessionId
+        ? Promise.resolve(endedResponse)
+        : Promise.reject(notFound()),
     );
     pokemonFindMany.mockResolvedValue([]);
     partyFindMany.mockResolvedValue([]);
@@ -517,6 +587,239 @@ describe("BATTLE-001/002/003 session API", () => {
     ]);
 
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+  });
+
+  it("自分のactive Sessionの候補上位3件を取得できる", async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/candidates`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(200);
+
+    expect(battleCandidatesResponseSchema.parse(response.body)).toEqual(candidatesResponse);
+    expect(response.body).not.toHaveProperty("userId");
+    expect(response.body.candidates[0]).not.toHaveProperty("rawScore");
+    expect(response.body.candidates[0]).not.toHaveProperty("maxScore");
+    expect(response.body.candidates[0]).not.toHaveProperty("excluded");
+    expect(getCandidates).toHaveBeenCalledWith(userAId, sessionId);
+  });
+
+  it("候補取得の認証なし401、他人・admin・不存在Sessionは404", async () => {
+    const unauthorized = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/candidates`)
+      .expect(401);
+    expect(problemDetailsSchema.parse(unauthorized.body)).toMatchObject({
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+
+    for (const [token, requestedSessionId] of [
+      [userBToken, sessionId],
+      [adminToken, sessionId],
+      [userAToken, missingSessionId],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/sessions/${requestedSessionId}/candidates`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(404);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 404,
+        code: "NOT_FOUND",
+      });
+    }
+  });
+
+  it("ended/archived Sessionの候補取得を400 INVALID_SESSION_STATEにする", async () => {
+    getCandidates.mockRejectedValue(
+      new BadRequestException({
+        type: "about:blank",
+        title: "Invalid Session State",
+        status: 400,
+        code: "INVALID_SESSION_STATE",
+      }),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/candidates`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(400);
+    expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+      status: 400,
+      code: "INVALID_SESSION_STATE",
+    });
+  });
+
+  it("自分のactive Sessionで候補を選択できる", async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/select`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({ archetypeId })
+      .expect(200);
+
+    expect(battleCandidateSelectResponseSchema.parse(response.body)).toEqual(selectedResponse);
+    expect(response.body).not.toHaveProperty("userId");
+    expect(response.body).not.toHaveProperty("pickCount");
+    expect(selectCandidate).toHaveBeenCalledWith(userAId, sessionId, { archetypeId });
+  });
+
+  it("候補選択のstrict入力違反を400 VALIDATION_ERRORにする", async () => {
+    for (const invalidInput of [{ archetypeId: "not-a-uuid" }, { archetypeId, userId: userBId }]) {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/select`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send(invalidInput)
+        .expect(400);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 400,
+        code: "VALIDATION_ERROR",
+      });
+    }
+    expect(selectCandidate).not.toHaveBeenCalled();
+  });
+
+  it("候補外選択を400、再選択競合を409にする", async () => {
+    selectCandidate
+      .mockRejectedValueOnce(
+        new BadRequestException({
+          type: "about:blank",
+          title: "Invalid Archetype Selection",
+          status: 400,
+          code: "INVALID_ARCHETYPE_SELECTION",
+        }),
+      )
+      .mockRejectedValueOnce(
+        new ConflictException({
+          type: "about:blank",
+          title: "Battle Conflict",
+          status: 409,
+          code: "BATTLE_CONFLICT",
+        }),
+      );
+
+    for (const expected of [
+      [400, "INVALID_ARCHETYPE_SELECTION"],
+      [409, "BATTLE_CONFLICT"],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${sessionId}/select`)
+        .set("Authorization", `Bearer ${userAToken}`)
+        .send({ archetypeId })
+        .expect(expected[0]);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: expected[0],
+        code: expected[1],
+      });
+    }
+  });
+
+  it("候補選択の認証なし401、他人・admin・不存在Sessionは404", async () => {
+    await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/select`)
+      .send({ archetypeId })
+      .expect(401);
+
+    for (const [token, requestedSessionId] of [
+      [userBToken, sessionId],
+      [adminToken, sessionId],
+      [userAToken, missingSessionId],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${requestedSessionId}/select`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ archetypeId })
+        .expect(404);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 404,
+        code: "NOT_FOUND",
+      });
+    }
+  });
+
+  it("自分のactive Sessionを終了できる", async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({ result: "win" })
+      .expect(200);
+
+    expect(battleSessionEndResponseSchema.parse(response.body)).toEqual(endedResponse);
+    expect(response.body).not.toHaveProperty("userId");
+    expect(response.body).not.toHaveProperty("accessToken");
+    expect(end).toHaveBeenCalledWith(userAId, sessionId, { result: "win" });
+  });
+
+  it("終了入力はstrictで、認証なしは401にする", async () => {
+    const invalid = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({ result: "draw", userId: userAId })
+      .expect(400);
+    expect(problemDetailsSchema.parse(invalid.body)).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+
+    const unauthorized = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .send({})
+      .expect(401);
+    expect(problemDetailsSchema.parse(unauthorized.body)).toMatchObject({
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("終了でも他人・admin・不存在Sessionを404、状態不正を400、競合を409にする", async () => {
+    for (const [token, requestedSessionId] of [
+      [userBToken, sessionId],
+      [adminToken, sessionId],
+      [userAToken, missingSessionId],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/sessions/${requestedSessionId}/end`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(404);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 404,
+        code: "NOT_FOUND",
+      });
+    }
+
+    end.mockRejectedValueOnce(
+      new BadRequestException({
+        type: "about:blank",
+        title: "Invalid Session State",
+        status: 400,
+        code: "INVALID_SESSION_STATE",
+      }),
+    );
+    const invalidState = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({})
+      .expect(400);
+    expect(problemDetailsSchema.parse(invalidState.body)).toMatchObject({
+      status: 400,
+      code: "INVALID_SESSION_STATE",
+    });
+
+    end.mockRejectedValueOnce(
+      new ConflictException({
+        type: "about:blank",
+        title: "Battle Conflict",
+        status: 409,
+        code: "BATTLE_CONFLICT",
+      }),
+    );
+    const conflict = await request(app.getHttpServer())
+      .post(`/api/v1/sessions/${sessionId}/end`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({})
+      .expect(409);
+    expect(problemDetailsSchema.parse(conflict.body)).toMatchObject({
+      status: 409,
+      code: "BATTLE_CONFLICT",
+    });
   });
 
   it("既存health・Party一覧・公開マスタ検索を壊さない", async () => {
