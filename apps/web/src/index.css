@@ -24,8 +24,14 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+summary::-webkit-details-marker {
+  display: none;
 }
 
 ::selection {

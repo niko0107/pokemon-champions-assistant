@@ -22,6 +22,12 @@ function authResponse(suffix: string) {
 
 async function mockAuth(page: Page): Promise<{ refreshCalls: () => number }> {
   let refreshCallCount = 0;
+  await page.route("**/api/v1/parties", async (route) => {
+    await route.fulfill({ status: 200, json: { items: [] } });
+  });
+  await page.route("**/api/v1/master/rules", async (route) => {
+    await route.fulfill({ status: 200, json: { items: [] } });
+  });
   await page.route("**/api/v1/auth/login", async (route) => {
     await route.fulfill({ status: 200, json: authResponse("login") });
   });

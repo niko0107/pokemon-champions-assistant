@@ -511,3 +511,16 @@
 - **判断:** PRODUCT_SPECに実数値計算レベルの固定値がないため、レベルは詳細レスポンスへ含めない。HP・その他能力・性格補正の計算およびレベルのUI仕様はWEB-006で扱う
 - **理由:** 検索候補の転送量と責務を増やさず、選択後だけ計算に必要な正確な種族値を取得できるようにし、abilities・PokemonMove・内部情報の重複公開を避けるため
 - **影響:** WEB-006は検索でPokemonを選択した後、この詳細APIから6種族値を取得して実数値計算へ利用できる
+
+## 2026-07-26 ホーム・パーティ登録画面(WEB-006)
+
+### D-049: Party作成ルート・Rule連動フォーム・実数値計算レベル
+
+- **判断:** 認証済みホーム`/`をParty一覧へ置き換え、新規作成はPRODUCT_SPECにURLの明記がないため`/parties/new`の1画面だけを追加する。編集・削除・対戦開始は今回の明示範囲外とし、対戦開始ボタンは後続実装であることが分かる無効状態にする
+- **判断:** 一覧と作成mutationはTanStack Queryで管理し、保存成功時にParty一覧queryをinvalidateする。ZustandはWEB-005の認証状態だけに維持し、長いフォームの入力状態は画面ローカルに置く。認証付きParty APIは既存APIクライアントを通し、401時の単一refresh・1回だけの再試行を再利用する
+- **判断:** Ruleは公開`GET /api/v1/master/rules`から取得し、選択した`teamSize`と同数のslotを作る。Party一覧レスポンスにはPokemon件数がないため、APIが保存時に常にRule.teamSizeとの一致を保証する現行契約に基づき、一覧の「登録済み数」は対応RuleのteamSizeを表示する。Rule取得失敗時は不確かな件数・名称を推測せずRule IDと確認中表示へフォールバックする
+- **判断:** Pokemon・技・持ち物は300ms debounceかつ2文字以上で公開検索し、技は選択中の`pokemon_id`を必ず付ける。特性はPokemon選択後に`pokemon_id`で取得し、Pokemon詳細は選択後だけ取得する。同一Party内のPokemon ID重複と同一Pokemon内の技ID重複は候補から除外し、送信時にもsharedのstrict `partyWriteSchema`で再検証する。通常形態とメガ形態は名称ではなく別Pokemon IDとして扱う
+- **判断:** PRODUCT_SPECに計算レベルの固定値がなくParty APIにもlevel保存項目がないため、レベルを1〜100の必須・画面内一時入力として追加し、既定値は置かない。レベル自体は送信せず、MASTER-011の6種族値・IV・EV・性格から仕様どおりのfloor順で算出した`actualStats`だけを保存する。実数値欄はAPI契約どおり正整数で手動上書きを許可し、レベル・性格・EV・IV変更時は上書きを破棄して再計算する
+- **判断:** 現行`partyWriteSchema`は各Pokemonの技をちょうど4件要求するため、UIも1〜4件ではなく4件必須として契約へ一致させる。Item・Ability・Tera Typeは現行APIどおり任意、Nature・EV・IV・actualStatsは既存契約どおり送信する。エラーはRFC 9457のcodeだけを安全な日本語へ写像し、サーバーdetailは表示しない
+- **理由:** APIやDBを変更せず、MASTER-010/011とPARTY-002の公開契約だけで、Rule人数・習得技・種族値計算を含む実用的なParty登録フローを構成するため
+- **影響:** Party編集・削除、複数Party切替、対戦セッション開始は後続タスクのまま。レベルはPartyに永続化されないため、保存後に同じ計算レベルを画面へ復元する機能はない
