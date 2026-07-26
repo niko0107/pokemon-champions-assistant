@@ -204,8 +204,8 @@ describe("MASTER-007 catalog search APIs", () => {
 
   it("Rule一覧を認証なしで決定的な順序のまま返す", async () => {
     const rules = [
-      { id: 2, name: "ダブル", teamSize: 6, pickSize: 4 },
-      { id: 1, name: "シングル", teamSize: 6, pickSize: 3 },
+      { id: 2, name: "ダブル", teamSize: 6, pickSize: 4, battleLevel: 50 },
+      { id: 1, name: "シングル", teamSize: 6, pickSize: 3, battleLevel: 50 },
     ];
     ruleFindMany.mockResolvedValue(rules);
 
@@ -219,6 +219,7 @@ describe("MASTER-007 catalog search APIs", () => {
         name: true,
         teamSize: true,
         pickSize: true,
+        battleLevel: true,
       },
       orderBy: [{ name: "asc" }, { id: "asc" }],
     });
@@ -231,7 +232,9 @@ describe("MASTER-007 catalog search APIs", () => {
   });
 
   it("不正なRuleのDB値は内部情報を返さず500にする", async () => {
-    ruleFindMany.mockResolvedValue([{ id: 1, name: "broken", teamSize: 2, pickSize: 3 }]);
+    ruleFindMany.mockResolvedValue([
+      { id: 1, name: "broken", teamSize: 2, pickSize: 3, battleLevel: 50 },
+    ]);
 
     const res = await request(app.getHttpServer()).get("/api/v1/master/rules").expect(500);
 

@@ -325,7 +325,11 @@ async function seedRules(
     if (!existing) {
       await transaction.rule.create({ data: rule });
       increment(summary, "rules", "created");
-    } else if (existing.teamSize === rule.teamSize && existing.pickSize === rule.pickSize) {
+    } else if (
+      existing.teamSize === rule.teamSize &&
+      existing.pickSize === rule.pickSize &&
+      existing.battleLevel === rule.battleLevel
+    ) {
       increment(summary, "rules", "unchanged");
     } else {
       await transaction.rule.update({

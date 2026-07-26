@@ -108,7 +108,9 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
   await page.route("**/api/v1/master/rules", async (route) => {
     await route.fulfill({
       status: 200,
-      json: { items: [{ id: 1, name: "シングルバトル", teamSize: 6, pickSize: 3 }] },
+      json: {
+        items: [{ id: 1, name: "シングルバトル", teamSize: 6, pickSize: 3, battleLevel: 50 }],
+      },
     });
   });
   await page.route("**/api/v1/master/pokemons?*", async (route) => {

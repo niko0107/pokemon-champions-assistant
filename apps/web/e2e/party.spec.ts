@@ -18,7 +18,13 @@ const authResponse = {
   user,
 };
 
-const rule = { id: 1, name: "シングルバトル", teamSize: 1, pickSize: 1 };
+const rule = {
+  id: 1,
+  name: "シングルバトル",
+  teamSize: 1,
+  pickSize: 1,
+  battleLevel: 50,
+};
 const pokemon = {
   id: 1,
   dexNo: 130,
@@ -163,7 +169,8 @@ test("375pxでPartyを登録し、再読み込み後も一覧へ反映する", a
 
   await page.getByLabel("パーティ名").fill("E2Eパーティ");
   await page.getByLabel("Rule").selectOption("1");
-  await page.getByLabel("実数値の計算レベル").fill("50");
+  await expect(page.getByLabel("対戦レベル")).toContainText("Lv. 50");
+  await expect(page.getByRole("spinbutton", { name: "実数値の計算レベル" })).toHaveCount(0);
   await page.getByLabel("ポケモン", { exact: true }).fill("ギャ");
   await page.getByRole("button", { name: "ギャラドス（normal）" }).click();
   await page.getByLabel("性格").selectOption("まじめ");
@@ -192,7 +199,14 @@ test("375pxでPartyを登録し、再読み込み後も一覧へ反映する", a
         pokemonId: 1,
         itemId: 1,
         abilityId: 1,
-        actualStats: { hp: 202 },
+        actualStats: {
+          hp: 202,
+          attack: 145,
+          defense: 99,
+          specialAttack: 80,
+          specialDefense: 120,
+          speed: 101,
+        },
       },
     ],
   });

@@ -6,6 +6,14 @@ import { AdminArchetypesService } from "./admin-archetypes.service";
 
 const now = new Date("2026-07-25T00:00:00.000Z");
 const archetypeId = "e7e7a0d4-5e2d-4f3d-9f09-8576ca1ca94e";
+const actualStats = {
+  hp: 215,
+  attack: 132,
+  defense: 187,
+  specialAttack: 88,
+  specialDefense: 93,
+  speed: 67,
+};
 
 const validInput: AdminArchetypeWrite = adminArchetypeWriteSchema.parse({
   name: "展開構築",
@@ -21,6 +29,7 @@ const validInput: AdminArchetypeWrite = adminArchetypeWriteSchema.parse({
       itemId: 20,
       itemAlternatives: [21],
       abilityId: 30,
+      actualStats,
       role: "lead",
       moves: [{ moveId: 40 }],
     },
@@ -174,6 +183,7 @@ describe("AdminArchetypesService", () => {
                 pokemon: { connect: { id: 10 } },
                 item: { connect: { id: 20 } },
                 ability: { connect: { id: 30 } },
+                actualStats,
                 moves: {
                   create: [{ move: { connect: { id: 40 } }, adoptionRate: 1 }],
                 },
@@ -222,8 +232,24 @@ describe("AdminArchetypesService", () => {
   });
 
   it("PUTは子要素を削除・再作成する全置換を1トランザクションで行う", async () => {
-    await expect(service.update(archetypeId, validInput)).resolves.toMatchObject({
+    const replacement = {
+      ...validInput,
+      pokemons: validInput.pokemons.map((pokemon) => ({
+        ...pokemon,
+        actualStats: { ...pokemon.actualStats, speed: 99 },
+      })),
+    };
+    transactionArchetypeUpdate.mockResolvedValue({
+      ...detailRecord,
+      pokemons: detailRecord.pokemons.map((pokemon) => ({
+        ...pokemon,
+        actualStats: replacement.pokemons[0]?.actualStats,
+      })),
+    });
+
+    await expect(service.update(archetypeId, replacement)).resolves.toMatchObject({
       id: archetypeId,
+      pokemons: [{ actualStats: expect.objectContaining({ speed: 99 }) }],
     });
 
     expect(sourceDeleteMany).toHaveBeenCalledWith({ where: { archetypeId } });
@@ -232,7 +258,13 @@ describe("AdminArchetypesService", () => {
       expect.objectContaining({
         where: { id: archetypeId },
         data: expect.objectContaining({
-          pokemons: expect.objectContaining({ create: expect.any(Array) }),
+          pokemons: {
+            create: [
+              expect.objectContaining({
+                actualStats: expect.objectContaining({ speed: 99 }),
+              }),
+            ],
+          },
           sources: { create: validInput.sources },
         }),
       }),

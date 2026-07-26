@@ -11,6 +11,7 @@ export * from "./api/master-search";
 export * from "./api/parties";
 export * from "./api/sessions";
 export * from "./archetype";
+export * from "./combat-stats";
 export * from "./constants/api";
 export * from "./enums";
 export * from "./errors";

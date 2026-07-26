@@ -23,6 +23,14 @@ const validInput = {
       nature: "わんぱく",
       teraType: null,
       evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
+      actualStats: {
+        hp: 215,
+        attack: 132,
+        defense: 187,
+        specialAttack: 88,
+        specialDefense: 93,
+        speed: 67,
+      },
       role: "lead",
       usageRate: 1,
       threatNotes: "あくびに注意",
@@ -34,12 +42,28 @@ const validInput = {
     {
       slot: 2,
       pokemonId: 2,
+      actualStats: {
+        hp: 180,
+        attack: 172,
+        defense: 95,
+        specialAttack: 120,
+        specialDefense: 95,
+        speed: 194,
+      },
       role: "sweeper",
       moves: [{ moveId: 3 }],
     },
     {
       slot: 3,
       pokemonId: 3,
+      actualStats: {
+        hp: 202,
+        attack: 80,
+        defense: 140,
+        specialAttack: 115,
+        specialDefense: 150,
+        speed: 90,
+      },
       role: "support",
       moves: [{ moveId: 4 }],
     },
@@ -123,6 +147,41 @@ describe("ARCHETYPE-002 shared API schemas", () => {
       adminArchetypeWriteSchema.safeParse({
         ...validInput,
         pokemons: [{ ...validInput.pokemons[0], usageRate: 1.1 }],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("actualStatsを必須とし、不正値と余分なキーを拒否する", () => {
+    const { actualStats: _actualStats, ...withoutActualStats } = validInput.pokemons[0];
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [withoutActualStats],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [
+          {
+            ...validInput.pokemons[0],
+            actualStats: { ...validInput.pokemons[0].actualStats, speed: Number.NaN },
+          },
+        ],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [
+          {
+            ...validInput.pokemons[0],
+            actualStats: { ...validInput.pokemons[0].actualStats, extra: 1 },
+          },
+        ],
         defaultLeads: [1],
       }).success,
     ).toBe(false);

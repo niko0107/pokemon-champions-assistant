@@ -23,7 +23,13 @@ const authResponse = {
   },
 };
 
-const rule = { id: 1, name: "シングルバトル", teamSize: 1, pickSize: 1 };
+const rule = {
+  id: 1,
+  name: "シングルバトル",
+  teamSize: 1,
+  pickSize: 1,
+  battleLevel: 50,
+};
 const pokemon = {
   id: 1,
   dexNo: 130,
@@ -248,6 +254,8 @@ describe("WEB-006 party pages", () => {
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
     expect(screen.getByText("1枠 · 1体選出")).toBeVisible();
+    expect(screen.getByLabelText("対戦レベル")).toHaveTextContent("Lv. 50");
+    expect(screen.queryByRole("spinbutton", { name: "実数値の計算レベル" })).toBeNull();
     const pokemonSearch = screen.getByLabelText("ポケモン");
     await user.type(pokemonSearch, "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
@@ -297,7 +305,6 @@ describe("WEB-006 party pages", () => {
     await user.type(screen.getByLabelText("パーティ名"), "ランク用");
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
-    await user.type(screen.getByLabelText("実数値の計算レベル"), "50");
     await user.type(screen.getByLabelText("ポケモン"), "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
     await user.selectOptions(screen.getByLabelText("性格"), "まじめ");
@@ -330,7 +337,14 @@ describe("WEB-006 party pages", () => {
           pokemonId: 1,
           itemId: 1,
           abilityId: 1,
-          actualStats: { hp: 202 },
+          actualStats: {
+            hp: 202,
+            attack: 145,
+            defense: 99,
+            specialAttack: 80,
+            specialDefense: 120,
+            speed: 101,
+          },
           moves: [
             { slot: 1, moveId: 1 },
             { slot: 2, moveId: 2 },
@@ -363,7 +377,6 @@ describe("WEB-006 party pages", () => {
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
     await user.click(screen.getByRole("button", { name: "パーティを保存" }));
     expect(await screen.findByText("パーティ名を入力してください。")).toBeVisible();
-    expect(screen.getByText("計算レベルを1〜100の整数で入力してください。")).toBeVisible();
     expect(screen.getByText("ポケモンを選択してください。")).toBeVisible();
     expect(
       fetchMock.mock.calls.filter(
@@ -381,7 +394,6 @@ describe("WEB-006 party pages", () => {
     await user.type(screen.getByLabelText("パーティ名"), "EVテスト");
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
-    await user.type(screen.getByLabelText("実数値の計算レベル"), "50");
     await user.type(screen.getByLabelText("ポケモン"), "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
 
@@ -398,5 +410,23 @@ describe("WEB-006 party pages", () => {
         ([input, init]) => String(input).endsWith("/parties") && init?.method === "POST",
       ),
     ).toHaveLength(0);
+  });
+
+  it("Rule変更時に新しいbattleLevelで実数値を再計算する", async () => {
+    const levelOneRule = { ...rule, id: 2, name: "レベル1", battleLevel: 1 };
+    vi.stubGlobal("fetch", createFetchMock({ rules: [rule, levelOneRule] }));
+    const user = userEvent.setup();
+    renderApp("/parties/new");
+
+    await screen.findByRole("option", { name: /シングルバトル/u });
+    await user.selectOptions(screen.getByLabelText("Rule"), "1");
+    await user.type(screen.getByLabelText("ポケモン"), "ギャ");
+    await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
+    await user.selectOptions(screen.getByLabelText("性格"), "まじめ");
+    expect(await screen.findByLabelText("ポケモン1 HP 実数値")).toHaveValue(170);
+
+    await user.selectOptions(screen.getByLabelText("Rule"), "2");
+    expect(screen.getByLabelText("対戦レベル")).toHaveTextContent("Lv. 1");
+    expect(screen.getByLabelText("ポケモン1 HP 実数値")).toHaveValue(13);
   });
 });

@@ -10,7 +10,14 @@ import {
 
 const defaultEvs = { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 };
 const defaultIvs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
-const defaultActualStats = { hp: 200, atk: 120, def: 150, spa: 100, spd: 130, spe: 110 };
+const defaultActualStats = {
+  hp: 200,
+  attack: 120,
+  defense: 150,
+  specialAttack: 100,
+  specialDefense: 130,
+  speed: 110,
+};
 
 const pokemon = {
   slot: 1,

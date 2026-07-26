@@ -642,3 +642,15 @@
 - **判断:** MATCHUP-007は構造化データ生成だけを担当し、LLMを呼び出さない。後続LLMは確定済みreason code・スコア・playstyle note・strategy codeを短い文章へ変換するだけで、おすすめ、選出、警戒技の追加・変更を行わない
 - **理由:** PRODUCT_SPEC §9.5・§10.3・§12の計算と文章化の責務を分離し、MATCHUP-004〜006の決定結果を唯一の根拠として、後続API・Web・LLMが同じ警戒情報を決定的に利用できるようにするため
 - **影響:** playstyleNotesは現行scoringのArchetypeSnapshotに含まれないため、MATCHUP-008ではDB/API層が保存値を同じ入力へ明示的に射影する必要がある。自然文生成、観測による技上書き、ace/back推定は後続または別仕様のままとする
+
+## 2026-07-27 戦闘能力値スナップショット基盤(MATCHUP-008A)
+
+### D-060: Rule共通対戦レベルと明示的な確定実数値
+
+- **判断:** 対戦レベルはPokemonごとに重複保存せず、同じ対戦条件を共有するRuleの必須`battleLevel`として1〜100で保持する。既存開発Ruleは新規forward migrationで明示的に50へ更新してからNOT NULLとCHECKを適用し、新規Ruleはadmin入力から必ず明示値を受け取る。実行時コードに「未設定なら50」の暗黙フォールバックは設けない
+- **判断:** Partyのダメージ計算入力は既存`PartyPokemon.actualStats`と`Rule.battleLevel`を正とし、PartyPokemonへlevel列を追加しない。PartyとArchetypeで同じ意味を使えるよう、actualStatsは`hp / attack / defense / specialAttack / specialDefense / speed`の正の安全な整数を持つstrict共通shared契約へ統一し、既存Party JSONの略称キーは同migrationで値を変えずに意味名へ変換する
+- **判断:** Archetypeのダメージ計算入力は新設する`ArchetypePokemon.actualStats`と`Rule.battleLevel`を正とし、ArchetypePokemonへlevel列を追加しない。種族値のコピー、IV31、EV0、neutral nature、level50などをAPI・migration・実行時に推定しない
+- **判断:** 根拠のない既存Archetype能力値を補完しないため、`archetype_pokemons.actual_stats`はJSONB nullableとし、DBはnullまたはobjectだけをCHECKする。一方、adminのPOST・PUT全置換・previewはshared/API契約で6能力すべてを必須にし、詳細な型・範囲・余分なキーはZodで拒否する。admin GETは既存nullデータも不正な補完なしで返せるようnullableレスポンスとする
+- **判断:** 公開`GET /api/v1/master/rules`と管理`GET /api/v1/admin/rules`は`id / name / teamSize / pickSize / battleLevel`だけを返し、admin Rule作成もbattleLevelを保存する。D-047の公開4列契約とD-049のUI専用level入力は本判断で置き換え、Party画面は選択RuleのbattleLevelを読取表示して既存純粋関数へ渡す。自由level入力、根拠のない50固定、levelのParty API送信は行わず、Rule未取得時は計算・保存しない
+- **理由:** MATCHUP-003〜005のダメージ計算は双方の正確なレベルと確定実数値を要求するが、従来はレベルがWebの一時入力だけでArchetypeには確定実数値がなかったため。共通Rule条件と明示入力を永続化し、MATCHUP-008が推測なしで純粋関数用Snapshotを構築できるようにする
+- **影響:** 既存ArchetypeのactualStatsはnullのままであり、後続MATCHUP-008では内部不整合として拒否する必要がある。既存Ruleはmigration時だけ50になるが、以後の作成・読取・計算に暗黙値は存在しない。counterplan API、CombatantSnapshot変換、Observation合成はMATCHUP-008へ残す

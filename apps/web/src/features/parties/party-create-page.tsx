@@ -34,7 +34,6 @@ export function PartyCreatePage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [ruleId, setRuleId] = useState<number | null>(null);
-  const [levelText, setLevelText] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [pokemons, setPokemons] = useState<PartyPokemonFormState[]>([]);
   const [validation, setValidation] = useState<ValidationState>(emptyValidation);
@@ -44,8 +43,7 @@ export function PartyCreatePage() {
     queryFn: fetchRules,
   });
   const selectedRule = rules.data?.items.find((rule) => rule.id === ruleId) ?? null;
-  const level =
-    levelText !== "" && Number.isSafeInteger(Number(levelText)) ? Number(levelText) : null;
+  const level = selectedRule?.battleLevel ?? null;
 
   const createMutation = useMutation({
     mutationFn: createParty,
@@ -64,9 +62,14 @@ export function PartyCreatePage() {
   function selectRule(nextRuleId: number): void {
     const rule = rules.data?.items.find((item) => item.id === nextRuleId);
     setRuleId(rule?.id ?? null);
-    setPokemons(
+    setPokemons((current) =>
       rule
-        ? Array.from({ length: rule.teamSize }, (_, index) => createEmptyPokemonSlot(index + 1))
+        ? Array.from({ length: rule.teamSize }, (_, index) => {
+            const existing = current[index];
+            return existing
+              ? { ...existing, slot: index + 1, actualStatOverrides: {} }
+              : createEmptyPokemonSlot(index + 1);
+          })
         : [],
     );
     setValidation(emptyValidation);
@@ -78,9 +81,6 @@ export function PartyCreatePage() {
 
     if (!selectedRule) {
       general.push("Ruleを選択してください。");
-    }
-    if (level === null || level < 1 || level > 100) {
-      general.push("計算レベルを1〜100の整数で入力してください。");
     }
     if (!name.trim()) {
       general.push("パーティ名を入力してください。");
@@ -140,11 +140,11 @@ export function PartyCreatePage() {
           ivs: pokemon.ivs,
           actualStats: {
             hp: pokemon.actualStatOverrides.hp ?? calculated.hp,
-            atk: pokemon.actualStatOverrides.atk ?? calculated.atk,
-            def: pokemon.actualStatOverrides.def ?? calculated.def,
-            spa: pokemon.actualStatOverrides.spa ?? calculated.spa,
-            spd: pokemon.actualStatOverrides.spd ?? calculated.spd,
-            spe: pokemon.actualStatOverrides.spe ?? calculated.spe,
+            attack: pokemon.actualStatOverrides.atk ?? calculated.attack,
+            defense: pokemon.actualStatOverrides.def ?? calculated.defense,
+            specialAttack: pokemon.actualStatOverrides.spa ?? calculated.specialAttack,
+            specialDefense: pokemon.actualStatOverrides.spd ?? calculated.specialDefense,
+            speed: pokemon.actualStatOverrides.spe ?? calculated.speed,
           },
           moves: pokemon.moves.flatMap((move, moveIndex) =>
             move ? [{ slot: moveIndex + 1, moveId: move.id }] : [],
@@ -296,30 +296,16 @@ export function PartyCreatePage() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-700 focus:ring-3 focus:ring-blue-100"
                 />
               </div>
-              <div>
-                <label htmlFor="party-level" className="mb-2 block text-sm font-bold">
-                  実数値の計算レベル
-                </label>
-                <input
-                  id="party-level"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={levelText}
-                  onChange={(event) => {
-                    setLevelText(event.target.value);
-                    setPokemons((current) =>
-                      current.map((pokemon) => ({
-                        ...pokemon,
-                        actualStatOverrides: {},
-                      })),
-                    );
-                  }}
-                  placeholder="1〜100"
-                  className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-700 focus:ring-3 focus:ring-blue-100"
-                />
-                <p className="mt-2 text-xs leading-5 text-slate-500">
-                  UI上の計算専用です。レベル自体はParty APIへ保存されません。
+              <div
+                aria-label="対戦レベル"
+                className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-3"
+              >
+                <p className="text-sm font-bold">実数値の計算レベル</p>
+                <p className="mt-1 text-lg font-black text-blue-950">
+                  {selectedRule ? `Lv. ${selectedRule.battleLevel}` : "Rule選択後に表示"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  選択したRuleの対戦レベルを使用します。Party APIへlevelは送信しません。
                 </p>
               </div>
               <label className="flex min-h-12 items-center gap-3 self-start rounded-xl border border-slate-300 bg-white px-4 py-3">
@@ -362,7 +348,7 @@ export function PartyCreatePage() {
                 <PokemonSlotEditor
                   key={pokemon.slot}
                   value={pokemon}
-                  level={level !== null && level >= 1 && level <= 100 ? level : null}
+                  level={level}
                   excludedPokemonIds={
                     new Set(
                       pokemons.flatMap((item, itemIndex) =>

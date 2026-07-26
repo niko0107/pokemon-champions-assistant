@@ -25,6 +25,7 @@ const ruleSelect = {
   name: true,
   teamSize: true,
   pickSize: true,
+  battleLevel: true,
 } satisfies Prisma.RuleSelect;
 
 type SeasonRecord = Prisma.SeasonGetPayload<{ select: typeof seasonSelect }>;
@@ -82,6 +83,7 @@ export class AdminSeasonsRulesService {
           name: input.name,
           teamSize: input.teamSize,
           pickSize: input.pickSize,
+          battleLevel: input.battleLevel,
         },
         select: ruleSelect,
       });
@@ -130,6 +132,7 @@ export class AdminSeasonsRulesService {
       name: record.name,
       teamSize: record.teamSize,
       pickSize: record.pickSize,
+      battleLevel: record.battleLevel,
     });
   }
 

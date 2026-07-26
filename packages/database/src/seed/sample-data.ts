@@ -242,6 +242,7 @@ export const sampleMasterData = {
       name: "シングルバトル（6体から3体選出）",
       teamSize: 6,
       pickSize: 3,
+      battleLevel: 50,
     },
   ],
 } satisfies SampleMasterData;

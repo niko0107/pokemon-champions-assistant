@@ -18,6 +18,7 @@ describe("MASTER-005 sample master data", () => {
     expect(parsed.pokemonMoves.length).toBeGreaterThanOrEqual(5);
     expect(parsed.seasons).toHaveLength(1);
     expect(parsed.rules).toHaveLength(1);
+    expect(parsed.rules[0]?.battleLevel).toBe(50);
   });
 
   it("元ポケモンをメガ形態より先に並べる", () => {

@@ -27,7 +27,13 @@ const authResponse = {
   },
 };
 
-const rule = { id: 1, name: "シングルバトル", teamSize: 2, pickSize: 1 };
+const rule = {
+  id: 1,
+  name: "シングルバトル",
+  teamSize: 2,
+  pickSize: 1,
+  battleLevel: 50,
+};
 const parties = [
   {
     id: partyId,

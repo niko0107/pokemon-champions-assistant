@@ -21,7 +21,7 @@ const adminId = "95335a95-31d1-429d-87e3-8921d2b05d08";
 const userId = "fecccd4a-a137-4b3b-bb09-239306040706";
 
 const season = { id: 1, name: "シーズン12", startsAt: "2026-01-01", endsAt: "2026-03-31" };
-const rule = { id: 1, name: "シングル", teamSize: 6, pickSize: 3 };
+const rule = { id: 1, name: "シングル", teamSize: 6, pickSize: 3, battleLevel: 50 };
 
 describe("ARCHETYPE-003 admin seasons/rules API", () => {
   let app: INestApplication;
@@ -112,9 +112,15 @@ describe("ARCHETYPE-003 admin seasons/rules API", () => {
     const created = await request(app.getHttpServer())
       .post("/api/v1/admin/rules")
       .set("Authorization", `Bearer ${adminToken}`)
-      .send({ name: "シングル", teamSize: 6, pickSize: 3 })
+      .send({ name: "シングル", teamSize: 6, pickSize: 3, battleLevel: 50 })
       .expect(201);
     expect(adminRuleSchema.parse(created.body)).toEqual(rule);
+    expect(createRule).toHaveBeenCalledWith({
+      name: "シングル",
+      teamSize: 6,
+      pickSize: 3,
+      battleLevel: 50,
+    });
   });
 
   it("シーズン終了時に構築を一括アーカイブできる", async () => {
@@ -155,13 +161,22 @@ describe("ARCHETYPE-003 admin seasons/rules API", () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/admin/rules")
       .set("Authorization", `Bearer ${adminToken}`)
-      .send({ name: "不整合", teamSize: 3, pickSize: 6 })
+      .send({ name: "不整合", teamSize: 3, pickSize: 6, battleLevel: 50 })
       .expect(400);
 
     expect(problemDetailsSchema.parse(response.body)).toMatchObject({
       status: 400,
       code: "VALIDATION_ERROR",
     });
+    expect(createRule).not.toHaveBeenCalled();
+  });
+
+  it("battleLevel範囲外のルール作成を400にする", async () => {
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/rules")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "不正レベル", teamSize: 6, pickSize: 3, battleLevel: 101 })
+      .expect(400);
     expect(createRule).not.toHaveBeenCalled();
   });
 

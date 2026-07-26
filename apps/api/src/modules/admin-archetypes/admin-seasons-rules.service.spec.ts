@@ -9,7 +9,13 @@ const seasonRow = {
   startsAt: new Date("2026-01-01T00:00:00.000Z"),
   endsAt: new Date("2026-03-31T00:00:00.000Z"),
 };
-const ruleRow = { id: 1, name: "シングル", teamSize: 6, pickSize: 3 };
+const ruleRow = {
+  id: 1,
+  name: "シングル",
+  teamSize: 6,
+  pickSize: 3,
+  battleLevel: 50,
+};
 
 function p2002(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
@@ -90,14 +96,29 @@ describe("AdminSeasonsRulesService (ARCHETYPE-003)", () => {
   });
 
   it("ルールを作成する", async () => {
-    const result = await service.createRule({ name: "シングル", teamSize: 6, pickSize: 3 });
-    expect(result).toEqual({ id: 1, name: "シングル", teamSize: 6, pickSize: 3 });
+    const result = await service.createRule({
+      name: "シングル",
+      teamSize: 6,
+      pickSize: 3,
+      battleLevel: 50,
+    });
+    expect(ruleCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          name: "シングル",
+          teamSize: 6,
+          pickSize: 3,
+          battleLevel: 50,
+        },
+      }),
+    );
+    expect(result).toEqual(ruleRow);
   });
 
   it("ルール名重複(P2002)を409 RULE_CONFLICTに変換する", async () => {
     ruleCreate.mockRejectedValue(p2002());
     await expect(
-      service.createRule({ name: "重複", teamSize: 6, pickSize: 3 }),
+      service.createRule({ name: "重複", teamSize: 6, pickSize: 3, battleLevel: 50 }),
     ).rejects.toMatchObject({ status: 409, response: { code: "RULE_CONFLICT" } });
   });
 
