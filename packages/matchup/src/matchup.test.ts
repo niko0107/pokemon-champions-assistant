@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateDamageRange } from "./damage-estimation";
 import { calculateMatchupScore } from "./matchup-score";
-import { buildCounterplan } from "./counterplan";
+import { buildCounterplan, buildMatchupMatrix } from "./counterplan";
 import { getCombinedTypeEffectiveness, getDefensiveTypeProfile } from "./type-effectiveness";
 import type { CombatantSnapshot } from "./types";
 
@@ -139,7 +139,18 @@ describe("calculateMatchupScore (MATCHUP-002〜004)", () => {
 });
 
 describe("buildCounterplan (MATCHUP-005〜007 で実装)", () => {
-  it.todo("自6体 × 相手6体の相性マトリクス(36セル)を計算する");
+  it("MATCHUP-005: 自6体 × 相手6体の相性マトリクス(36セル)を計算する", () => {
+    const self = Array.from({ length: 6 }, (_, index) => ({
+      combatant: { ...dummyCombatant, pokemonId: index + 1 },
+      level: 50,
+    }));
+    const opponents = Array.from({ length: 6 }, (_, index) => ({
+      combatant: { ...dummyCombatant, pokemonId: index + 101 },
+      level: 50,
+    }));
+
+    expect(buildMatchupMatrix({ self, opponents }).matrix.cells).toHaveLength(36);
+  });
   it.todo("相手のエース級への回答が最低1体含まれる選出を提案する");
   it.todo("先発は相手の default_leads に最も有利なポケモンを選ぶ");
   it.todo("警戒技として setup/hazard/screen/priority/status タグの技を列挙する");

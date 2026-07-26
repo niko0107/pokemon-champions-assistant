@@ -245,24 +245,56 @@ export interface MatchupScore {
   breakdown: MatchupScoreBreakdown;
 }
 
-/** 相性マトリクス(自6 × 相手6) */
+/** MATCHUP-005でマトリクスへ渡す、レベルを明示した1体分の入力。 */
+export interface MatchupMatrixCombatant {
+  readonly combatant: CombatantSnapshot;
+  readonly level: number;
+}
+
+/** 相性マトリクス入力。DB由来のParty / Archetypeは呼び出し側で変換する。 */
+export interface MatchupMatrixInput {
+  readonly self: readonly MatchupMatrixCombatant[];
+  readonly opponents: readonly MatchupMatrixCombatant[];
+}
+
+/** 相性マトリクス(行: 自分、列: 相手)。 */
 export interface MatchupMatrix {
-  scores: MatchupScore[];
+  readonly selfPokemonIds: readonly number[];
+  readonly opponentPokemonIds: readonly number[];
+  readonly cells: readonly MatchupScore[];
+  /** MATCHUP-001の既存利用側との互換エイリアス。 */
+  readonly scores: readonly MatchupScore[];
+}
+
+/** 相手1体に対する、自分Pokemon 1体分の順位。 */
+export interface RankedOpponentRecommendation {
+  readonly rank: number;
+  readonly recommendedSelfPokemonId: number;
+  /** MATCHUP-001の既存利用側との互換エイリアス。 */
+  readonly myPokemonId: number;
+  readonly score: number;
+  readonly matchupResult: MatchupScore;
+  /** 理由の構造化データ(LLM への入力・テンプレ文生成に使用)。 */
+  readonly reasonCodes: readonly MatchupReasonCode[];
+  /** 警戒技の生成はMATCHUP-007のため、MATCHUP-005では空配列。 */
+  readonly cautionMoveIds: readonly number[];
 }
 
 /** 相手1体に対するおすすめ(counterplan の perOpponent に対応) */
 export interface OpponentRecommendation {
-  opponentPokemonId: number;
-  recommendations: {
-    rank: number;
-    myPokemonId: number;
-    score: number;
-    /** 理由の構造化データ(LLM への入力・テンプレ文生成に使用) */
-    reasonCodes: string[];
-    cautionMoveIds: number[];
-  }[];
+  readonly opponentPokemonId: number;
+  readonly recommendations: readonly RankedOpponentRecommendation[];
   /** 出さない方がよい自ポケモン */
-  avoidMyPokemonIds: number[];
+  readonly avoidMyPokemonIds: readonly number[];
+}
+
+/** MATCHUP-005の出力。Counterplan完成前のマトリクスと相手別順位だけを返す。 */
+export interface MatchupMatrixResult {
+  readonly matrix: MatchupMatrix;
+  /** PRODUCT_SPEC §10.3の名称。 */
+  readonly perOpponent: readonly OpponentRecommendation[];
+  /** 後続層から意図を読み取りやすくする同一値のエイリアス。 */
+  readonly recommendationsByOpponent: readonly OpponentRecommendation[];
 }
 
 /** おすすめ選出(§9.4) */
