@@ -16,16 +16,20 @@ import {
 } from "../parties/party-api";
 import { PartyShell } from "../parties/party-shell";
 import { useDebouncedValue } from "../parties/use-debounced-value";
+import { ApiError } from "../../lib/api-client";
 import {
   addMoveObservation,
   addPokemonObservation,
   battleQueryKeys,
   fetchBattleCandidates,
   fetchBattleSession,
+  undoBattleObservation,
 } from "./battle-api";
 import { BattleCandidatesPanel } from "./battle-candidates";
-import { getBattleErrorMessage } from "./battle-errors";
+import { getBattleErrorMessage, getBattleUndoErrorMessage } from "./battle-errors";
 import {
+  applyBattleObservationUndo,
+  getLatestActiveBattleObservation,
   loadBattleObservations,
   saveBattleObservations,
   toStoredMoveObservation,
@@ -68,6 +72,36 @@ function MoveFacts({ move }: { move: MoveSummary }) {
   );
 }
 
+function observationSummary(
+  item: StoredBattleObservation,
+  observations: StoredBattleObservation[],
+): {
+  kindLabel: string;
+  name: string;
+  pokemonName: string;
+} {
+  if (item.type === "pokemon") {
+    return {
+      kindLabel: "ポケモン観測",
+      name: item.pokemon.nameJa,
+      pokemonName: item.pokemon.nameJa,
+    };
+  }
+
+  const pokemonObservation = observations.find(
+    (observation): observation is StoredPokemonObservation =>
+      observation.type === "pokemon" &&
+      observation.observation.pokemonId === item.observation.pokemonId,
+  );
+  const pokemonName =
+    pokemonObservation?.pokemon.nameJa ?? `Pokemon ID: ${item.observation.pokemonId}`;
+  return {
+    kindLabel: "技観測",
+    name: item.move.nameJa,
+    pokemonName,
+  };
+}
+
 function BattleWorkspace({
   session,
   rule,
@@ -87,6 +121,8 @@ function BattleWorkspace({
   const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
   const [pokemonClientError, setPokemonClientError] = useState<string | null>(null);
   const [moveClientError, setMoveClientError] = useState<string | null>(null);
+  const [undoClientError, setUndoClientError] = useState<string | null>(null);
+  const [undoSuccessMessage, setUndoSuccessMessage] = useState<string | null>(null);
   const submissionInFlight = useRef(false);
   const debouncedPokemonQuery = useDebouncedValue(pokemonQuery.trim(), 300);
   const debouncedMoveQuery = useDebouncedValue(moveQuery.trim(), 300);
@@ -94,11 +130,14 @@ function BattleWorkspace({
   const maximumPokemonCount = rule.teamSize;
   const isActive = session.status === "active";
   const pokemonObservations = observations.filter(
-    (item): item is StoredPokemonObservation => item.type === "pokemon",
+    (item): item is StoredPokemonObservation =>
+      item.type === "pokemon" && !item.observation.isRevoked,
   );
   const moveObservations = observations.filter(
-    (item): item is StoredMoveObservation => item.type === "move",
+    (item): item is StoredMoveObservation => item.type === "move" && !item.observation.isRevoked,
   );
+  const revokedObservations = observations.filter((item) => item.observation.isRevoked);
+  const latestActiveObservation = getLatestActiveBattleObservation(session.id, observations);
   const hasReachedLimit = pokemonObservations.length >= maximumPokemonCount;
   const observedPokemonIds = new Set(pokemonObservations.map((item) => item.observation.pokemonId));
   const selectedPokemon =
@@ -111,6 +150,9 @@ function BattleWorkspace({
   const selectedMoveIds = new Set(
     selectedPokemonMoves.map((item) => item.observation.moveId).filter((id) => id !== null),
   );
+  const orphanedMoveObservations = moveObservations.filter(
+    (moveObservation) => !observedPokemonIds.has(moveObservation.observation.pokemonId),
+  );
   const candidates = useQuery({
     queryKey: battleQueryKeys.candidates(session.id),
     queryFn: () => fetchBattleCandidates(session.id),
@@ -119,8 +161,11 @@ function BattleWorkspace({
   });
 
   useEffect(() => {
-    if (
-      pokemonObservations.length > 0 &&
+    if (pokemonObservations.length === 0) {
+      if (selectedPokemonId !== null) {
+        setSelectedPokemonId(null);
+      }
+    } else if (
       !pokemonObservations.some((item) => item.observation.pokemonId === selectedPokemonId)
     ) {
       setSelectedPokemonId(pokemonObservations[0]?.observation.pokemonId ?? null);
@@ -133,18 +178,15 @@ function BattleWorkspace({
     setObservations(next);
   }
 
-  function refreshCandidatesAfterObservation(): void {
-    void queryClient
-      .cancelQueries({
-        queryKey: battleQueryKeys.candidates(session.id),
-        exact: true,
-      })
-      .then(() =>
-        queryClient.invalidateQueries({
-          queryKey: battleQueryKeys.candidates(session.id),
-          exact: true,
-        }),
-      );
+  async function refreshCandidatesAfterObservation(): Promise<void> {
+    await queryClient.cancelQueries({
+      queryKey: battleQueryKeys.candidates(session.id),
+      exact: true,
+    });
+    await queryClient.invalidateQueries({
+      queryKey: battleQueryKeys.candidates(session.id),
+      exact: true,
+    });
   }
 
   const pokemonSearch = useQuery({
@@ -174,13 +216,16 @@ function BattleWorkspace({
   const addPokemon = useMutation({
     mutationFn: (pokemon: PokemonSummary) => addPokemonObservation(session.id, pokemon.id),
     onSuccess: (observation, pokemon) => {
-      refreshCandidatesAfterObservation();
+      void refreshCandidatesAfterObservation();
       try {
         const stored = toStoredPokemonObservation(pokemon, observation);
         const current = observationsRef.current;
         if (
           current.some(
-            (item) => item.type === "pokemon" && item.observation.pokemonId === pokemon.id,
+            (item) =>
+              item.type === "pokemon" &&
+              !item.observation.isRevoked &&
+              item.observation.pokemonId === pokemon.id,
           )
         ) {
           return;
@@ -205,15 +250,19 @@ function BattleWorkspace({
     mutationFn: ({ pokemonId, move }: { pokemonId: number; move: MoveSummary }) =>
       addMoveObservation(session.id, pokemonId, move.id),
     onSuccess: (observation, { pokemonId, move }) => {
-      refreshCandidatesAfterObservation();
+      void refreshCandidatesAfterObservation();
       try {
         const current = observationsRef.current;
         const targetExists = current.some(
-          (item) => item.type === "pokemon" && item.observation.pokemonId === pokemonId,
+          (item) =>
+            item.type === "pokemon" &&
+            !item.observation.isRevoked &&
+            item.observation.pokemonId === pokemonId,
         );
         const duplicateExists = current.some(
           (item) =>
             item.type === "move" &&
+            !item.observation.isRevoked &&
             item.observation.pokemonId === pokemonId &&
             item.observation.moveId === move.id,
         );
@@ -234,13 +283,50 @@ function BattleWorkspace({
     },
   });
 
+  const undoObservation = useMutation({
+    mutationFn: (target: StoredBattleObservation) =>
+      undoBattleObservation(session.id, target.observation.id),
+    onSuccess: async (response) => {
+      try {
+        const target = getLatestActiveBattleObservation(session.id, observationsRef.current);
+        if (!target) {
+          throw new Error("No active observation is available");
+        }
+        const next = applyBattleObservationUndo(session.id, observationsRef.current, response);
+        const summary = observationSummary(target, observationsRef.current);
+        commitObservations(next);
+        setUndoClientError(null);
+        setUndoSuccessMessage(
+          `${summary.kindLabel}「${summary.name}」を取り消しました。履歴は保持されています。`,
+        );
+      } catch {
+        setUndoSuccessMessage(null);
+        setUndoClientError("Undo結果を画面へ反映できませんでした。観測状態を確認してください。");
+      }
+      await refreshCandidatesAfterObservation();
+    },
+    onError: async (error) => {
+      setUndoSuccessMessage(null);
+      setUndoClientError(getBattleUndoErrorMessage(error));
+      if (error instanceof ApiError && error.problem?.code === "OBSERVATION_CONFLICT") {
+        await refreshCandidatesAfterObservation();
+      }
+    },
+    onSettled: () => {
+      submissionInFlight.current = false;
+    },
+  });
+
   function selectPokemonCandidate(pokemon: PokemonSummary): void {
     if (
       submissionInFlight.current ||
       !isActive ||
       hasReachedLimit ||
       observationsRef.current.some(
-        (item) => item.type === "pokemon" && item.observation.pokemonId === pokemon.id,
+        (item) =>
+          item.type === "pokemon" &&
+          !item.observation.isRevoked &&
+          item.observation.pokemonId === pokemon.id,
       )
     ) {
       return;
@@ -258,11 +344,15 @@ function BattleWorkspace({
       !isActive ||
       pokemonId === null ||
       !current.some(
-        (item) => item.type === "pokemon" && item.observation.pokemonId === pokemonId,
+        (item) =>
+          item.type === "pokemon" &&
+          !item.observation.isRevoked &&
+          item.observation.pokemonId === pokemonId,
       ) ||
       current.some(
         (item) =>
           item.type === "move" &&
+          !item.observation.isRevoked &&
           item.observation.pokemonId === pokemonId &&
           item.observation.moveId === move.id,
       )
@@ -282,6 +372,27 @@ function BattleWorkspace({
     setMoveQuery("");
     setMoveClientError(null);
   }
+
+  function requestUndo(): void {
+    const target = getLatestActiveBattleObservation(session.id, observationsRef.current);
+    if (
+      submissionInFlight.current ||
+      !isActive ||
+      target === null ||
+      addPokemon.isPending ||
+      addMove.isPending
+    ) {
+      return;
+    }
+    submissionInFlight.current = true;
+    setUndoClientError(null);
+    setUndoSuccessMessage(null);
+    undoObservation.mutate(target);
+  }
+
+  const undoSummary = latestActiveObservation
+    ? observationSummary(latestActiveObservation, observations)
+    : null;
 
   return (
     <PartyShell>
@@ -327,6 +438,85 @@ function BattleWorkspace({
             この対戦セッションはactiveではないため、観測を追加できません。
           </div>
         )}
+
+        <section
+          aria-labelledby="undo-heading"
+          className="mb-8 border-y border-slate-200 bg-slate-50/80 px-4 py-5 sm:px-6"
+        >
+          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div>
+              <p className="text-xs font-black tracking-[0.15em] text-slate-400">
+                LATEST OBSERVATION
+              </p>
+              <h2 id="undo-heading" className="mt-2 text-lg font-black text-slate-950">
+                直近の入力をひとつ戻す
+              </h2>
+              {latestActiveObservation && undoSummary ? (
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  戻す内容: <strong className="text-slate-950">{undoSummary.name}</strong>
+                  <span className="mx-2 text-slate-300">/</span>
+                  {undoSummary.kindLabel}
+                  <span className="mx-2 text-slate-300">/</span>
+                  対象 {undoSummary.pokemonName}
+                  <span className="ml-2 text-xs text-slate-400">
+                    Undo対象 #{latestActiveObservation.observation.seq}
+                  </span>
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">Undoできる有効な観測はありません。</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={requestUndo}
+              disabled={
+                !isActive ||
+                latestActiveObservation === null ||
+                undoObservation.isPending ||
+                addPokemon.isPending ||
+                addMove.isPending
+              }
+              className="min-h-12 min-w-36 rounded-xl border border-rose-300 bg-white px-5 py-3 text-sm font-black text-rose-900 outline-none transition hover:border-rose-500 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              {undoObservation.isPending ? "取り消し中…" : "ひとつ戻す"}
+            </button>
+          </div>
+
+          {undoSuccessMessage && (
+            <p role="status" className="mt-4 text-sm font-bold text-blue-900">
+              {undoSuccessMessage}
+            </p>
+          )}
+          {undoClientError && (
+            <p
+              role="alert"
+              className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-800"
+            >
+              {undoClientError}
+            </p>
+          )}
+          {revokedObservations.length > 0 && (
+            <p className="mt-3 text-xs font-semibold text-slate-500">
+              取消済みの履歴 {revokedObservations.length}
+              件は、このSessionの端末内履歴に保持されています。
+            </p>
+          )}
+          {orphanedMoveObservations.length > 0 && (
+            <div className="mt-4 border-l-2 border-amber-300 pl-3 text-sm text-amber-900">
+              <p className="font-bold">
+                Pokemon観測が現在無効でも、次の技観測は有効な履歴として保持されています。
+              </p>
+              <ul className="mt-1 list-disc pl-5">
+                {orphanedMoveObservations.map((item) => (
+                  <li key={item.observation.id}>
+                    {item.move.nameJa}（Pokemon ID: {item.observation.pokemonId} / seq{" "}
+                    {item.observation.seq}）
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
 
         <BattleCandidatesPanel
           sessionId={session.id}

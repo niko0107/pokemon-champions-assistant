@@ -20,6 +20,14 @@ const CANDIDATE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   INTERNAL_ERROR: "現在、候補を取得できません。時間をおいて再度お試しください。",
 };
 
+const UNDO_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  INVALID_SESSION_STATE: "この対戦セッションでは観測を取り消せません。",
+  NOT_FOUND: "対象の対戦セッションまたは観測が見つかりません。",
+  OBSERVATION_CONFLICT: "観測状態が更新されています。画面の内容を確認してください。",
+  UNAUTHORIZED: "ログインの有効期限が切れました。もう一度ログインしてください。",
+  INTERNAL_ERROR: "現在、観測を取り消せません。時間をおいて再度お試しください。",
+};
+
 export function getBattleErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) {
     return "処理を完了できませんでした。時間をおいて再度お試しください。";
@@ -48,4 +56,19 @@ export function getBattleCandidatesErrorMessage(error: unknown): string {
     return "候補を取得できませんでした。通信環境を確認してください。";
   }
   return "候補を取得できませんでした。時間をおいて再度お試しください。";
+}
+
+export function getBattleUndoErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "観測を取り消せませんでした。時間をおいて再度お試しください。";
+  }
+
+  const code = error.problem?.code;
+  if (code && UNDO_ERROR_MESSAGES[code]) {
+    return UNDO_ERROR_MESSAGES[code];
+  }
+  if (error.status === null) {
+    return "観測を取り消せませんでした。通信環境を確認してください。";
+  }
+  return "観測を取り消せませんでした。時間をおいて再度お試しください。";
 }

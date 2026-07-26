@@ -560,3 +560,15 @@
 - **判断:** 順位変動バッジは同じ画面ライフサイクル内の直前レスポンスと`archetypeId`で比較し、NEW / UP / DOWNを補助表示する。これは候補順位の再計算ではなくサーバーrankの変化表示であり、reload後の過去順位は永続化しない。候補0件は原因を推測しない正常な共通空状態、通信・状態・所有権エラーはRFC 9457のcodeだけを安全な日本語へ写像する
 - **理由:** 完了済みBATTLE-004/005の候補契約・Redisキャッシュ・scoringを変更せず、対戦入力の保存結果だけに同期した決定的な上位3件表示を、既存の認証refresh・復元方式・公開master APIで構成するため
 - **影響:** PRODUCT_SPECが観測追加レスポンスに最新候補を含める記述に対し、現行BATTLE-002はObservation単体レスポンスであるため、WebはD-041の既存判断どおり保存成功後に候補GETを1回行う。技名を警戒技へ表示するには、将来タスクで公開Move詳細契約を仕様化する必要がある
+
+## 2026-07-27 Undo UI(WEB-004)
+
+### D-053: 直近有効観測の論理取消・端末内履歴保持・候補再同期
+
+- **判断:** 新規ルートは追加せず、既存の`/battle/:sessionId`に直近の有効Observation概要と「ひとつ戻す」操作を追加する。Undo対象はSession UUID単位のsessionStorage v2から`isRevoked=false`かつ最大`seq`の1件を配列順に依存せず決定し、そのIDをBATTLE-003の正式な`DELETE /api/v1/sessions/:id/observations/:obsId`へ渡す。bodyやuserId・seqは送らず、sharedのstrict `undoObservationResponseSchema`に加えて要求したSession ID・Observation IDとの一致を検証する
+- **判断:** 楽観的更新は行わず、成功レスポンスが対象のseq・kind・payload・createdAtとも一致し`isRevoked=true`である場合だけ、既存イベントを削除せず同じ位置で取消済みへ更新する。sessionStorageのversionはv2のまま維持し、strict検証を取消状態へ拡張する。有効なPokemon IDと同一Pokemon内Move IDだけを重複判定することで、取消済み履歴を残したまま同じPokemon・Moveを新しいseqで再追加できるようにする。seqの詰め直しや再利用は行わない
+- **判断:** 有効一覧・技入力対象・重複除外は取消済みを除外する。Pokemon観測を取消しても関連Moveを連鎖更新せず、サーバーが取消した1件だけを変更する。通常の直近限定Undoでは後続の有効Moveが先に対象となるが、別クライアントとの状態差などでPokemonが無効かつMoveが有効な履歴を復元した場合は、そのMoveを削除せず「Pokemon観測が現在無効な有効履歴」としてID・技名・seqを明示し、引き続き直近Undo対象にできる
+- **判断:** Undo成功後は進行中の同Session候補queryをcancelしてexact keyをinvalidateし、Web側でスコアを計算しない。`409 OBSERVATION_CONFLICT`ではローカルObservationを変更せず、候補だけを再取得して「観測状態が更新されている可能性」を案内する。それ以外の失敗ではローカル状態と候補queryを変更しない。送信中refとmutation状態でPokemon・Move追加を含む二重送信を防ぐ
+- **判断:** 現行`GET /sessions/:id`にはObservation一覧がないため、別タブ・別端末・sessionStorage消去後の完全同期や409後の履歴修復は行わず、推測したObservation IDも生成しない。RFC 9457の`INVALID_SESSION_STATE / NOT_FOUND / OBSERVATION_CONFLICT / UNAUTHORIZED / INTERNAL_ERROR`と通信失敗はcodeまたは通信状態だけから安全な日本語へ変換し、server detailを表示しない
+- **理由:** BATTLE-003の直近限定・追記型履歴・競合防止契約を変更せず、対戦中のワンタップ操作でUI、同一タブ内復元、BATTLE-004の候補表示をサーバー成功後だけ整合させるため
+- **影響:** sessionStorageに存在しない他クライアント由来ObservationはWebからUndoできず、409時に完全な観測履歴を復元できない。完全同期が必要になった場合は、Observation一覧の読取契約を別タスクで仕様化する必要がある。Redo、任意・複数Undo、他kind入力、候補選択・終了はWEB-004に含めない
