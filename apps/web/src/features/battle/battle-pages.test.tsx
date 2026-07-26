@@ -68,6 +68,25 @@ const megaCharizard = {
   isMega: true,
   basePokemonId: 6,
 };
+const flamethrower = {
+  id: 53,
+  nameJa: "かえんほうしゃ",
+  nameEn: "Flamethrower",
+  type: "fire",
+  category: "special" as const,
+  power: 90,
+  accuracy: 100,
+  priority: 0,
+  tags: [],
+};
+const fireBlast = {
+  ...flamethrower,
+  id: 126,
+  nameJa: "だいもんじ",
+  nameEn: "Fire Blast",
+  power: 110,
+  accuracy: 85,
+};
 
 interface FetchMockOptions {
   partyItems?: typeof parties;
@@ -77,10 +96,16 @@ interface FetchMockOptions {
   sessionStatus?: "active" | "ended" | "archived";
   searchItems?: Array<typeof charizard>;
   searchStatus?: number;
+  moveSearchItems?: Array<typeof flamethrower>;
+  moveSearchStatus?: number;
   observationStatus?: number;
   observationProblem?: unknown;
   observationDelayMs?: number;
   observationNetworkError?: boolean;
+  moveObservationStatus?: number;
+  moveObservationProblem?: unknown;
+  moveObservationDelayMs?: number;
+  moveObservationNetworkError?: boolean;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -118,22 +143,36 @@ function createFetchMock(options: FetchMockOptions = {}) {
         : Promise.resolve(response);
     }
     if (url.endsWith(`/sessions/${sessionId}/observations`) && init?.method === "POST") {
-      if (options.observationNetworkError) {
+      const isMove = JSON.parse(String(init.body)).kind === "move";
+      if (
+        (isMove && options.moveObservationNetworkError) ||
+        (!isMove && options.observationNetworkError)
+      ) {
         return Promise.reject(new Error("network unavailable"));
       }
-      const body = JSON.parse(String(init.body)) as { pokemonId: number };
+      const body = JSON.parse(String(init.body)) as {
+        kind: "pokemon" | "move";
+        pokemonId: number;
+        moveId?: number;
+      };
       observationSeq += 1;
+      const responseStatus = isMove
+        ? (options.moveObservationStatus ?? options.observationStatus)
+        : options.observationStatus;
+      const responseProblem = isMove
+        ? (options.moveObservationProblem ?? options.observationProblem)
+        : options.observationProblem;
       const response =
-        options.observationStatus && options.observationStatus >= 400
-          ? jsonResponse(options.observationProblem, options.observationStatus)
+        responseStatus && responseStatus >= 400
+          ? jsonResponse(responseProblem, responseStatus)
           : jsonResponse(
               {
                 id: `20000000-0000-4000-8000-${String(observationSeq).padStart(12, "0")}`,
                 sessionId,
                 seq: observationSeq,
-                kind: "pokemon",
+                kind: body.kind,
                 pokemonId: body.pokemonId,
-                moveId: null,
+                moveId: body.kind === "move" ? body.moveId : null,
                 itemId: null,
                 abilityId: null,
                 position: null,
@@ -142,10 +181,11 @@ function createFetchMock(options: FetchMockOptions = {}) {
               },
               201,
             );
-      return options.observationDelayMs
-        ? new Promise<Response>((resolve) =>
-            setTimeout(() => resolve(response), options.observationDelayMs),
-          )
+      const responseDelay = isMove
+        ? (options.moveObservationDelayMs ?? options.observationDelayMs)
+        : options.observationDelayMs;
+      return responseDelay
+        ? new Promise<Response>((resolve) => setTimeout(() => resolve(response), responseDelay))
         : Promise.resolve(response);
     }
     if (url.endsWith(`/sessions/${sessionId}`)) {
@@ -176,6 +216,14 @@ function createFetchMock(options: FetchMockOptions = {}) {
         ),
       );
     }
+    if (url.includes("/master/moves?")) {
+      return Promise.resolve(
+        jsonResponse(
+          { items: options.moveSearchItems ?? [flamethrower, fireBlast] },
+          options.moveSearchStatus ?? 200,
+        ),
+      );
+    }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
 }
@@ -201,7 +249,7 @@ function problem(code: string, status: number): unknown {
   };
 }
 
-describe("WEB-001 battle pages", () => {
+describe("WEB-001 / WEB-002 battle pages", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     resetAuthStoreForTests();
@@ -420,12 +468,239 @@ describe("WEB-001 battle pages", () => {
     ).toHaveLength(1);
   });
 
+  it("Pokemon未登録では技入力を無効にする", async () => {
+    vi.stubGlobal("fetch", createFetchMock());
+    renderApp(`/battle/${sessionId}`);
+
+    expect(await screen.findByLabelText("技名")).toBeDisabled();
+    expect(screen.getByText("Pokemon観測を追加すると技入力が有効になります。")).toBeVisible();
+    expect(screen.getByText("入力対象を選択してください")).toBeVisible();
+  });
+
+  it("選択中Pokemonのpokemon_idで2文字から技を検索し、技情報を表示する", async () => {
+    const fetchMock = createFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    const pokemonSearch = await screen.findByLabelText("相手ポケモン");
+    await user.type(pokemonSearch, "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(await screen.findByText("入力対象: リザードン")).toBeVisible();
+
+    const moveSearch = screen.getByLabelText("技名");
+    await user.type(moveSearch, "か");
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(
+      fetchMock.mock.calls.filter(([input]) => String(input).includes("/master/moves?")),
+    ).toHaveLength(0);
+
+    await user.type(moveSearch, "え");
+    const candidate = await screen.findByRole("button", {
+      name: "かえんほうしゃをリザードンの技として追加",
+    });
+    expect(candidate).toHaveTextContent("Flamethrower");
+    expect(candidate).toHaveTextContent("fire");
+    expect(candidate).toHaveTextContent("特殊");
+    expect(candidate).toHaveTextContent("威力 90");
+    expect(candidate).toHaveTextContent("命中 100");
+    expect(candidate).toHaveTextContent("優先度 0");
+
+    const moveCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).includes("/master/moves?"),
+    );
+    expect(String(moveCall?.[0])).toContain("q=%E3%81%8B%E3%81%88");
+    expect(String(moveCall?.[0])).toContain("pokemon_id=6");
+  });
+
+  it("技検索0件を対象Pokemonに紐づけて表示する", async () => {
+    vi.stubGlobal("fetch", createFetchMock({ moveSearchItems: [] }));
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "なし");
+
+    expect(await screen.findByText("一致する習得可能技はありません。")).toBeVisible();
+  });
+
+  it("正確なmove Observationを一度だけ送信し、成功後だけ対象Pokemonへ追加する", async () => {
+    const fetchMock = createFetchMock({ moveObservationDelayMs: 40 });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.dblClick(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+
+    const observedMoves = await screen.findByRole("heading", {
+      name: "リザードンの観測済み技",
+    });
+    const observedMoveSection = observedMoves.parentElement;
+    if (!observedMoveSection) throw new Error("observed move section missing");
+    expect(await within(observedMoveSection).findByText("かえんほうしゃ")).toBeVisible();
+    expect(within(observedMoveSection).getByText("seq 2")).toBeVisible();
+
+    const observationCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).endsWith(`/sessions/${sessionId}/observations`),
+    );
+    expect(observationCalls).toHaveLength(2);
+    expect(observationCalls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+      { kind: "pokemon", pokemonId: 6 },
+      { kind: "move", pokemonId: 6, moveId: 53 },
+    ]);
+
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    expect(
+      screen.queryByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "だいもんじをリザードンの技として追加" }),
+    ).toBeVisible();
+  });
+
+  it("Pokemon切替時に検索結果を消し、同じ技を別Pokemonへ追加できる", async () => {
+    const fetchMock = createFetchMock({ moveSearchItems: [flamethrower] });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    const pokemonSearch = await screen.findByLabelText("相手ポケモン");
+    await user.type(pokemonSearch, "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+
+    await user.type(pokemonSearch, "リザ");
+    await user.click(
+      await screen.findByRole("button", { name: "メガリザードンX（mega-x）を追加" }),
+    );
+    expect(screen.getByLabelText("技名")).toHaveValue("");
+    expect(screen.queryByRole("button", { name: /かえんほうしゃ.*技として追加/u })).toBeNull();
+
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをメガリザードンXの技として追加",
+      }),
+    );
+
+    const observationCalls = fetchMock.mock.calls
+      .filter(([input]) => String(input).endsWith(`/sessions/${sessionId}/observations`))
+      .map(([, init]) => JSON.parse(String(init?.body)));
+    expect(observationCalls).toEqual([
+      { kind: "pokemon", pokemonId: 6 },
+      { kind: "move", pokemonId: 6, moveId: 53 },
+      { kind: "pokemon", pokemonId: 10006 },
+      { kind: "move", pokemonId: 10006, moveId: 53 },
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "リザードンを技入力対象にする" }));
+    expect(screen.getByText("入力対象: リザードン")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "リザードンの観測済み技" })).toBeVisible();
+  });
+
+  it.each([
+    [429, "RATE_LIMITED", "少し待って"],
+    [400, "VALIDATION_ERROR", "入力内容"],
+    [400, "INVALID_SESSION_STATE", "観測を追加できません"],
+    [400, "INVALID_MASTER_REFERENCE", "選び直してください"],
+    [404, "NOT_FOUND", "見つかりません"],
+    [500, "INTERNAL_ERROR", "時間をおいて"],
+  ])("move Observation失敗時(%s %s)は技一覧へ追加しない", async (status, code, message) => {
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        moveObservationStatus: status,
+        moveObservationProblem: problem(code, status),
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByText("まだ技観測はありません")).toBeVisible();
+    expect(screen.queryByText("seq 2")).not.toBeInTheDocument();
+  });
+
+  it("技検索・追加の通信エラーを表示し、reload相当でPokemonと技をseq順に復元する", async () => {
+    vi.stubGlobal("fetch", createFetchMock({ moveSearchStatus: 500 }));
+    const user = userEvent.setup();
+    const searchFailure = renderApp(`/battle/${sessionId}`);
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "失敗");
+    expect(await screen.findByRole("alert")).toHaveTextContent("技候補を取得できませんでした");
+    searchFailure.unmount();
+
+    window.sessionStorage.clear();
+    const fetchMock = createFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    const first = renderApp(`/battle/${sessionId}`);
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+    await screen.findByText("seq 2");
+    first.unmount();
+
+    renderApp(`/battle/${sessionId}`);
+    expect(await screen.findByText(/観測 seq 1/u)).toBeVisible();
+    expect(await screen.findByText("seq 2")).toBeVisible();
+    expect(screen.getByText("かえんほうしゃ")).toBeVisible();
+  });
+
+  it("move Observationの通信エラー時は技一覧へ追加しない", async () => {
+    vi.stubGlobal("fetch", createFetchMock({ moveObservationNetworkError: true }));
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("通信環境");
+    expect(screen.getByText("まだ技観測はありません")).toBeVisible();
+  });
+
   it("ended Sessionでは状態を表示しPokemon入力を無効化する", async () => {
     vi.stubGlobal("fetch", createFetchMock({ sessionStatus: "ended" }));
     renderApp(`/battle/${sessionId}`);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("activeではない");
     expect(screen.getByLabelText("相手ポケモン")).toBeDisabled();
+    expect(screen.getByLabelText("技名")).toBeDisabled();
     expect(screen.getByText("ended")).toBeVisible();
   });
 });

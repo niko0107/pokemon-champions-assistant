@@ -536,3 +536,15 @@
 - **判断:** RFC 9457の`INVALID_PARTY_STATE / INVALID_SESSION_STATE / INVALID_MASTER_REFERENCE / NOT_FOUND / RATE_LIMITED / UNAUTHORIZED / INTERNAL_ERROR`はcodeだけを安全な日本語へ写像し、サーバーのdetailを表示しない。技・Item・Ability・position・mega観測、候補、Undo、選択・終了は後続WEBタスクへ残し、API・DB・shared契約は変更しない
 - **理由:** 完了済みBATTLE APIの所有権・原子性・レート制限をそのまま利用し、対戦中の最短操作を保ちながら、API契約を広げずWEB-001のPokemon観測だけを安全に実装するため
 - **影響:** 同一タブでこの画面から追加したPokemonはreload後も復元できるが、別端末・別タブ・sessionStorage消去後や他クライアントから追加されたObservationは復元できない。完全なサーバー復元にはObservation一覧を含む読取契約を別タスクで仕様化する必要がある。IMPLEMENTATION_PLANにある対戦画面用Zustandは、今回の画面ローカル状態を不必要にグローバル化しない明示要件を優先して追加していない
+
+## 2026-07-27 技入力画面(WEB-002)
+
+### D-051: Pokemon単位の習得技検索とversion付き観測イベント復元
+
+- **判断:** 新規ルートは追加せず、WEB-001の`/battle/:sessionId`をPokemon選択・技検索・観測済み技表示で拡張する。技入力対象はこの画面で追加成功・復元できたPokemon Observationだけとし、選択中PokemonをID単位で明示する。通常形態とメガ形態は別IDとして扱い、Pokemon切替時は検索語と表示候補を即時破棄する
+- **判断:** 技検索は既存公開`GET /api/v1/master/moves?q=&pokemon_id=`を300ms debounceかつ2〜50文字で呼び、TanStack QueryのkeyへPokemon IDと検索語を含める。候補は日英名・type・category・power・accuracy・priorityを表示し、同一Pokemonで観測済みのmoveIdだけを除外する。技観測に仕様上の件数上限がないためUI独自上限は設けず、同じmoveIdを別Pokemonへ追加することは許可する
+- **判断:** 選択時は既存`POST /api/v1/sessions/:id/observations`へstrict shared契約どおり`{ kind: "move", pokemonId, moveId }`だけを送り、送信直前にも対象Pokemonの存在と同一Pokemon内の重複を再確認する。共通の送信中refで連打とPokemon/技Observationの同時送信を防ぎ、sharedレスポンス検証後だけUIと保存状態へ追加する。JWT付与・401 refresh・1回だけの再試行はWEB-005のAPIクライアントを変更せず再利用する
+- **判断:** WEB-001のPokemon-only `sessionStorage` v1は、Session UUID単位のv2へ安全に移行する。v2はPokemonとmoveを単一のseq順イベント列として保存し、strict Zodでversion、sessionId、Observation ID、seq単調増加、kind別payload、非取消状態、表示用マスタ概要、Pokemon→moveの参照順、同一Pokemon内の技重複を検証する。正常なv1はPokemonイベントへ変換してv2保存後に旧keyを削除し、破損値は破棄する。token・userId・秘密情報は保存せず、localStorageやZustandへ移さない
+- **判断:** RFC 9457の`VALIDATION_ERROR / INVALID_SESSION_STATE / INVALID_MASTER_REFERENCE / RATE_LIMITED / NOT_FOUND / UNAUTHORIZED / INTERNAL_ERROR`と通信失敗はcodeまたは通信状態だけから安全な日本語へ変換し、server detailは表示しない。今回の明示範囲に従い、PRODUCT_SPEC B-03および従来のIMPLEMENTATION_PLANが同じ画面群に含める持ち物・特性・先発/控え・メガ入力は実装せず、候補・Undo・終了とともに後続の範囲確定へ残す
+- **理由:** 完了済みMASTER-007とBATTLE-002の習得関係・所有権・状態・原子性・レート制限を変更せず、対戦中に対象Pokemonを取り違えない短い技入力と、WEB-001のタブ内復元互換性を両立するため
+- **影響:** 同一タブで本画面から成功したPokemon・技観測はreload後も復元できるが、GET SessionにObservation一覧がないため別端末・別タブ・他クライアントからの追加やUndoは完全同期できない。持ち物・特性・position・megaのUIは未実装であり、着手前にタスク範囲またはIDを明確化する必要がある

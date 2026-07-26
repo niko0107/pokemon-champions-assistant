@@ -1,14 +1,17 @@
 import {
+  moveSummarySchema,
   observationResponseSchema,
   pokemonSummarySchema,
+  type MoveSummary,
   type ObservationResponse,
   type PokemonSummary,
 } from "@pokemon-champions/shared";
 import { z } from "zod";
 
-const STORAGE_PREFIX = "pokemon-champions.battle.observations.v1";
+const LEGACY_STORAGE_PREFIX = "pokemon-champions.battle.observations.v1";
+const STORAGE_PREFIX = "pokemon-champions.battle.observations.v2";
 
-const storedObservationSchema = observationResponseSchema
+const storedPokemonObservationResponseSchema = observationResponseSchema
   .extend({
     kind: z.literal("pokemon"),
     moveId: z.null(),
@@ -19,10 +22,21 @@ const storedObservationSchema = observationResponseSchema
   })
   .strict();
 
-const storedPokemonObservationSchema = z
+const storedMoveObservationResponseSchema = observationResponseSchema
+  .extend({
+    kind: z.literal("move"),
+    moveId: z.number().int().positive(),
+    itemId: z.null(),
+    abilityId: z.null(),
+    position: z.null(),
+    isRevoked: z.literal(false),
+  })
+  .strict();
+
+const legacyStoredPokemonObservationSchema = z
   .object({
     pokemon: pokemonSummarySchema.strict(),
-    observation: storedObservationSchema,
+    observation: storedPokemonObservationResponseSchema,
   })
   .strict()
   .superRefine((value, context) => {
@@ -35,11 +49,56 @@ const storedPokemonObservationSchema = z
     }
   });
 
-const storedBattleStateSchema = z
+const storedPokemonObservationSchema = z
+  .object({
+    type: z.literal("pokemon"),
+    pokemon: pokemonSummarySchema.strict(),
+    observation: storedPokemonObservationResponseSchema,
+  })
+  .strict();
+
+const validatedStoredPokemonObservationSchema = storedPokemonObservationSchema.superRefine(
+  (value, context) => {
+    if (value.pokemon.id !== value.observation.pokemonId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Pokemon IDが一致しません",
+        path: ["observation", "pokemonId"],
+      });
+    }
+  },
+);
+
+const storedMoveObservationSchema = z
+  .object({
+    type: z.literal("move"),
+    move: moveSummarySchema.strict(),
+    observation: storedMoveObservationResponseSchema,
+  })
+  .strict();
+
+const validatedStoredMoveObservationSchema = storedMoveObservationSchema.superRefine(
+  (value, context) => {
+    if (value.move.id !== value.observation.moveId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Move IDが一致しません",
+        path: ["observation", "moveId"],
+      });
+    }
+  },
+);
+
+const storedBattleObservationSchema = z.discriminatedUnion("type", [
+  storedPokemonObservationSchema,
+  storedMoveObservationSchema,
+]);
+
+const legacyStoredBattleStateSchema = z
   .object({
     version: z.literal(1),
     sessionId: z.string().uuid(),
-    items: z.array(storedPokemonObservationSchema).max(6),
+    items: z.array(legacyStoredPokemonObservationSchema).max(6),
   })
   .strict()
   .superRefine((value, context) => {
@@ -73,54 +132,193 @@ const storedBattleStateSchema = z
     });
   });
 
+const storedBattleStateSchema = z
+  .object({
+    version: z.literal(2),
+    sessionId: z.string().uuid(),
+    observations: z.array(storedBattleObservationSchema),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const observationIds = new Set<string>();
+    const pokemonIds = new Set<number>();
+    const moveKeys = new Set<string>();
+    let pokemonCount = 0;
+    let previousSeq = 0;
+
+    value.observations.forEach((item, index) => {
+      const { observation } = item;
+      if (observation.sessionId !== value.sessionId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Session IDが一致しません",
+          path: ["observations", index, "observation", "sessionId"],
+        });
+      }
+      if (observationIds.has(observation.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Observationが重複しています",
+          path: ["observations", index, "observation", "id"],
+        });
+      }
+      observationIds.add(observation.id);
+      if (observation.seq <= previousSeq) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "観測順が正しくありません",
+          path: ["observations", index, "observation", "seq"],
+        });
+      }
+      previousSeq = observation.seq;
+
+      if (item.type === "pokemon") {
+        pokemonCount += 1;
+        if (pokemonCount > 6) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Pokemon観測は6件以下である必要があります",
+            path: ["observations", index],
+          });
+        }
+        if (item.pokemon.id !== observation.pokemonId) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Pokemon IDが一致しません",
+            path: ["observations", index, "observation", "pokemonId"],
+          });
+        }
+        if (pokemonIds.has(item.pokemon.id)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Pokemonが重複しています",
+            path: ["observations", index, "pokemon", "id"],
+          });
+        }
+        pokemonIds.add(item.pokemon.id);
+        return;
+      }
+
+      if (item.move.id !== observation.moveId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Move IDが一致しません",
+          path: ["observations", index, "observation", "moveId"],
+        });
+      }
+      if (!pokemonIds.has(observation.pokemonId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "技の対象Pokemonが登録されていません",
+          path: ["observations", index, "observation", "pokemonId"],
+        });
+      }
+      const moveKey = `${observation.pokemonId}:${observation.moveId}`;
+      if (moveKeys.has(moveKey)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "同じPokemonの技が重複しています",
+          path: ["observations", index, "observation", "moveId"],
+        });
+      }
+      moveKeys.add(moveKey);
+    });
+  });
+
 export type StoredPokemonObservation = z.infer<typeof storedPokemonObservationSchema>;
+export type StoredMoveObservation = z.infer<typeof storedMoveObservationSchema>;
+export type StoredBattleObservation = z.infer<typeof storedBattleObservationSchema>;
 
 export function toStoredPokemonObservation(
   pokemon: PokemonSummary,
   observation: ObservationResponse,
 ): StoredPokemonObservation {
-  return storedPokemonObservationSchema.parse({ pokemon, observation });
+  return validatedStoredPokemonObservationSchema.parse({ type: "pokemon", pokemon, observation });
+}
+
+export function toStoredMoveObservation(
+  move: MoveSummary,
+  observation: ObservationResponse,
+): StoredMoveObservation {
+  return validatedStoredMoveObservationSchema.parse({ type: "move", move, observation });
 }
 
 export function battleObservationStorageKey(sessionId: string): string {
   return `${STORAGE_PREFIX}:${sessionId}`;
 }
 
+export function legacyBattleObservationStorageKey(sessionId: string): string {
+  return `${LEGACY_STORAGE_PREFIX}:${sessionId}`;
+}
+
+function saveParsedState(
+  sessionId: string,
+  observations: StoredBattleObservation[],
+  storage: Storage,
+): boolean {
+  const state = storedBattleStateSchema.parse({
+    version: 2,
+    sessionId,
+    observations,
+  });
+  try {
+    storage.setItem(battleObservationStorageKey(sessionId), JSON.stringify(state));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function migrateLegacyState(sessionId: string, storage: Storage): StoredBattleObservation[] | null {
+  const legacyKey = legacyBattleObservationStorageKey(sessionId);
+  try {
+    const raw = storage.getItem(legacyKey);
+    if (!raw) {
+      return null;
+    }
+    const result = legacyStoredBattleStateSchema.safeParse(JSON.parse(raw));
+    if (!result.success || result.data.sessionId !== sessionId) {
+      storage.removeItem(legacyKey);
+      return null;
+    }
+    const observations = result.data.items.map((item) =>
+      storedPokemonObservationSchema.parse({ type: "pokemon", ...item }),
+    );
+    if (saveParsedState(sessionId, observations, storage)) {
+      storage.removeItem(legacyKey);
+    }
+    return observations;
+  } catch {
+    storage.removeItem(legacyKey);
+    return null;
+  }
+}
+
 export function loadBattleObservations(
   sessionId: string,
   storage: Storage = window.sessionStorage,
-): StoredPokemonObservation[] {
+): StoredBattleObservation[] {
   const key = battleObservationStorageKey(sessionId);
   try {
     const raw = storage.getItem(key);
-    if (!raw) {
-      return [];
-    }
-    const result = storedBattleStateSchema.safeParse(JSON.parse(raw));
-    if (!result.success || result.data.sessionId !== sessionId) {
+    if (raw) {
+      const result = storedBattleStateSchema.safeParse(JSON.parse(raw));
+      if (result.success && result.data.sessionId === sessionId) {
+        return result.data.observations;
+      }
       storage.removeItem(key);
-      return [];
     }
-    return result.data.items;
   } catch {
     storage.removeItem(key);
-    return [];
   }
+
+  return migrateLegacyState(sessionId, storage) ?? [];
 }
 
 export function saveBattleObservations(
   sessionId: string,
-  items: StoredPokemonObservation[],
+  observations: StoredBattleObservation[],
   storage: Storage = window.sessionStorage,
 ): void {
-  const state = storedBattleStateSchema.parse({
-    version: 1,
-    sessionId,
-    items,
-  });
-  try {
-    storage.setItem(battleObservationStorageKey(sessionId), JSON.stringify(state));
-  } catch {
-    // sessionStorageが利用できない場合も、成功済みObservationの画面表示は継続する。
-  }
+  saveParsedState(sessionId, observations, storage);
 }

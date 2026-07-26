@@ -49,6 +49,17 @@ const megaCharizard = {
   isMega: true,
   basePokemonId: 6,
 };
+const flamethrower = {
+  id: 53,
+  nameJa: "かえんほうしゃ",
+  nameEn: "Flamethrower",
+  type: "fire",
+  category: "special",
+  power: 90,
+  accuracy: 100,
+  priority: 0,
+  tags: [],
+};
 
 interface BattleMockState {
   createBodies: unknown[];
@@ -81,6 +92,9 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
   await page.route("**/api/v1/master/pokemons?*", async (route) => {
     await route.fulfill({ status: 200, json: { items: [charizard, megaCharizard] } });
   });
+  await page.route("**/api/v1/master/moves?*", async (route) => {
+    await route.fulfill({ status: 200, json: { items: [flamethrower] } });
+  });
   await page.route(`**/api/v1/sessions/${sessionId}/observations`, async (route) => {
     const body = route.request().postDataJSON();
     state.observationBodies.push(body);
@@ -98,16 +112,16 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       });
       return;
     }
-    const input = body as { pokemonId: number };
+    const input = body as { kind: "pokemon" | "move"; pokemonId: number; moveId?: number };
     await route.fulfill({
       status: 201,
       json: {
         id: `20000000-0000-4000-8000-${String(state.observationBodies.length).padStart(12, "0")}`,
         sessionId,
         seq: state.observationBodies.length,
-        kind: "pokemon",
+        kind: input.kind,
         pokemonId: input.pokemonId,
-        moveId: null,
+        moveId: input.kind === "move" ? input.moveId : null,
         itemId: null,
         abilityId: null,
         position: null,
@@ -159,7 +173,7 @@ async function login(page: Page): Promise<void> {
   await expect(page).toHaveURL("/");
 }
 
-test("375pxでSession作成・Pokemon観測・重複防止・reload復元が動く", async ({ page }) => {
+test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元が動く", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const state = await mockBattleApis(page);
   await login(page);
@@ -180,8 +194,24 @@ test("375pxでSession作成・Pokemon観測・重複防止・reload復元が動�
   await expect(page.getByRole("button", { name: "リザードン（normal）を追加" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "メガリザードンX（mega-x）を追加" })).toBeVisible();
 
+  await page.getByLabel("技名").fill("かえ");
+  await page.getByRole("button", { name: "かえんほうしゃをリザードンの技として追加" }).click();
+  await expect(page.getByRole("heading", { name: "リザードンの観測済み技" })).toBeVisible();
+  await expect(page.getByText("seq 2")).toBeVisible();
+  expect(state.observationBodies).toEqual([
+    { kind: "pokemon", pokemonId: 6 },
+    { kind: "move", pokemonId: 6, moveId: 53 },
+  ]);
+
+  await page.getByLabel("技名").fill("かえ");
+  await expect(
+    page.getByRole("button", { name: "かえんほうしゃをリザードンの技として追加" }),
+  ).toHaveCount(0);
+
   await page.reload();
   await expect(page.getByText(/観測 seq 1/u)).toBeVisible();
+  await expect(page.getByText("seq 2")).toBeVisible();
+  await expect(page.getByText("かえんほうしゃ")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -189,23 +219,30 @@ test("375pxでSession作成・Pokemon観測・重複防止・reload復元が動�
   ).toBe(true);
 });
 
-test("1440pxでキーボード入力でき、429を安全に表示してログアウトできる", async ({ page }) => {
+test("1440pxで技をキーボード入力でき、429を安全に表示してログアウトできる", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const state = await mockBattleApis(page);
   await login(page);
   await page.goto(`/battle/${sessionId}`);
 
-  const search = page.getByLabel("相手ポケモン");
-  await search.focus();
-  await expect(search).toBeFocused();
-  await search.fill("リザ");
-  const candidate = page.getByRole("button", { name: "リザードン（normal）を追加" });
+  const pokemonSearch = page.getByLabel("相手ポケモン");
+  await pokemonSearch.fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+
+  const moveSearch = page.getByLabel("技名");
+  await expect(moveSearch).toBeEnabled();
+  await moveSearch.focus();
+  await expect(moveSearch).toBeFocused();
+  await moveSearch.fill("かえ");
+  const candidate = page.getByRole("button", {
+    name: "かえんほうしゃをリザードンの技として追加",
+  });
   await candidate.focus();
   state.rejectNextObservation = true;
   await page.keyboard.press("Enter");
 
   await expect(page.getByRole("alert")).toContainText("少し待って");
-  await expect(page.getByText("まだ観測はありません")).toBeVisible();
+  await expect(page.getByText("まだ技観測はありません")).toBeVisible();
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL("/login");
   expect(
