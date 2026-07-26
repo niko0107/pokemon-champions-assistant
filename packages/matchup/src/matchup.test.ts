@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateDamageRange } from "./damage-estimation";
 import { calculateMatchupScore } from "./matchup-score";
 import { buildCounterplan } from "./counterplan";
 import { getCombinedTypeEffectiveness, getDefensiveTypeProfile } from "./type-effectiveness";
@@ -36,7 +37,36 @@ describe("calculateMatchupScore (MATCHUP-002〜004 で実装)", () => {
   });
 
   it.todo("素早さ実数値の比較で −10〜+15 を加減点する(スカーフ補正込み)");
-  it.todo("簡易ダメージ計算による確定数比較で −15〜+15 を加減点する");
+  it("MATCHUP-003: 簡易ダメージ計算から確定数を算出する", () => {
+    const result = calculateDamageRange({
+      attacker: {
+        pokemonId: 1,
+        level: 50,
+        attack: 120,
+        specialAttack: 100,
+        type1: "fire",
+        type2: null,
+      },
+      defender: {
+        pokemonId: 2,
+        hp: 200,
+        defense: 100,
+        specialDefense: 100,
+        type1: "grass",
+        type2: null,
+      },
+      move: {
+        moveId: 1,
+        type: "fire",
+        category: "physical",
+        power: 100,
+      },
+    });
+
+    expect(result.minDamage).toBe(162);
+    expect(result.knockoutCount).toBe(2);
+    expect(result.knockoutClassification).toBe("guaranteed_two_hit");
+  });
   it.todo("有効な先制技を持つ場合 +5 する");
   it.todo("相手が積み技持ちで対抗手段がない場合に減点する");
   it.todo("合計を −100〜+100 に正規化し verdict(有利/五分/不利)を判定する");
