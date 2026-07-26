@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BattleSessionResponse,
   MasterRule,
@@ -20,8 +20,10 @@ import {
   addMoveObservation,
   addPokemonObservation,
   battleQueryKeys,
+  fetchBattleCandidates,
   fetchBattleSession,
 } from "./battle-api";
+import { BattleCandidatesPanel } from "./battle-candidates";
 import { getBattleErrorMessage } from "./battle-errors";
 import {
   loadBattleObservations,
@@ -75,6 +77,7 @@ function BattleWorkspace({
   rule: MasterRule;
   partyName: string | undefined;
 }) {
+  const queryClient = useQueryClient();
   const [pokemonQuery, setPokemonQuery] = useState("");
   const [moveQuery, setMoveQuery] = useState("");
   const [observations, setObservations] = useState<StoredBattleObservation[]>(() =>
@@ -108,6 +111,12 @@ function BattleWorkspace({
   const selectedMoveIds = new Set(
     selectedPokemonMoves.map((item) => item.observation.moveId).filter((id) => id !== null),
   );
+  const candidates = useQuery({
+    queryKey: battleQueryKeys.candidates(session.id),
+    queryFn: () => fetchBattleCandidates(session.id),
+    enabled: isActive,
+    retry: false,
+  });
 
   useEffect(() => {
     if (
@@ -122,6 +131,20 @@ function BattleWorkspace({
     saveBattleObservations(session.id, next);
     observationsRef.current = next;
     setObservations(next);
+  }
+
+  function refreshCandidatesAfterObservation(): void {
+    void queryClient
+      .cancelQueries({
+        queryKey: battleQueryKeys.candidates(session.id),
+        exact: true,
+      })
+      .then(() =>
+        queryClient.invalidateQueries({
+          queryKey: battleQueryKeys.candidates(session.id),
+          exact: true,
+        }),
+      );
   }
 
   const pokemonSearch = useQuery({
@@ -151,6 +174,7 @@ function BattleWorkspace({
   const addPokemon = useMutation({
     mutationFn: (pokemon: PokemonSummary) => addPokemonObservation(session.id, pokemon.id),
     onSuccess: (observation, pokemon) => {
+      refreshCandidatesAfterObservation();
       try {
         const stored = toStoredPokemonObservation(pokemon, observation);
         const current = observationsRef.current;
@@ -181,6 +205,7 @@ function BattleWorkspace({
     mutationFn: ({ pokemonId, move }: { pokemonId: number; move: MoveSummary }) =>
       addMoveObservation(session.id, pokemonId, move.id),
     onSuccess: (observation, { pokemonId, move }) => {
+      refreshCandidatesAfterObservation();
       try {
         const current = observationsRef.current;
         const targetExists = current.some(
@@ -302,6 +327,19 @@ function BattleWorkspace({
             この対戦セッションはactiveではないため、観測を追加できません。
           </div>
         )}
+
+        <BattleCandidatesPanel
+          sessionId={session.id}
+          isActive={isActive}
+          response={candidates.data}
+          observations={observations}
+          isLoading={candidates.isLoading}
+          isFetching={candidates.isFetching}
+          error={candidates.error}
+          onRetry={() => {
+            void candidates.refetch();
+          }}
+        />
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-start">
           <section

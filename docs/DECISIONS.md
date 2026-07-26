@@ -548,3 +548,15 @@
 - **判断:** RFC 9457の`VALIDATION_ERROR / INVALID_SESSION_STATE / INVALID_MASTER_REFERENCE / RATE_LIMITED / NOT_FOUND / UNAUTHORIZED / INTERNAL_ERROR`と通信失敗はcodeまたは通信状態だけから安全な日本語へ変換し、server detailは表示しない。今回の明示範囲に従い、PRODUCT_SPEC B-03および従来のIMPLEMENTATION_PLANが同じ画面群に含める持ち物・特性・先発/控え・メガ入力は実装せず、候補・Undo・終了とともに後続の範囲確定へ残す
 - **理由:** 完了済みMASTER-007とBATTLE-002の習得関係・所有権・状態・原子性・レート制限を変更せず、対戦中に対象Pokemonを取り違えない短い技入力と、WEB-001のタブ内復元互換性を両立するため
 - **影響:** 同一タブで本画面から成功したPokemon・技観測はreload後も復元できるが、GET SessionにObservation一覧がないため別端末・別タブ・他クライアントからの追加やUndoは完全同期できない。持ち物・特性・position・megaのUIは未実装であり、着手前にタスク範囲またはIDを明確化する必要がある
+
+## 2026-07-27 候補上位3件表示(WEB-003)
+
+### D-052: Session単位の候補取得・観測成功後の再取得・補助名称の安全な解決
+
+- **判断:** 新規ルートやタブ状態は追加せず、既存の`/battle/:sessionId`で入力より先に現在候補を確認できる縦方向のセクションを追加する。候補は既存`GET /api/v1/sessions/:id/candidates`だけを正とし、TanStack QueryのkeyをSession ID単位で分離する。レスポンスはsharedのstrict `battleCandidatesResponseSchema`に加えて要求Session IDとの一致も検証し、サーバー順を並べ替えず最大3件をそのまま表示する。Web側でスコア・除外・順位を再計算しない
+- **判断:** PokemonまたはMove Observationの保存成功後だけ、進行中の同Session候補queryをcancelしてからexact keyをinvalidateする。更新中は直前の候補を維持して状態を明示し、失敗したObservationでは再取得しない。これにより入力前に開始した遅い候補レスポンスが、保存後の新しい結果を上書きすることを防ぐ。ポーリング、WebSocket、候補のsessionStorage保存、Zustandへの複製は行わない
+- **判断:** 候補はrank、構築名、サーバー値を表示用に最大1桁へ丸めたmatchRate、人気度の`高 / 中 / 低`、matchedの一致・不一致と加減点、既知のcontradiction/exclusionの安全な日本語、likelyUnseen、threatMoveIdsを表示する。未知コードは値そのものやserver detailを露出せず「未分類の判定情報があります」へフォールバックし、`rawScore / maxScore / excluded / userId`等の非公開値は扱わない
+- **判断:** matchedのPokemon/Move名称はSession UUID単位の既存sessionStorage v2に保存されたID一致の概要だけを利用し、item/ability/position/megaを含む将来kindもIDまたは定義済み表示へ安全にフォールバックする。likelyUnseenのPokemon名は既存公開詳細APIをTanStack Queryで重複排除して取得し、候補3件×最大チーム6体の18 IDを上限とする。詳細取得失敗は候補全体を失敗させずPokemon IDを表示する。公開Move詳細ID APIは存在しないため、threatMoveIdsは推測せず「技 ID」として表示する
+- **判断:** 順位変動バッジは同じ画面ライフサイクル内の直前レスポンスと`archetypeId`で比較し、NEW / UP / DOWNを補助表示する。これは候補順位の再計算ではなくサーバーrankの変化表示であり、reload後の過去順位は永続化しない。候補0件は原因を推測しない正常な共通空状態、通信・状態・所有権エラーはRFC 9457のcodeだけを安全な日本語へ写像する
+- **理由:** 完了済みBATTLE-004/005の候補契約・Redisキャッシュ・scoringを変更せず、対戦入力の保存結果だけに同期した決定的な上位3件表示を、既存の認証refresh・復元方式・公開master APIで構成するため
+- **影響:** PRODUCT_SPECが観測追加レスポンスに最新候補を含める記述に対し、現行BATTLE-002はObservation単体レスポンスであるため、WebはD-041の既存判断どおり保存成功後に候補GETを1回行う。技名を警戒技へ表示するには、将来タスクで公開Move詳細契約を仕様化する必要がある

@@ -1,16 +1,19 @@
 import {
+  battleCandidatesResponseSchema,
   battleSessionCreateSchema,
   battleSessionResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
+  type BattleCandidatesResponse,
   type BattleSessionCreate,
   type BattleSessionResponse,
   type ObservationResponse,
 } from "@pokemon-champions/shared";
-import { apiClient } from "../../lib/api-client";
+import { ApiError, apiClient } from "../../lib/api-client";
 
 export const battleQueryKeys = {
   session: (sessionId: string) => ["battle", "session", sessionId] as const,
+  candidates: (sessionId: string) => ["battle", "candidates", sessionId] as const,
   pokemonSearch: (query: string) => ["battle", "pokemon-search", query] as const,
   moveSearch: (pokemonId: number, query: string) =>
     ["battle", "move-search", pokemonId, query] as const,
@@ -30,6 +33,20 @@ export function fetchBattleSession(sessionId: string): Promise<BattleSessionResp
     authenticated: true,
     responseSchema: battleSessionResponseSchema,
   });
+}
+
+export async function fetchBattleCandidates(sessionId: string): Promise<BattleCandidatesResponse> {
+  const response = await apiClient.request<BattleCandidatesResponse>(
+    `/sessions/${sessionId}/candidates`,
+    {
+      authenticated: true,
+      responseSchema: battleCandidatesResponseSchema,
+    },
+  );
+  if (response.sessionId !== sessionId) {
+    throw new ApiError("APIレスポンスの形式が正しくありません。");
+  }
+  return response;
 }
 
 export function addPokemonObservation(

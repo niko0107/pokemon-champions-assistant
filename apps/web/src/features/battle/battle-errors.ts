@@ -13,6 +13,13 @@ const BATTLE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   INTERNAL_ERROR: "現在、対戦操作を完了できません。時間をおいて再度お試しください。",
 };
 
+const CANDIDATE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  INVALID_SESSION_STATE: "この対戦セッションでは候補を取得できません。",
+  NOT_FOUND: "対象の対戦セッションが見つかりません。",
+  UNAUTHORIZED: "ログインの有効期限が切れました。もう一度ログインしてください。",
+  INTERNAL_ERROR: "現在、候補を取得できません。時間をおいて再度お試しください。",
+};
+
 export function getBattleErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) {
     return "処理を完了できませんでした。時間をおいて再度お試しください。";
@@ -26,4 +33,19 @@ export function getBattleErrorMessage(error: unknown): string {
     return "サーバーへ接続できませんでした。通信環境を確認してください。";
   }
   return "処理を完了できませんでした。時間をおいて再度お試しください。";
+}
+
+export function getBattleCandidatesErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "候補を取得できませんでした。時間をおいて再度お試しください。";
+  }
+
+  const code = error.problem?.code;
+  if (code && CANDIDATE_ERROR_MESSAGES[code]) {
+    return CANDIDATE_ERROR_MESSAGES[code];
+  }
+  if (error.status === null) {
+    return "候補を取得できませんでした。通信環境を確認してください。";
+  }
+  return "候補を取得できませんでした。時間をおいて再度お試しください。";
 }

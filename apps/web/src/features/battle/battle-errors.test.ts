@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../lib/api-client";
-import { getBattleErrorMessage } from "./battle-errors";
+import { getBattleCandidatesErrorMessage, getBattleErrorMessage } from "./battle-errors";
 
 describe("getBattleErrorMessage", () => {
   it.each([
@@ -42,5 +42,33 @@ describe("getBattleErrorMessage", () => {
 
   it("通信エラーを区別する", () => {
     expect(getBattleErrorMessage(new ApiError("network"))).toContain("通信環境");
+  });
+});
+
+describe("getBattleCandidatesErrorMessage", () => {
+  it.each([
+    ["INVALID_SESSION_STATE", 400, "候補を取得できません"],
+    ["NOT_FOUND", 404, "見つかりません"],
+    ["UNAUTHORIZED", 401, "ログインの有効期限"],
+    ["INTERNAL_ERROR", 500, "時間をおいて"],
+  ])("%sを内部detailなしの日本語へ変換する", (code, status, message) => {
+    const result = getBattleCandidatesErrorMessage(
+      new ApiError("server detail", {
+        status,
+        problem: {
+          type: "about:blank",
+          title: "Internal title",
+          status,
+          detail: "表示してはいけないRedis内部情報",
+          code,
+        },
+      }),
+    );
+    expect(result).toContain(message);
+    expect(result).not.toContain("Redis");
+  });
+
+  it("通信エラーを区別する", () => {
+    expect(getBattleCandidatesErrorMessage(new ApiError("network"))).toContain("通信環境");
   });
 });

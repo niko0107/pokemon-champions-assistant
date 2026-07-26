@@ -64,6 +64,7 @@ const flamethrower = {
 interface BattleMockState {
   createBodies: unknown[];
   observationBodies: unknown[];
+  candidateRequests: number;
   rejectNextObservation: boolean;
 }
 
@@ -71,6 +72,7 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
   const state: BattleMockState = {
     createBodies: [],
     observationBodies: [],
+    candidateRequests: 0,
     rejectNextObservation: false,
   };
 
@@ -94,6 +96,28 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
   });
   await page.route("**/api/v1/master/moves?*", async (route) => {
     await route.fulfill({ status: 200, json: { items: [flamethrower] } });
+  });
+  await page.route("**/api/v1/master/pokemons/25", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        id: 25,
+        dexNo: 25,
+        nameJa: "ピカチュウ",
+        nameEn: "Pikachu",
+        form: "normal",
+        type1: "electric",
+        type2: null,
+        isMega: false,
+        basePokemonId: null,
+        baseHp: 35,
+        baseAtk: 55,
+        baseDef: 40,
+        baseSpa: 50,
+        baseSpd: 50,
+        baseSpe: 90,
+      },
+    });
   });
   await page.route(`**/api/v1/sessions/${sessionId}/observations`, async (route) => {
     const body = route.request().postDataJSON();
@@ -129,6 +153,62 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
         createdAt: "2026-07-26T00:00:00.000Z",
       },
     });
+  });
+  await page.route(`**/api/v1/sessions/${sessionId}/candidates`, async (route) => {
+    state.candidateRequests += 1;
+    const pokemonMatched = {
+      observationSeq: 1,
+      kind: "pokemon",
+      matched: true,
+      points: 10,
+      pokemonId: 6,
+    };
+    const moveMatched = {
+      observationSeq: 2,
+      kind: "move",
+      matched: true,
+      points: 15,
+      pokemonId: 6,
+      moveId: 53,
+    };
+    const candidate = (
+      id: string,
+      name: string,
+      rank: number,
+      matchRate: number,
+      popularityTier: "high" | "mid" | "low",
+    ) => ({
+      archetypeId: id,
+      name,
+      rank,
+      matchRate,
+      popularityTier,
+      matched:
+        state.observationBodies.length >= 2
+          ? [pokemonMatched, moveMatched]
+          : state.observationBodies.length === 1
+            ? [pokemonMatched]
+            : [],
+      contradictions: [],
+      exclusionCodes: [],
+      likelyUnseen: [{ pokemonId: 25, usageRate: 0.8 }],
+      threatMoveIds: [85],
+    });
+    const candidates =
+      state.observationBodies.length === 0
+        ? []
+        : state.observationBodies.length === 1
+          ? [
+              candidate("30000000-0000-4000-8000-000000000001", "リザードン展開", 1, 80, "high"),
+              candidate("30000000-0000-4000-8000-000000000002", "雨展開", 2, 70, "mid"),
+              candidate("30000000-0000-4000-8000-000000000003", "対面構築", 3, 60, "low"),
+            ]
+          : [
+              candidate("30000000-0000-4000-8000-000000000002", "雨展開", 1, 100, "mid"),
+              candidate("30000000-0000-4000-8000-000000000001", "リザードン展開", 2, 92.5, "high"),
+              candidate("30000000-0000-4000-8000-000000000003", "対面構築", 3, 75, "low"),
+            ];
+    await route.fulfill({ status: 200, json: { sessionId, candidates } });
   });
   await page.route(`**/api/v1/sessions/${sessionId}`, async (route) => {
     await route.fulfill({
@@ -184,10 +264,17 @@ test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元�
   await page.getByRole("button", { name: "このパーティで対戦開始" }).click();
   await expect(page).toHaveURL(`/battle/${sessionId}`);
   expect(state.createBodies).toEqual([{ partyId, ruleId: 1 }]);
+  await expect(page.getByText("表示できる候補はまだありません")).toBeVisible();
 
   await page.getByLabel("相手ポケモン").fill("リザ");
   await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
   await expect(page.getByText(/観測 seq 1/u)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "リザードン展開" })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "構築候補上位3件" }).getByRole("heading", { level: 3 }),
+  ).toHaveCount(3);
+  await expect(page.getByText("ピカチュウ").first()).toBeVisible();
+  await expect(page.getByText("技 ID: 85").first()).toBeVisible();
   expect(state.observationBodies).toEqual([{ kind: "pokemon", pokemonId: 6 }]);
 
   await page.getByLabel("相手ポケモン").fill("リザ");
@@ -198,6 +285,10 @@ test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元�
   await page.getByRole("button", { name: "かえんほうしゃをリザードンの技として追加" }).click();
   await expect(page.getByRole("heading", { name: "リザードンの観測済み技" })).toBeVisible();
   await expect(page.getByText("seq 2")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "雨展開" })).toBeVisible();
+  await expect(page.getByLabel("2位から1位へ上昇")).toBeVisible();
+  await expect(page.getByText("100").first()).toBeVisible();
+  await expect(page.getByText("人気度 中")).toBeVisible();
   expect(state.observationBodies).toEqual([
     { kind: "pokemon", pokemonId: 6 },
     { kind: "move", pokemonId: 6, moveId: 53 },
@@ -211,7 +302,9 @@ test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元�
   await page.reload();
   await expect(page.getByText(/観測 seq 1/u)).toBeVisible();
   await expect(page.getByText("seq 2")).toBeVisible();
-  await expect(page.getByText("かえんほうしゃ")).toBeVisible();
+  await expect(page.getByText("かえんほうしゃ", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "雨展開" })).toBeVisible();
+  expect(state.candidateRequests).toBeGreaterThanOrEqual(3);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
