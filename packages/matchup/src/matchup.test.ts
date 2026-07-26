@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateDamageRange } from "./damage-estimation";
 import { calculateMatchupScore } from "./matchup-score";
-import { buildCounterplan, buildMatchupMatrix } from "./counterplan";
+import { buildCounterplan, buildMatchupMatrix, buildSelectionRecommendation } from "./counterplan";
 import { getCombinedTypeEffectiveness, getDefensiveTypeProfile } from "./type-effectiveness";
 import type { CombatantSnapshot } from "./types";
 
@@ -151,8 +151,42 @@ describe("buildCounterplan (MATCHUP-005〜007 で実装)", () => {
 
     expect(buildMatchupMatrix({ self, opponents }).matrix.cells).toHaveLength(36);
   });
-  it.todo("相手のエース級への回答が最低1体含まれる選出を提案する");
-  it.todo("先発は相手の default_leads に最も有利なポケモンを選ぶ");
+  it("MATCHUP-006: 呼び出し側がpriority指定した相手への回答を含む選出を返す", () => {
+    const matrix = buildMatchupMatrix({
+      self: [
+        { combatant: { ...dummyCombatant, pokemonId: 2 }, level: 50 },
+        { combatant: { ...dummyCombatant, pokemonId: 1 }, level: 50 },
+      ],
+      opponents: [{ combatant: { ...dummyCombatant, pokemonId: 101 }, level: 50 }],
+    });
+
+    const result = buildSelectionRecommendation({
+      matrix,
+      pickSize: 1,
+      priorityOpponentPokemonIds: [101],
+    });
+
+    expect(result.selectedPokemonIds).toEqual([1]);
+    expect(result.coveredOpponentPokemonIds).toEqual([101]);
+  });
+
+  it("MATCHUP-006: priority対象との比較から選出内の先発を決める", () => {
+    const matrix = buildMatchupMatrix({
+      self: [
+        { combatant: { ...dummyCombatant, pokemonId: 2 }, level: 50 },
+        { combatant: { ...dummyCombatant, pokemonId: 1 }, level: 50 },
+      ],
+      opponents: [{ combatant: { ...dummyCombatant, pokemonId: 101 }, level: 50 }],
+    });
+
+    const result = buildSelectionRecommendation({
+      matrix,
+      pickSize: 2,
+      priorityOpponentPokemonIds: [101],
+    });
+
+    expect(result.leadPokemonId).toBe(1);
+  });
   it.todo("警戒技として setup/hazard/screen/priority/status タグの技を列挙する");
 
   it("未実装のうちは明示的にエラーを投げる", () => {

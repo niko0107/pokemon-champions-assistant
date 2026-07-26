@@ -297,6 +297,39 @@ export interface MatchupMatrixResult {
   readonly recommendationsByOpponent: readonly OpponentRecommendation[];
 }
 
+/** MATCHUP-006の選出提案入力。主軸・基本先発の特定は呼び出し側の責務。 */
+export interface SelectionRecommendationInput {
+  readonly matrix: MatchupMatrixResult;
+  readonly pickSize: number;
+  readonly priorityOpponentPokemonIds?: readonly number[];
+}
+
+/** 選出した自分Pokemonの、相手1体に対する担当結果。 */
+export interface SelectionAssignment {
+  readonly opponentPokemonId: number;
+  readonly assignedSelfPokemonId: number;
+  readonly matchupResult: MatchupScore;
+}
+
+/** 重み付けせず辞書式比較する選出組の評価値。 */
+export interface SelectionMetrics {
+  readonly priorityCoveredCount: number;
+  readonly coveredCount: number;
+  readonly worstBestScore: number;
+  readonly bestScoreSum: number;
+  readonly secondBestScoreSum: number;
+}
+
+/** 任意のRule.pickSizeを表現できるMATCHUP-006専用出力。 */
+export interface SelectionRecommendation {
+  readonly selectedPokemonIds: readonly number[];
+  readonly leadPokemonId: number | null;
+  readonly assignmentsByOpponent: readonly SelectionAssignment[];
+  readonly coveredOpponentPokemonIds: readonly number[];
+  readonly uncoveredOpponentPokemonIds: readonly number[];
+  readonly metrics: SelectionMetrics;
+}
+
 /** おすすめ選出(§9.4) */
 export interface TeamPlan {
   leadPokemonId: number;

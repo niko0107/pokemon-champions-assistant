@@ -617,3 +617,15 @@
 - **判断:** 既存`avoidMyPokemonIds`は独自の点数境界を追加せず、MATCHUP-004が既に`unfavorable`と分類したセルだけをPokemon ID昇順で返す。`favorable`等の分類、タイプ相性、ダメージ、確定数、総合点をMATCHUP-005側で再計算・補正しない
 - **理由:** PRODUCT_SPEC §9.4の36セル、§10.3の相手別表示、付録Bの上位3体を、MATCHUP-004を唯一のセル計算根拠として決定的・非破壊に提供し、MATCHUP-006の3体選出や役割・補完の加重評価を先取りしないため
 - **影響:** `buildMatchupMatrix`はマトリクスと相手別順位までを返し、最終`buildCounterplan`はMATCHUP-006以降も未完成のままとする。相手の採用率上位技選択、選出3体、先発・控え・エース、警戒技、立ち回りは後続層の責務である
+
+## 2026-07-27 選出提案(MATCHUP-006)
+
+### D-058: 既存1対1結果の辞書式比較・coverage境界・priority基準の先発
+
+- **判断:** MATCHUP-005の`MatchupMatrixResult`と1対1結果の比較関数を再利用し、自分側1〜6体から`pickSize`体の全組み合わせをPokemon ID昇順・辞書順で列挙する。各相手の担当は`totalScore / offensiveScore / defensiveScore / damageRaceScore`の降順、最後に自分Pokemon ID昇順で決め、タイプ相性・ダメージ・MATCHUP-004スコアを再計算しない
+- **判断:** 各組は`priorityCoveredCount / coveredCount / worstBestScore / bestScoreSum / secondBestScoreSum`の降順、最後に選出Pokemon ID列の辞書順昇順で比較する。重み付き合計は作らず、`totalScore >= -9`を対応可能、`totalScore <= -10`を未対応とする既存MATCHUP-004分類境界をそのまま用いる。全組が不利でも、この順序で最も悪くない1組を返す
+- **判断:** `priorityOpponentPokemonIds`はdefault leadや主軸を呼び出し側が選択した相手IDの部分集合として受け取る。指定時だけ、選出内の各Pokemonをpriority対象への最低totalScore、totalScore合計、offensiveScore合計の降順、最後にPokemon ID昇順で比較して`leadPokemonId`を返し、未指定・空配列ではnullとする。MATCHUP-006内でdefault leadや主軸を推測しない
+- **判断:** 現行`TeamPlan`の固定`lead / back / ace`構造は任意の`pickSize`を表現できず、積み技・高火力・役割・素早さ等によるace/backの正式判定式もないため変更・流用しない。専用の`SelectionRecommendation`を追加し、選出ID、priority基準の先発、相手別担当、coverage、辞書式比較用metricsだけを構造化して返す。警戒技と最終`CounterplanResult`完成はMATCHUP-007へ残す
+- **判断:** マトリクスは自分・相手各1〜6体、ID重複なし、全組のcellが過不足・重複なく存在し、各cellのID・主要スコア・分類・互換alias・内訳がMATCHUP-004契約に適合することを実行時に検証する。不正値を補完せずRangeErrorとし、入力順・cell順を正規化して入力を変更しない
+- **理由:** PRODUCT_SPEC §9.4に具体配点がなかった選出評価を、承認済み仕様どおり既存1対1評価の比較だけで構成し、任意pickSize、priority対象への対応、担当の冗長性を決定的に比較するため
+- **影響:** 出力は最良の1組だけで、ace/back、役割シナジー、素早さ、先制技、警戒技、立ち回り文章を含まない。呼び出し側は相手のdefault lead・主軸を解決してpriority IDを渡す必要があり、`buildCounterplan`はMATCHUP-007完了まで明示的な未実装エラーを維持する
