@@ -22,4 +22,5 @@ export * from "./master/pokemon-move";
 export * from "./master/rule";
 export * from "./master/season";
 export * from "./party";
+export * from "./type-effectiveness";
 export * from "./user";

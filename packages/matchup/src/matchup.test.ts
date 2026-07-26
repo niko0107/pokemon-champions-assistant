@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateMatchupScore } from "./matchup-score";
 import { buildCounterplan } from "./counterplan";
+import { getCombinedTypeEffectiveness, getDefensiveTypeProfile } from "./type-effectiveness";
 import type { CombatantSnapshot } from "./types";
 
 /**
@@ -19,8 +20,21 @@ const dummyCombatant: CombatantSnapshot = {
 };
 
 describe("calculateMatchupScore (MATCHUP-002〜004 で実装)", () => {
-  it.todo("弱点を突ける技を持つ場合、攻撃相性(0〜30)を加点する");
-  it.todo("相手の想定技を半減/無効にできる場合、防御相性(0〜30)を加点する");
+  it("MATCHUP-002: 弱点を突ける攻撃タイプを判定する", () => {
+    expect(
+      getCombinedTypeEffectiveness("electric", {
+        type1: "water",
+        type2: "flying",
+      }),
+    ).toBe(4);
+  });
+
+  it("MATCHUP-002: 相手の攻撃タイプを半減・無効にできる防御相性を分類する", () => {
+    const profile = getDefensiveTypeProfile({ type1: "ground", type2: "flying" });
+    expect(profile.resistances).toContain("fighting");
+    expect(profile.immunities).toEqual(["electric", "ground"]);
+  });
+
   it.todo("素早さ実数値の比較で −10〜+15 を加減点する(スカーフ補正込み)");
   it.todo("簡易ダメージ計算による確定数比較で −15〜+15 を加減点する");
   it.todo("有効な先制技を持つ場合 +5 する");
