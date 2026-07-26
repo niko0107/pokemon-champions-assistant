@@ -524,3 +524,15 @@
 - **判断:** 現行`partyWriteSchema`は各Pokemonの技をちょうど4件要求するため、UIも1〜4件ではなく4件必須として契約へ一致させる。Item・Ability・Tera Typeは現行APIどおり任意、Nature・EV・IV・actualStatsは既存契約どおり送信する。エラーはRFC 9457のcodeだけを安全な日本語へ写像し、サーバーdetailは表示しない
 - **理由:** APIやDBを変更せず、MASTER-010/011とPARTY-002の公開契約だけで、Rule人数・習得技・種族値計算を含む実用的なParty登録フローを構成するため
 - **影響:** Party編集・削除、複数Party切替、対戦セッション開始は後続タスクのまま。レベルはPartyに永続化されないため、保存後に同じ計算レベルを画面へ復元する機能はない
+
+## 2026-07-26 相手ポケモン入力画面(WEB-001)
+
+### D-050: 対戦開始・入力ルートと成功済み観測のタブ内復元
+
+- **判断:** PRODUCT_SPECにWeb URLの指定がないため、認証済み対戦開始画面を`/battle/new`、対戦入力画面を`/battle/:sessionId`とする。ホームのactive Partyだけに開始リンクを設け、開始画面では`GET /parties`と公開`GET /master/rules`を使ってactive PartyとRuleを再確認し、strictなshared契約どおり`POST /sessions`へ`partyId / ruleId`だけを送る。未認証時は既存route guardで`/login`へ遷移する
+- **判断:** Pokemon入力は公開`GET /master/pokemons?q=`を300ms debounceかつ2文字以上で呼び、候補のID・日英名・form・type・isMegaを表示する。候補タップ時は`POST /sessions/:id/observations`へ`{ kind: "pokemon", pokemonId }`だけを送り、成功レスポンスをstrictスキーマで検証できた場合だけ入力順リストへ追加する。通常形態とメガ形態は名称でまとめず別Pokemon IDとして扱い、同じIDは候補から除外する
+- **判断:** 入力可能数はSessionのruleIdに対応する公開Ruleの`teamSize`とし、Ruleを取得・特定できない間は推測値で入力を許可しない。送信中refとmutation状態で二重送信を防ぎ、上限到達後は検索・候補選択を無効にする。API入出力、JWT refresh、TanStack Queryのリクエスト取消・古い検索結果分離は既存クライアントとquery keyを再利用し、対戦入力状態は画面固有なのでZustandへ追加しない
+- **判断:** 現行`GET /sessions/:id`レスポンスにはObservation一覧がなく、WEB-001ではAPI変更が明示的な対象外であるため、この画面から追加に成功したPokemon概要とObservationレスポンスだけをSession UUID単位のversion付き`sessionStorage`へ保存する。読込時はSession所有権・状態をAPIで確認した後、strict ZodスキーマでsessionId、Pokemon ID、非取消pokemon観測、seq昇順、重複なしを検証し、破損値は破棄する。token・userId・秘密情報は保存せず、`localStorage`やZustandによる永続化は行わない
+- **判断:** RFC 9457の`INVALID_PARTY_STATE / INVALID_SESSION_STATE / INVALID_MASTER_REFERENCE / NOT_FOUND / RATE_LIMITED / UNAUTHORIZED / INTERNAL_ERROR`はcodeだけを安全な日本語へ写像し、サーバーのdetailを表示しない。技・Item・Ability・position・mega観測、候補、Undo、選択・終了は後続WEBタスクへ残し、API・DB・shared契約は変更しない
+- **理由:** 完了済みBATTLE APIの所有権・原子性・レート制限をそのまま利用し、対戦中の最短操作を保ちながら、API契約を広げずWEB-001のPokemon観測だけを安全に実装するため
+- **影響:** 同一タブでこの画面から追加したPokemonはreload後も復元できるが、別端末・別タブ・sessionStorage消去後や他クライアントから追加されたObservationは復元できない。完全なサーバー復元にはObservation一覧を含む読取契約を別タスクで仕様化する必要がある。IMPLEMENTATION_PLANにある対戦画面用Zustandは、今回の画面ローカル状態を不必要にグローバル化しない明示要件を優先して追加していない

@@ -155,14 +155,23 @@ export function HomePage() {
                         </div>
                       </dl>
                     </div>
-                    <button
-                      type="button"
-                      disabled
-                      title="対戦開始画面は後続タスクで実装します"
-                      className="min-h-11 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-bold text-slate-400"
-                    >
-                      対戦開始（準備中）
-                    </button>
+                    {party.isActive ? (
+                      <Link
+                        to={`/battle/new?partyId=${party.id}`}
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-300 bg-white px-4 py-2 text-sm font-black text-blue-900 outline-none transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700"
+                      >
+                        このパーティで対戦
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="対戦開始にはactiveなパーティが必要です"
+                        className="min-h-11 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-bold text-slate-400"
+                      >
+                        inactive
+                      </button>
+                    )}
                   </article>
                 );
               })}

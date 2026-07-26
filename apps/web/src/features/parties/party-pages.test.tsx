@@ -189,7 +189,10 @@ describe("WEB-006 party pages", () => {
       "href",
       "/parties/new",
     );
-    expect(screen.getByRole("button", { name: "対戦開始（準備中）" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "このパーティで対戦" })).toHaveAttribute(
+      "href",
+      `/battle/new?partyId=${partySummary.id}`,
+    );
   });
 
   it("0件の空状態を表示する", async () => {
