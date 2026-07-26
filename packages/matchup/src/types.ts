@@ -330,6 +330,80 @@ export interface SelectionRecommendation {
   readonly metrics: SelectionMetrics;
 }
 
+/** MATCHUP-007で警戒対象にするMoveTag。pivot単独は対象外。 */
+export type CautionMoveTag = Exclude<MoveTag, "pivot">;
+
+/** 警戒タグを自然文へ変換せず伝える立ち回りコード。 */
+export type StrategyCode =
+  "PREVENT_SETUP" | "LIMIT_HAZARDS" | "STALL_SCREEN_TURNS" | "RESPECT_PRIORITY" | "MANAGE_STATUS";
+
+/** MATCHUP-007がArchetypeから必要とする最小の技Snapshot。 */
+export interface CounterplanArchetypeMoveSnapshot {
+  readonly moveId: number;
+  readonly tags: readonly MoveTag[];
+  readonly adoptionRate: number;
+}
+
+/** MATCHUP-007がArchetypeから必要とする最小のPokemon Snapshot。 */
+export interface CounterplanArchetypePokemonSnapshot {
+  readonly pokemonId: number;
+  readonly usageRate: number;
+  readonly threatNotes?: string | null;
+  readonly moves: readonly CounterplanArchetypeMoveSnapshot[];
+}
+
+/**
+ * MATCHUP-007用の最小Archetype Snapshot。
+ * DB entityやscoringパッケージへ依存せず、API層が既存ArchetypeSnapshotから射影する。
+ */
+export interface CounterplanArchetypeSnapshot {
+  readonly playstyleNotes?: string | null;
+  readonly pokemons: readonly CounterplanArchetypePokemonSnapshot[];
+}
+
+/** 構築内のPokemonとMoveの関連を保持した警戒技。 */
+export interface StructuredCautionMove {
+  readonly moveId: number;
+  readonly opponentPokemonId: number;
+  readonly tags: readonly CautionMoveTag[];
+  readonly primaryTag: CautionMoveTag;
+  readonly adoptionRate: number;
+  readonly opponentUsageRate: number;
+}
+
+/** 自由記述を解析せずPokemonとの関連だけを保持する警戒note。 */
+export interface StructuredThreatNote {
+  readonly opponentPokemonId: number;
+  readonly note: string;
+}
+
+/** 相手1体に対する構造化おすすめ。 */
+export interface StructuredOpponentRecommendation {
+  readonly rank: number;
+  readonly selfPokemonId: number;
+  readonly opponentPokemonId: number;
+  readonly totalScore: number;
+  readonly classification: MatchupVerdict;
+  readonly reasonCodes: readonly MatchupReasonCode[];
+  readonly matchupResult: MatchupScore;
+}
+
+/** 相手1体に対するおすすめ・回避・警戒情報。 */
+export interface StructuredOpponentCounterplan {
+  readonly opponentPokemonId: number;
+  readonly recommendations: readonly StructuredOpponentRecommendation[];
+  readonly avoidSelfPokemonIds: readonly number[];
+  readonly cautionMoves: readonly StructuredCautionMove[];
+  readonly threatNotes: readonly StructuredThreatNote[];
+}
+
+/** MATCHUP-005〜006の確定結果とArchetype情報を統合する入力。 */
+export interface CounterplanInput {
+  readonly archetype: CounterplanArchetypeSnapshot;
+  readonly matrix: MatchupMatrixResult;
+  readonly selection: SelectionRecommendation;
+}
+
 /** おすすめ選出(§9.4) */
 export interface TeamPlan {
   leadPokemonId: number;
@@ -341,9 +415,12 @@ export interface TeamPlan {
   strategyCodes: string[];
 }
 
-/** 相性判定エンジンの最終出力 */
+/** MATCHUP-008/API・Web・LLMへ渡す、自然文に依存しない相性判定エンジン出力。 */
 export interface CounterplanResult {
-  matrix: MatchupMatrix;
-  perOpponent: OpponentRecommendation[];
-  teamPlan: TeamPlan;
+  readonly perOpponent: readonly StructuredOpponentCounterplan[];
+  readonly selection: SelectionRecommendation;
+  readonly playstyleNotes: string | null;
+  readonly strategyCodes: readonly StrategyCode[];
+  readonly cautionMoves: readonly StructuredCautionMove[];
+  readonly threatNotes: readonly StructuredThreatNote[];
 }

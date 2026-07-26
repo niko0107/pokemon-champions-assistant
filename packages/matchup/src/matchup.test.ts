@@ -187,14 +187,44 @@ describe("buildCounterplan (MATCHUP-005〜007 で実装)", () => {
 
     expect(result.leadPokemonId).toBe(1);
   });
-  it.todo("警戒技として setup/hazard/screen/priority/status タグの技を列挙する");
+  it("MATCHUP-007: setup/hazard/screen/priority/statusタグを構造化して列挙する", () => {
+    const matrix = buildMatchupMatrix({
+      self: [{ combatant: dummyCombatant, level: 50 }],
+      opponents: [{ combatant: { ...dummyCombatant, pokemonId: 101 }, level: 50 }],
+    });
+    const selection = buildSelectionRecommendation({ matrix, pickSize: 1 });
+    const result = buildCounterplan({
+      archetype: {
+        playstyleNotes: "展開を急がない",
+        pokemons: [
+          {
+            pokemonId: 101,
+            usageRate: 1,
+            threatNotes: "積み技に注意",
+            moves: [
+              {
+                moveId: 1001,
+                tags: ["setup", "status"],
+                adoptionRate: 1,
+              },
+            ],
+          },
+        ],
+      },
+      matrix,
+      selection,
+    });
 
-  it("未実装のうちは明示的にエラーを投げる", () => {
-    expect(() =>
-      buildCounterplan(
-        { partyId: "p1", pokemons: [] },
-        { archetypeId: "a1", defaultLeadSlots: [], pokemons: [] },
-      ),
-    ).toThrowError(/Not implemented/);
+    expect(result.cautionMoves).toEqual([
+      {
+        moveId: 1001,
+        opponentPokemonId: 101,
+        tags: ["setup", "status"],
+        primaryTag: "setup",
+        adoptionRate: 1,
+        opponentUsageRate: 1,
+      },
+    ]);
+    expect(result.strategyCodes).toEqual(["PREVENT_SETUP", "MANAGE_STATUS"]);
   });
 });
