@@ -4,6 +4,8 @@ import { AnonymousOnly, RequireAuth } from "./features/auth/auth-route";
 import { AuthLayout } from "./features/auth/auth-layout";
 import { LoginPage } from "./features/auth/login-page";
 import { RegisterPage } from "./features/auth/register-page";
+import { BattleInputPage } from "./features/battle/battle-input-page";
+import { BattleStartPage } from "./features/battle/battle-start-page";
 import { HomePage } from "./features/parties/home-page";
 import { PartyCreatePage } from "./features/parties/party-create-page";
 import { apiClient } from "./lib/api-client";
@@ -30,6 +32,8 @@ export function App() {
         <Route element={<RequireAuth />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/parties/new" element={<PartyCreatePage />} />
+          <Route path="/battle/new" element={<BattleStartPage />} />
+          <Route path="/battle/:sessionId" element={<BattleInputPage />} />
         </Route>
         <Route
           path="*"
