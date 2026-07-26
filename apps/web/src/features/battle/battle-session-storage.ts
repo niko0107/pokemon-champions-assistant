@@ -2,6 +2,7 @@ import {
   moveSummarySchema,
   observationResponseSchema,
   pokemonSummarySchema,
+  type UndoObservationResponse,
   type MoveSummary,
   type ObservationResponse,
   type PokemonSummary,
@@ -18,7 +19,7 @@ const storedPokemonObservationResponseSchema = observationResponseSchema
     itemId: z.null(),
     abilityId: z.null(),
     position: z.null(),
-    isRevoked: z.literal(false),
+    isRevoked: z.boolean(),
   })
   .strict();
 
@@ -29,14 +30,18 @@ const storedMoveObservationResponseSchema = observationResponseSchema
     itemId: z.null(),
     abilityId: z.null(),
     position: z.null(),
-    isRevoked: z.literal(false),
+    isRevoked: z.boolean(),
   })
   .strict();
+
+const legacyStoredPokemonObservationResponseSchema = storedPokemonObservationResponseSchema.extend({
+  isRevoked: z.literal(false),
+});
 
 const legacyStoredPokemonObservationSchema = z
   .object({
     pokemon: pokemonSummarySchema.strict(),
-    observation: storedPokemonObservationResponseSchema,
+    observation: legacyStoredPokemonObservationResponseSchema,
   })
   .strict()
   .superRefine((value, context) => {
@@ -141,9 +146,10 @@ const storedBattleStateSchema = z
   .strict()
   .superRefine((value, context) => {
     const observationIds = new Set<string>();
-    const pokemonIds = new Set<number>();
-    const moveKeys = new Set<string>();
-    let pokemonCount = 0;
+    const historicalPokemonIds = new Set<number>();
+    const activePokemonIds = new Set<number>();
+    const activeMoveKeys = new Set<string>();
+    let activePokemonCount = 0;
     let previousSeq = 0;
 
     value.observations.forEach((item, index) => {
@@ -173,11 +179,14 @@ const storedBattleStateSchema = z
       previousSeq = observation.seq;
 
       if (item.type === "pokemon") {
-        pokemonCount += 1;
-        if (pokemonCount > 6) {
+        historicalPokemonIds.add(item.pokemon.id);
+        if (!observation.isRevoked) {
+          activePokemonCount += 1;
+        }
+        if (activePokemonCount > 6) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Pokemon観測は6件以下である必要があります",
+            message: "有効なPokemon観測は6件以下である必要があります",
             path: ["observations", index],
           });
         }
@@ -188,14 +197,16 @@ const storedBattleStateSchema = z
             path: ["observations", index, "observation", "pokemonId"],
           });
         }
-        if (pokemonIds.has(item.pokemon.id)) {
+        if (!observation.isRevoked && activePokemonIds.has(item.pokemon.id)) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Pokemonが重複しています",
+            message: "有効なPokemonが重複しています",
             path: ["observations", index, "pokemon", "id"],
           });
         }
-        pokemonIds.add(item.pokemon.id);
+        if (!observation.isRevoked) {
+          activePokemonIds.add(item.pokemon.id);
+        }
         return;
       }
 
@@ -206,7 +217,7 @@ const storedBattleStateSchema = z
           path: ["observations", index, "observation", "moveId"],
         });
       }
-      if (!pokemonIds.has(observation.pokemonId)) {
+      if (!historicalPokemonIds.has(observation.pokemonId)) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message: "技の対象Pokemonが登録されていません",
@@ -214,14 +225,16 @@ const storedBattleStateSchema = z
         });
       }
       const moveKey = `${observation.pokemonId}:${observation.moveId}`;
-      if (moveKeys.has(moveKey)) {
+      if (!observation.isRevoked && activeMoveKeys.has(moveKey)) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "同じPokemonの技が重複しています",
+          message: "同じPokemonの有効な技が重複しています",
           path: ["observations", index, "observation", "moveId"],
         });
       }
-      moveKeys.add(moveKey);
+      if (!observation.isRevoked) {
+        activeMoveKeys.add(moveKey);
+      }
     });
   });
 
@@ -241,6 +254,62 @@ export function toStoredMoveObservation(
   observation: ObservationResponse,
 ): StoredMoveObservation {
   return validatedStoredMoveObservationSchema.parse({ type: "move", move, observation });
+}
+
+export function getLatestActiveBattleObservation(
+  sessionId: string,
+  observations: StoredBattleObservation[],
+): StoredBattleObservation | null {
+  return (
+    observations.reduce<StoredBattleObservation | null>((latest, item) => {
+      if (item.observation.sessionId !== sessionId || item.observation.isRevoked) {
+        return latest;
+      }
+      return latest === null || item.observation.seq > latest.observation.seq ? item : latest;
+    }, null) ?? null
+  );
+}
+
+export function applyBattleObservationUndo(
+  sessionId: string,
+  observations: StoredBattleObservation[],
+  response: UndoObservationResponse,
+): StoredBattleObservation[] {
+  const latest = getLatestActiveBattleObservation(sessionId, observations);
+  if (
+    !latest ||
+    response.sessionId !== sessionId ||
+    response.id !== latest.observation.id ||
+    response.seq !== latest.observation.seq ||
+    response.kind !== latest.observation.kind ||
+    response.pokemonId !== latest.observation.pokemonId ||
+    response.moveId !== latest.observation.moveId ||
+    response.itemId !== latest.observation.itemId ||
+    response.abilityId !== latest.observation.abilityId ||
+    response.position !== latest.observation.position ||
+    response.createdAt !== latest.observation.createdAt ||
+    response.isRevoked !== true
+  ) {
+    throw new Error("Undo response does not match the latest active observation");
+  }
+
+  const next = observations.map((item) =>
+    item.observation.id === response.id
+      ? {
+          ...item,
+          observation: {
+            ...item.observation,
+            isRevoked: true as const,
+          },
+        }
+      : item,
+  );
+
+  return storedBattleStateSchema.parse({
+    version: 2,
+    sessionId,
+    observations: next,
+  }).observations;
 }
 
 export function battleObservationStorageKey(sessionId: string): string {

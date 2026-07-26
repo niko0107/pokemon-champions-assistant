@@ -4,10 +4,12 @@ import {
   battleSessionResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
+  undoObservationResponseSchema,
   type BattleCandidatesResponse,
   type BattleSessionCreate,
   type BattleSessionResponse,
   type ObservationResponse,
+  type UndoObservationResponse,
 } from "@pokemon-champions/shared";
 import { ApiError, apiClient } from "../../lib/api-client";
 
@@ -72,4 +74,22 @@ export function addMoveObservation(
     authenticated: true,
     responseSchema: observationResponseSchema,
   });
+}
+
+export async function undoBattleObservation(
+  sessionId: string,
+  observationId: string,
+): Promise<UndoObservationResponse> {
+  const response = await apiClient.request<UndoObservationResponse>(
+    `/sessions/${sessionId}/observations/${observationId}`,
+    {
+      method: "DELETE",
+      authenticated: true,
+      responseSchema: undoObservationResponseSchema,
+    },
+  );
+  if (response.sessionId !== sessionId || response.id !== observationId) {
+    throw new ApiError("APIレスポンスの形式が正しくありません。");
+  }
+  return response;
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../lib/api-client";
-import { getBattleCandidatesErrorMessage, getBattleErrorMessage } from "./battle-errors";
+import {
+  getBattleCandidatesErrorMessage,
+  getBattleErrorMessage,
+  getBattleUndoErrorMessage,
+} from "./battle-errors";
 
 describe("getBattleErrorMessage", () => {
   it.each([
@@ -70,5 +74,33 @@ describe("getBattleCandidatesErrorMessage", () => {
 
   it("通信エラーを区別する", () => {
     expect(getBattleCandidatesErrorMessage(new ApiError("network"))).toContain("通信環境");
+  });
+});
+
+describe("getBattleUndoErrorMessage", () => {
+  it.each([
+    ["INVALID_SESSION_STATE", 400, "取り消せません"],
+    ["NOT_FOUND", 404, "見つかりません"],
+    ["OBSERVATION_CONFLICT", 409, "観測状態が更新されています"],
+    ["UNAUTHORIZED", 401, "ログイン"],
+    ["INTERNAL_ERROR", 500, "時間をおいて"],
+  ])("RFC 9457 code %sを安全な文言へ変換する", (code, status, message) => {
+    const error = new ApiError("internal title", {
+      status,
+      problem: {
+        type: "about:blank",
+        title: "internal title",
+        status,
+        detail: "表示してはいけない内部情報",
+        code,
+      },
+    });
+
+    expect(getBattleUndoErrorMessage(error)).toContain(message);
+    expect(getBattleUndoErrorMessage(error)).not.toContain("表示してはいけない内部情報");
+  });
+
+  it("通信エラーを区別する", () => {
+    expect(getBattleUndoErrorMessage(new ApiError("network"))).toContain("通信環境");
   });
 });

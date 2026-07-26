@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { resetAuthStoreForTests, useAuthStore } from "../../stores/auth-store";
+import { loadBattleObservations } from "./battle-session-storage";
 
 const partyId = "00000000-0000-4000-8000-000000000001";
 const secondPartyId = "00000000-0000-4000-8000-000000000002";
@@ -118,6 +119,12 @@ interface FetchMockOptions {
   moveObservationProblem?: unknown;
   moveObservationDelayMs?: number;
   moveObservationNetworkError?: boolean;
+  undoStatus?: number;
+  undoProblem?: unknown;
+  undoDelayMs?: number;
+  undoNetworkError?: boolean;
+  undoResponse?: unknown;
+  undoRequiresRefresh?: boolean;
   candidateResponses?: unknown[];
   candidateDelaysMs?: number[];
   candidateStatus?: number;
@@ -135,7 +142,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function createFetchMock(options: FetchMockOptions = {}) {
   let observationSeq = 0;
+  let undoRequestCount = 0;
   let candidateRequestCount = 0;
+  const observationResponses = new Map<string, Record<string, unknown>>();
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/auth/refresh") && init?.method === "POST") {
@@ -184,30 +193,71 @@ function createFetchMock(options: FetchMockOptions = {}) {
       const responseProblem = isMove
         ? (options.moveObservationProblem ?? options.observationProblem)
         : options.observationProblem;
+      const responseBody = {
+        id: `20000000-0000-4000-8000-${String(observationSeq).padStart(12, "0")}`,
+        sessionId,
+        seq: observationSeq,
+        kind: body.kind,
+        pokemonId: body.pokemonId,
+        moveId: body.kind === "move" ? body.moveId : null,
+        itemId: null,
+        abilityId: null,
+        position: null,
+        isRevoked: false,
+        createdAt: "2026-07-26T00:00:00.000Z",
+      };
       const response =
         responseStatus && responseStatus >= 400
           ? jsonResponse(responseProblem, responseStatus)
-          : jsonResponse(
-              {
-                id: `20000000-0000-4000-8000-${String(observationSeq).padStart(12, "0")}`,
-                sessionId,
-                seq: observationSeq,
-                kind: body.kind,
-                pokemonId: body.pokemonId,
-                moveId: body.kind === "move" ? body.moveId : null,
-                itemId: null,
-                abilityId: null,
-                position: null,
-                isRevoked: false,
-                createdAt: "2026-07-26T00:00:00.000Z",
-              },
-              201,
-            );
+          : jsonResponse(responseBody, 201);
+      if (!responseStatus || responseStatus < 400) {
+        observationResponses.set(responseBody.id, responseBody);
+      }
       const responseDelay = isMove
         ? (options.moveObservationDelayMs ?? options.observationDelayMs)
         : options.observationDelayMs;
       return responseDelay
         ? new Promise<Response>((resolve) => setTimeout(() => resolve(response), responseDelay))
+        : Promise.resolve(response);
+    }
+    const undoMatch = url.match(
+      new RegExp(`/sessions/${sessionId}/observations/([0-9a-f-]+)$`, "u"),
+    );
+    if (undoMatch && init?.method === "DELETE") {
+      undoRequestCount += 1;
+      if (options.undoNetworkError) {
+        return Promise.reject(new Error("network unavailable"));
+      }
+      if (options.undoRequiresRefresh && undoRequestCount === 1) {
+        return Promise.resolve(jsonResponse(problem("UNAUTHORIZED", 401), 401));
+      }
+      const observationId = undoMatch[1] ?? "";
+      const original = observationResponses.get(observationId);
+      const response =
+        options.undoStatus && options.undoStatus >= 400
+          ? jsonResponse(options.undoProblem, options.undoStatus)
+          : jsonResponse(
+              options.undoResponse ??
+                (original
+                  ? { ...original, isRevoked: true }
+                  : {
+                      id: observationId,
+                      sessionId,
+                      seq: 1,
+                      kind: "pokemon",
+                      pokemonId: 6,
+                      moveId: null,
+                      itemId: null,
+                      abilityId: null,
+                      position: null,
+                      isRevoked: true,
+                      createdAt: "2026-07-26T00:00:00.000Z",
+                    }),
+            );
+      return options.undoDelayMs
+        ? new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(response), options.undoDelayMs),
+          )
         : Promise.resolve(response);
     }
     if (url.endsWith(`/sessions/${sessionId}/candidates`)) {
@@ -716,7 +766,7 @@ describe("WEB-001 / WEB-002 battle pages", () => {
     renderApp(`/battle/${sessionId}`);
     expect(await screen.findByText(/観測 seq 1/u)).toBeVisible();
     expect(await screen.findByText("seq 2")).toBeVisible();
-    expect(screen.getByText("かえんほうしゃ")).toBeVisible();
+    expect(screen.getAllByText("かえんほうしゃ").length).toBeGreaterThan(0);
   });
 
   it("move Observationの通信エラー時は技一覧へ追加しない", async () => {
@@ -902,6 +952,199 @@ describe("WEB-001 / WEB-002 battle pages", () => {
     expect(screen.queryByText("古い候補")).not.toBeInTheDocument();
   });
 
+  it("観測0件ではUndoを無効化し、PokemonとMoveの最大seqを対象として表示する", async () => {
+    vi.stubGlobal("fetch", createFetchMock());
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    const undoButton = await screen.findByRole("button", { name: "ひとつ戻す" });
+    expect(undoButton).toBeDisabled();
+    expect(screen.getByText("Undoできる有効な観測はありません。")).toBeVisible();
+
+    await user.type(screen.getByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(screen.getByText(/戻す内容:.*リザードン/u)).toBeVisible();
+    expect(screen.getByText(/ポケモン観測/u)).toBeVisible();
+    expect(screen.getByText("Undo対象 #1")).toBeVisible();
+
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+    expect(screen.getAllByText("かえんほうしゃ").length).toBeGreaterThan(0);
+    expect(screen.getByText(/技観測/u)).toBeVisible();
+    expect(screen.getByText("Undo対象 #2")).toBeVisible();
+  });
+
+  it("直近Moveを正確なDELETE・bodyなしで一度だけUndoし、履歴を保持して再追加可能にする", async () => {
+    const fetchMock = createFetchMock({
+      undoDelayMs: 40,
+      candidateResponses: [
+        { sessionId, candidates: [] },
+        { sessionId, candidates: [{ ...candidate, name: "Pokemon入力後" }] },
+        { sessionId, candidates: [{ ...candidate, name: "技入力後" }] },
+        { sessionId, candidates: [{ ...candidate, name: "Undo後" }] },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+    await screen.findByText("技入力後");
+
+    await user.dblClick(screen.getByRole("button", { name: "ひとつ戻す" }));
+    expect(await screen.findByText(/技観測「かえんほうしゃ」を取り消しました/u)).toBeVisible();
+    expect(screen.getByText("まだ技観測はありません")).toBeVisible();
+    expect(screen.getByText(/取消済みの履歴 1件/u)).toBeVisible();
+    expect(await screen.findByText("Undo後")).toBeVisible();
+
+    const undoCalls = fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        String(input).endsWith(
+          `/sessions/${sessionId}/observations/20000000-0000-4000-8000-000000000002`,
+        ) && init?.method === "DELETE",
+    );
+    expect(undoCalls).toHaveLength(1);
+    expect(undoCalls[0]?.[1]?.body).toBeUndefined();
+
+    const stored = loadBattleObservations(sessionId);
+    expect(stored).toHaveLength(2);
+    expect(stored[1]).toMatchObject({
+      type: "move",
+      observation: { seq: 2, isRevoked: true },
+      move: { nameJa: "かえんほうしゃ" },
+    });
+
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+    expect(await screen.findByText("seq 3")).toBeVisible();
+    expect(loadBattleObservations(sessionId)).toHaveLength(3);
+  });
+
+  it("Pokemon Undoは対象だけを取消し、reload後も履歴を保って再追加できる", async () => {
+    const fetchMock = createFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    const first = renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.click(screen.getByRole("button", { name: "ひとつ戻す" }));
+    expect(await screen.findByText(/ポケモン観測「リザードン」を取り消しました/u)).toBeVisible();
+    expect(screen.getByText("まだ観測はありません")).toBeVisible();
+    expect(screen.getByLabelText("技名")).toBeDisabled();
+    expect(loadBattleObservations(sessionId)[0]).toMatchObject({
+      observation: { seq: 1, isRevoked: true },
+    });
+
+    first.unmount();
+    renderApp(`/battle/${sessionId}`);
+    expect(await screen.findByText(/取消済みの履歴 1件/u)).toBeVisible();
+    expect(screen.getByText("まだ観測はありません")).toBeVisible();
+
+    await user.type(screen.getByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(await screen.findByText(/観測 seq 2/u)).toBeVisible();
+    expect(loadBattleObservations(sessionId)).toHaveLength(2);
+  });
+
+  it.each([
+    [409, "OBSERVATION_CONFLICT", "観測状態が更新されています"],
+    [400, "INVALID_SESSION_STATE", "観測を取り消せません"],
+    [404, "NOT_FOUND", "見つかりません"],
+    [500, "INTERNAL_ERROR", "時間をおいて"],
+  ])("Undo失敗時(%s %s)はローカル履歴を変更しない", async (status, code, message) => {
+    const fetchMock = createFetchMock({
+      undoStatus: status,
+      undoProblem: problem(code, status),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    const candidatesBeforeUndo = fetchMock.mock.calls.filter(([input]) =>
+      String(input).endsWith(`/sessions/${sessionId}/candidates`),
+    ).length;
+    await user.click(screen.getByRole("button", { name: "ひとつ戻す" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByText(/観測 seq 1/u)).toBeVisible();
+    expect(loadBattleObservations(sessionId)[0]?.observation.isRevoked).toBe(false);
+    const candidatesAfterUndo = fetchMock.mock.calls.filter(([input]) =>
+      String(input).endsWith(`/sessions/${sessionId}/candidates`),
+    ).length;
+    expect(candidatesAfterUndo).toBe(
+      code === "OBSERVATION_CONFLICT" ? candidatesBeforeUndo + 1 : candidatesBeforeUndo,
+    );
+  });
+
+  it("Undoの通信エラー・不正レスポンスでは状態を変更せず、401時は既存refreshを使う", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", createFetchMock({ undoNetworkError: true }));
+    const network = renderApp(`/battle/${sessionId}`);
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.click(screen.getByRole("button", { name: "ひとつ戻す" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("通信環境");
+    expect(loadBattleObservations(sessionId)[0]?.observation.isRevoked).toBe(false);
+    network.unmount();
+
+    window.sessionStorage.clear();
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        undoResponse: {
+          id: "20000000-0000-4000-8000-000000000099",
+          sessionId,
+          seq: 1,
+          kind: "pokemon",
+          pokemonId: 6,
+          moveId: null,
+          itemId: null,
+          abilityId: null,
+          position: null,
+          isRevoked: true,
+          createdAt: "2026-07-26T00:00:00.000Z",
+        },
+      }),
+    );
+    const invalid = renderApp(`/battle/${sessionId}`);
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.click(screen.getByRole("button", { name: "ひとつ戻す" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("取り消せませんでした");
+    expect(loadBattleObservations(sessionId)[0]?.observation.isRevoked).toBe(false);
+    invalid.unmount();
+
+    window.sessionStorage.clear();
+    const refreshMock = createFetchMock({ undoRequiresRefresh: true });
+    vi.stubGlobal("fetch", refreshMock);
+    renderApp(`/battle/${sessionId}`);
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    await user.click(screen.getByRole("button", { name: "ひとつ戻す" }));
+    expect(await screen.findByText(/ポケモン観測「リザードン」を取り消しました/u)).toBeVisible();
+    expect(
+      refreshMock.mock.calls.filter(([input]) => String(input).endsWith("/auth/refresh")),
+    ).toHaveLength(1);
+  });
+
   it("ended Sessionでは状態を表示しPokemon入力を無効化する", async () => {
     vi.stubGlobal("fetch", createFetchMock({ sessionStatus: "ended" }));
     renderApp(`/battle/${sessionId}`);
@@ -909,6 +1152,7 @@ describe("WEB-001 / WEB-002 battle pages", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("activeではない");
     expect(screen.getByLabelText("相手ポケモン")).toBeDisabled();
     expect(screen.getByLabelText("技名")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "ひとつ戻す" })).toBeDisabled();
     expect(screen.getByText("ended")).toBeVisible();
   });
 });

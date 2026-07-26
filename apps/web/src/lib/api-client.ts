@@ -37,7 +37,7 @@ export class ApiError extends Error {
 }
 
 interface ApiRequestOptions<T> {
-  method?: "GET" | "POST";
+  method?: "DELETE" | "GET" | "POST";
   body?: unknown;
   responseSchema: ZodType<T, ZodTypeDef, unknown>;
   authenticated?: boolean;

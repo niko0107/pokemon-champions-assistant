@@ -2,6 +2,8 @@ import type { MoveSummary, ObservationResponse, PokemonSummary } from "@pokemon-
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   battleObservationStorageKey,
+  applyBattleObservationUndo,
+  getLatestActiveBattleObservation,
   legacyBattleObservationStorageKey,
   loadBattleObservations,
   saveBattleObservations,
@@ -166,5 +168,108 @@ describe("battle observation session storage", () => {
 
     expect(() => saveBattleObservations(sessionId, observations)).not.toThrow();
     expect(loadBattleObservations(sessionId)).toEqual(observations);
+  });
+
+  it("配列順ではなく最大seqの有効ObservationをUndo対象にし、取消済みを飛ばす", () => {
+    const pokemonItem = toStoredPokemonObservation(pokemon, pokemonObservation);
+    const moveItem = toStoredMoveObservation(move, moveObservation);
+    const revokedMove = {
+      ...moveItem,
+      observation: { ...moveItem.observation, isRevoked: true },
+    };
+
+    expect(getLatestActiveBattleObservation(sessionId, [revokedMove, pokemonItem])).toEqual(
+      pokemonItem,
+    );
+    expect(getLatestActiveBattleObservation(otherSessionId, [pokemonItem, moveItem])).toBeNull();
+    expect(
+      getLatestActiveBattleObservation(sessionId, [
+        pokemonItem,
+        {
+          ...moveItem,
+          observation: { ...moveItem.observation, seq: 7 },
+        },
+      ]),
+    ).toMatchObject({ observation: { id: moveObservation.id, seq: 7 } });
+  });
+
+  it("Undo成功時は対象を削除せずisRevokedだけ更新し、seq・表示情報・順番を保つ", () => {
+    const pokemonItem = toStoredPokemonObservation(pokemon, pokemonObservation);
+    const moveItem = toStoredMoveObservation(move, moveObservation);
+    const next = applyBattleObservationUndo(sessionId, [pokemonItem, moveItem], {
+      ...moveObservation,
+      isRevoked: true,
+    });
+
+    expect(next).toHaveLength(2);
+    expect(next[0]).toEqual(pokemonItem);
+    expect(next[1]).toEqual({
+      ...moveItem,
+      observation: { ...moveItem.observation, isRevoked: true },
+    });
+    saveBattleObservations(sessionId, next);
+    expect(loadBattleObservations(sessionId)).toEqual(next);
+  });
+
+  it("UndoレスポンスのID・seq・payload不一致を拒否しローカル状態を変えない", () => {
+    const items = [
+      toStoredPokemonObservation(pokemon, pokemonObservation),
+      toStoredMoveObservation(move, moveObservation),
+    ];
+
+    expect(() =>
+      applyBattleObservationUndo(sessionId, items, {
+        ...moveObservation,
+        id: "20000000-0000-4000-8000-000000000099",
+        isRevoked: true,
+      }),
+    ).toThrow();
+    expect(() =>
+      applyBattleObservationUndo(sessionId, items, {
+        ...moveObservation,
+        seq: 99,
+        isRevoked: true,
+      }),
+    ).toThrow();
+    expect(items[1]?.observation.isRevoked).toBe(false);
+  });
+
+  it("取消済みMove・Pokemonを履歴へ残したまま同じ観測を再追加できる", () => {
+    const storedPokemon = toStoredPokemonObservation(pokemon, pokemonObservation);
+    const storedMove = toStoredMoveObservation(move, moveObservation);
+    const revokedPokemon = {
+      ...storedPokemon,
+      observation: { ...storedPokemon.observation, isRevoked: true },
+    };
+    const revokedMove = {
+      ...storedMove,
+      observation: { ...storedMove.observation, isRevoked: true },
+    };
+    const readdedPokemon = toStoredPokemonObservation(pokemon, {
+      ...pokemonObservation,
+      id: "20000000-0000-4000-8000-000000000003",
+      seq: 3,
+    });
+    const readdedMove = toStoredMoveObservation(move, {
+      ...moveObservation,
+      id: "20000000-0000-4000-8000-000000000004",
+      seq: 4,
+    });
+
+    expect(() =>
+      saveBattleObservations(sessionId, [revokedPokemon, revokedMove, readdedPokemon, readdedMove]),
+    ).not.toThrow();
+  });
+
+  it("Pokemon取消後も関連する有効Moveを孤立履歴として保持できる", () => {
+    const storedPokemon = toStoredPokemonObservation(pokemon, pokemonObservation);
+    const revokedPokemon = {
+      ...storedPokemon,
+      observation: { ...storedPokemon.observation, isRevoked: true },
+    };
+    const activeMove = toStoredMoveObservation(move, moveObservation);
+
+    expect(() => saveBattleObservations(sessionId, [revokedPokemon, activeMove])).not.toThrow();
+    expect(loadBattleObservations(sessionId)).toEqual([revokedPokemon, activeMove]);
   });
 });

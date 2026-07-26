@@ -64,17 +64,37 @@ const flamethrower = {
 interface BattleMockState {
   createBodies: unknown[];
   observationBodies: unknown[];
+  undoObservationIds: string[];
   candidateRequests: number;
   rejectNextObservation: boolean;
+  rejectNextUndo: boolean;
 }
 
 async function mockBattleApis(page: Page): Promise<BattleMockState> {
   const state: BattleMockState = {
     createBodies: [],
     observationBodies: [],
+    undoObservationIds: [],
     candidateRequests: 0,
     rejectNextObservation: false,
+    rejectNextUndo: false,
   };
+  const observations = new Map<
+    string,
+    {
+      id: string;
+      sessionId: string;
+      seq: number;
+      kind: "pokemon" | "move";
+      pokemonId: number;
+      moveId: number | null;
+      itemId: null;
+      abilityId: null;
+      position: null;
+      isRevoked: boolean;
+      createdAt: string;
+    }
+  >();
 
   await page.route("**/api/v1/auth/login", async (route) => {
     await route.fulfill({ status: 200, json: authResponse });
@@ -137,34 +157,69 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       return;
     }
     const input = body as { kind: "pokemon" | "move"; pokemonId: number; moveId?: number };
+    const response = {
+      id: `20000000-0000-4000-8000-${String(state.observationBodies.length).padStart(12, "0")}`,
+      sessionId,
+      seq: state.observationBodies.length,
+      kind: input.kind,
+      pokemonId: input.pokemonId,
+      moveId: input.kind === "move" ? (input.moveId ?? null) : null,
+      itemId: null,
+      abilityId: null,
+      position: null,
+      isRevoked: false,
+      createdAt: "2026-07-26T00:00:00.000Z",
+    };
+    observations.set(response.id, response);
     await route.fulfill({
       status: 201,
-      json: {
-        id: `20000000-0000-4000-8000-${String(state.observationBodies.length).padStart(12, "0")}`,
-        sessionId,
-        seq: state.observationBodies.length,
-        kind: input.kind,
-        pokemonId: input.pokemonId,
-        moveId: input.kind === "move" ? input.moveId : null,
-        itemId: null,
-        abilityId: null,
-        position: null,
-        isRevoked: false,
-        createdAt: "2026-07-26T00:00:00.000Z",
-      },
+      json: response,
     });
+  });
+  await page.route(`**/api/v1/sessions/${sessionId}/observations/*`, async (route) => {
+    const observationId = route.request().url().split("/").at(-1) ?? "";
+    state.undoObservationIds.push(observationId);
+    const latestActive = [...observations.values()]
+      .filter((observation) => !observation.isRevoked)
+      .sort((left, right) => right.seq - left.seq)[0];
+    if (
+      state.rejectNextUndo ||
+      route.request().method() !== "DELETE" ||
+      !latestActive ||
+      latestActive.id !== observationId
+    ) {
+      state.rejectNextUndo = false;
+      await route.fulfill({
+        status: 409,
+        json: {
+          type: "about:blank",
+          title: "Observation conflict",
+          status: 409,
+          detail: "internal detail",
+          code: "OBSERVATION_CONFLICT",
+        },
+      });
+      return;
+    }
+    latestActive.isRevoked = true;
+    await route.fulfill({ status: 200, json: latestActive });
   });
   await page.route(`**/api/v1/sessions/${sessionId}/candidates`, async (route) => {
     state.candidateRequests += 1;
+    const activeObservations = [...observations.values()].filter(
+      (observation) => !observation.isRevoked,
+    );
+    const activePokemon = activeObservations.find((observation) => observation.kind === "pokemon");
+    const activeMove = activeObservations.find((observation) => observation.kind === "move");
     const pokemonMatched = {
-      observationSeq: 1,
+      observationSeq: activePokemon?.seq ?? 1,
       kind: "pokemon",
       matched: true,
       points: 10,
       pokemonId: 6,
     };
     const moveMatched = {
-      observationSeq: 2,
+      observationSeq: activeMove?.seq ?? 2,
       kind: "move",
       matched: true,
       points: 15,
@@ -184,9 +239,9 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       matchRate,
       popularityTier,
       matched:
-        state.observationBodies.length >= 2
+        activePokemon && activeMove
           ? [pokemonMatched, moveMatched]
-          : state.observationBodies.length === 1
+          : activePokemon
             ? [pokemonMatched]
             : [],
       contradictions: [],
@@ -195,9 +250,9 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       threatMoveIds: [85],
     });
     const candidates =
-      state.observationBodies.length === 0
+      activeObservations.length === 0
         ? []
-        : state.observationBodies.length === 1
+        : !activeMove
           ? [
               candidate("30000000-0000-4000-8000-000000000001", "リザードン展開", 1, 80, "high"),
               candidate("30000000-0000-4000-8000-000000000002", "雨展開", 2, 70, "mid"),
@@ -302,8 +357,42 @@ test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元�
   await page.reload();
   await expect(page.getByText(/観測 seq 1/u)).toBeVisible();
   await expect(page.getByText("seq 2")).toBeVisible();
-  await expect(page.getByText("かえんほうしゃ", { exact: true })).toBeVisible();
+  await expect(page.getByText("かえんほうしゃ", { exact: true }).last()).toBeVisible();
   await expect(page.getByRole("heading", { name: "雨展開" })).toBeVisible();
+
+  await page.getByRole("button", { name: "ひとつ戻す" }).click();
+  await expect(page.getByText(/技観測「かえんほうしゃ」を取り消しました/u)).toBeVisible();
+  await expect(page.getByText("まだ技観測はありません")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "リザードン展開" })).toBeVisible();
+  expect(state.undoObservationIds).toEqual(["20000000-0000-4000-8000-000000000002"]);
+
+  await page.getByLabel("技名").fill("かえ");
+  await page.getByRole("button", { name: "かえんほうしゃをリザードンの技として追加" }).click();
+  await expect(page.getByText("seq 3")).toBeVisible();
+  await page.getByRole("button", { name: "ひとつ戻す" }).click();
+  await expect(page.getByText(/取消済みの履歴 2件/u)).toBeVisible();
+  await page.getByRole("button", { name: "ひとつ戻す" }).click();
+  await expect(page.getByText(/ポケモン観測「リザードン」を取り消しました/u)).toBeVisible();
+  await expect(page.getByText("まだ観測はありません")).toBeVisible();
+  await expect(page.getByText("Undoできる有効な観測はありません。")).toBeVisible();
+
+  const stored = await page.evaluate((id) => {
+    const raw = sessionStorage.getItem(`pokemon-champions.battle.observations.v2:${id}`);
+    return raw ? JSON.parse(raw) : null;
+  }, sessionId);
+  expect(stored.observations).toHaveLength(3);
+  expect(
+    stored.observations.map((item: { observation: { seq: number } }) => item.observation.seq),
+  ).toEqual([1, 2, 3]);
+  expect(
+    stored.observations.every(
+      (item: { observation: { isRevoked: boolean } }) => item.observation.isRevoked,
+    ),
+  ).toBe(true);
+
+  await page.reload();
+  await expect(page.getByText(/取消済みの履歴 3件/u)).toBeVisible();
+  await expect(page.getByText("Undoできる有効な観測はありません。")).toBeVisible();
   expect(state.candidateRequests).toBeGreaterThanOrEqual(3);
   expect(
     await page.evaluate(
@@ -336,6 +425,15 @@ test("1440pxで技をキーボード入力でき、429を安全に表示して�
 
   await expect(page.getByRole("alert")).toContainText("少し待って");
   await expect(page.getByText("まだ技観測はありません")).toBeVisible();
+
+  state.rejectNextObservation = false;
+  await candidate.click();
+  await expect(page.getByText("seq 3")).toBeVisible();
+  state.rejectNextUndo = true;
+  await page.getByRole("button", { name: "ひとつ戻す" }).click();
+  await expect(page.getByRole("alert")).toContainText("観測状態が更新されています");
+  await expect(page.getByText("seq 3")).toBeVisible();
+
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL("/login");
   expect(
