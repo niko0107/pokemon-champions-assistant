@@ -20,7 +20,7 @@ const dummyCombatant: CombatantSnapshot = {
   moves: [],
 };
 
-describe("calculateMatchupScore (MATCHUP-002〜004 で実装)", () => {
+describe("calculateMatchupScore (MATCHUP-002〜004)", () => {
   it("MATCHUP-002: 弱点を突ける攻撃タイプを判定する", () => {
     expect(
       getCombinedTypeEffectiveness("electric", {
@@ -36,7 +36,18 @@ describe("calculateMatchupScore (MATCHUP-002〜004 で実装)", () => {
     expect(profile.immunities).toEqual(["electric", "ground"]);
   });
 
-  it.todo("素早さ実数値の比較で −10〜+15 を加減点する(スカーフ補正込み)");
+  it("承認済み対象外の素早さ値をスコアへ加えない", () => {
+    const slow = { ...dummyCombatant, pokemonId: 1, stats: { ...dummyCombatant.stats, spe: 1 } };
+    const fast = { ...dummyCombatant, pokemonId: 2, stats: { ...dummyCombatant.stats, spe: 999 } };
+    expect(
+      calculateMatchupScore({
+        self: slow,
+        selfLevel: 50,
+        opponent: fast,
+        opponentLevel: 50,
+      }).breakdown.speed,
+    ).toBe(0);
+  });
   it("MATCHUP-003: 簡易ダメージ計算から確定数を算出する", () => {
     const result = calculateDamageRange({
       attacker: {
@@ -67,15 +78,63 @@ describe("calculateMatchupScore (MATCHUP-002〜004 で実装)", () => {
     expect(result.knockoutCount).toBe(2);
     expect(result.knockoutClassification).toBe("guaranteed_two_hit");
   });
-  it.todo("有効な先制技を持つ場合 +5 する");
-  it.todo("相手が積み技持ちで対抗手段がない場合に減点する");
-  it.todo("合計を −100〜+100 に正規化し verdict(有利/五分/不利)を判定する");
-  it.todo("相手の技が観測済みならその技、未観測なら採用率上位4技で計算する");
+  it("承認済み対象外の先制技・積み対応軸をスコアへ加えない", () => {
+    const result = calculateMatchupScore({
+      self: dummyCombatant,
+      selfLevel: 50,
+      opponent: dummyCombatant,
+      opponentLevel: 50,
+    });
+    expect(result.breakdown.priority).toBe(0);
+    expect(result.breakdown.setupCounter).toBe(0);
+  });
 
-  it("未実装のうちは明示的にエラーを投げる", () => {
-    expect(() => calculateMatchupScore(dummyCombatant, dummyCombatant)).toThrowError(
-      /Not implemented/,
-    );
+  it("合計を −100〜+100 に正規化し判定する", () => {
+    const result = calculateMatchupScore({
+      self: dummyCombatant,
+      selfLevel: 50,
+      opponent: { ...dummyCombatant, pokemonId: 2 },
+      opponentLevel: 50,
+    });
+    expect(result.totalScore).toBeGreaterThanOrEqual(-100);
+    expect(result.totalScore).toBeLessThanOrEqual(100);
+    expect(result.classification).toBe("even");
+  });
+
+  it("呼び出し側が選択した相手技配列だけを評価する", () => {
+    const opponent = {
+      ...dummyCombatant,
+      pokemonId: 2,
+      moves: [
+        {
+          moveId: 10,
+          type: "normal" as const,
+          category: "physical" as const,
+          power: 20,
+          accuracy: 100,
+          priority: 0,
+          tags: [],
+          adoptionRate: 1,
+        },
+        {
+          moveId: 20,
+          type: "normal" as const,
+          category: "physical" as const,
+          power: 200,
+          accuracy: 100,
+          priority: 0,
+          tags: [],
+          adoptionRate: 0.01,
+        },
+      ],
+    };
+    const result = calculateMatchupScore({
+      self: dummyCombatant,
+      selfLevel: 50,
+      opponent,
+      opponentLevel: 50,
+    });
+    expect(result.mostThreateningMoveId).toBe(20);
   });
 });
 
