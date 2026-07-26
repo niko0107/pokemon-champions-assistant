@@ -572,3 +572,14 @@
 - **判断:** 現行`GET /sessions/:id`にはObservation一覧がないため、別タブ・別端末・sessionStorage消去後の完全同期や409後の履歴修復は行わず、推測したObservation IDも生成しない。RFC 9457の`INVALID_SESSION_STATE / NOT_FOUND / OBSERVATION_CONFLICT / UNAUTHORIZED / INTERNAL_ERROR`と通信失敗はcodeまたは通信状態だけから安全な日本語へ変換し、server detailを表示しない
 - **理由:** BATTLE-003の直近限定・追記型履歴・競合防止契約を変更せず、対戦中のワンタップ操作でUI、同一タブ内復元、BATTLE-004の候補表示をサーバー成功後だけ整合させるため
 - **影響:** sessionStorageに存在しない他クライアント由来ObservationはWebからUndoできず、409時に完全な観測履歴を復元できない。完全同期が必要になった場合は、Observation一覧の読取契約を別タスクで仕様化する必要がある。Redo、任意・複数Undo、他kind入力、候補選択・終了はWEB-004に含めない
+
+## 2026-07-27 タイプ相性表・攻防相性(MATCHUP-002)
+
+### D-054: sharedの18タイプ完全表と複合タイププロフィール
+
+- **判断:** `normal / fire / water / electric / grass / ice / fighting / poison / ground / flying / psychic / bug / rock / ghost / dragon / dark / steel / fairy`の現行18タイプを`POKEMON_TYPES`としてsharedの正規許可値にし、MATCHUP-001の暫定`TypeName=string`をこのliteral unionへ置き換える。既存Pokemon・Move APIの文字列契約やDB制約は今回変更せず、相性エンジンの入力だけを型安全に限定する
+- **判断:** 基本相性は攻撃18タイプ×防御18タイプの全324組を`TYPE_EFFECTIVENESS_CHART`へ明示し、未記載を暗黙の1倍として補完しない。基本倍率は`0 / 0.5 / 1 / 2`、複合倍率は積から生じる`0 / 0.25 / 0.5 / 1 / 2 / 4`だけを許可する。表本体と各行はfreezeし、利用側から共有データを変更できないようにする
+- **判断:** matchupは単一倍率、`type2=null`を含む複合倍率、防御プロフィール(4倍弱点・弱点・等倍・半減・4分の1・無効)、攻撃プロフィール(抜群・等倍・今ひとつ・無効)を純粋関数として返す。結果は常に`POKEMON_TYPES`順とし、呼び出しごとに新しい配列を返す。DBの`pokemons_distinct_types`制約と揃えて同一type1/type2はRangeErrorで拒否する
+- **判断:** PRODUCT_SPEC §9.2は攻撃・防御相性の最終配点を各0〜30とするが、タイプ倍率から点数へ変換する具体的な重みは定義していない。独自配点を追加せず、MATCHUP-002は後続評価の型安全な倍率・分類基盤までとし、技威力・実数値・想定技を含むスコア統合は計画どおりMATCHUP-003〜004で扱う
+- **理由:** sharedをタイプ文字列の単一の正とし、表の欠落・可変参照・入力順・浮動小数点誤差による非決定性を防ぎながら、後続ダメージ計算と1対1評価へ副作用のない相性情報を提供するため
+- **影響:** 現行18タイプ外の値はmatchupへ渡せない。STAB、テラスタル、特性、持ち物、例外技、天候・フィールドは基本表を上書きせず、明示された後続タスクで別の補正層として扱う必要がある

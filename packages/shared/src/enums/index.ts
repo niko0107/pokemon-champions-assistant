@@ -34,6 +34,29 @@ export type PokemonRole = (typeof POKEMON_ROLES)[number];
 export const MOVE_CATEGORIES = ["physical", "special", "status"] as const;
 export type MoveCategory = (typeof MOVE_CATEGORIES)[number];
 
+/** 現行ゲーム仕様で使用するポケモン・技の18タイプ。 */
+export const POKEMON_TYPES = [
+  "normal",
+  "fire",
+  "water",
+  "electric",
+  "grass",
+  "ice",
+  "fighting",
+  "poison",
+  "ground",
+  "flying",
+  "psychic",
+  "bug",
+  "rock",
+  "ghost",
+  "dragon",
+  "dark",
+  "steel",
+  "fairy",
+] as const;
+export type PokemonType = (typeof POKEMON_TYPES)[number];
+
 /** 警戒技判定等に使う技タグ(moves.tags) */
 export const MOVE_TAGS = ["setup", "hazard", "screen", "pivot", "status", "priority"] as const;
 export type MoveTag = (typeof MOVE_TAGS)[number];

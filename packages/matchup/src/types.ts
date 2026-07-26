@@ -6,10 +6,43 @@
  *   - 入力は「自パーティ」と「予測構築(観測で補正済み)」のスナップショット
  *   - 副作用(I/O・時刻取得・乱数)を持たない
  */
-import type { MoveCategory, MoveTag, PokemonRole } from "@pokemon-champions/shared";
+import type {
+  BaseTypeEffectivenessMultiplier,
+  MoveCategory,
+  MoveTag,
+  PokemonRole,
+  PokemonType,
+} from "@pokemon-champions/shared";
 
-/** タイプ名(将来 shared のマスタ定数へ昇格予定) */
-export type TypeName = string;
+/** sharedの現行18タイプ許可値。 */
+export type TypeName = PokemonType;
+
+/** 単一・複合タイプの計算結果として取り得る倍率。 */
+export type TypeEffectivenessMultiplier = BaseTypeEffectivenessMultiplier | 0.25 | 4;
+
+/** Pokemonの単一・複合タイプ構成。DBと同様に同一タイプの重複は許可しない。 */
+export interface DefensiveTyping {
+  readonly type1: TypeName;
+  readonly type2: TypeName | null;
+}
+
+/** 全攻撃タイプから見た防御側の倍率別プロフィール。 */
+export interface DefensiveTypeProfile {
+  quadrupleWeaknesses: TypeName[];
+  weaknesses: TypeName[];
+  neutral: TypeName[];
+  resistances: TypeName[];
+  quarterResistances: TypeName[];
+  immunities: TypeName[];
+}
+
+/** 1つの攻撃タイプから見た全単一防御タイプのプロフィール。 */
+export interface OffensiveTypeProfile {
+  superEffective: TypeName[];
+  neutral: TypeName[];
+  notVeryEffective: TypeName[];
+  noEffect: TypeName[];
+}
 
 /** 実数値セット */
 export interface StatValues {
@@ -83,11 +116,7 @@ export interface MatchupScoreBreakdown {
 
 /** 有利/不利の区分(§9.2 のしきい値に対応) */
 export type MatchupVerdict =
-  | "favorable"
-  | "slightly_favorable"
-  | "even"
-  | "slightly_unfavorable"
-  | "unfavorable";
+  "favorable" | "slightly_favorable" | "even" | "slightly_unfavorable" | "unfavorable";
 
 /** 1対1相性スコア(−100〜+100 に正規化) */
 export interface MatchupScore {
