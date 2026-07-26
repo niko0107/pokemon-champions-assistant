@@ -8,7 +8,8 @@ test("トップ画面が表示され、API ヘルスチェックに接続でき�
 
   // Web アプリが表示されること
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Pokémon Champions 対戦支援" })).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page.getByRole("heading", { name: "ログイン" })).toBeVisible();
 
   // Web → API の疎通(TanStack Query 経由)が成功すること
   await expect(page.getByTestId("health-status")).toHaveAttribute("data-status", "ok", {

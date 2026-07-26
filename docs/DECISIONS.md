@@ -478,3 +478,15 @@
 - **判断:** 新しい公開HTTP APIとhealth項目は追加しない。schedulerは開始・完了・処理件数だけを集約ログへ記録し、失敗時はSession ID・userId・接続情報・例外内容を含めない固定メッセージを記録して次回実行を継続する。現行BattleSessionモデルだけで完了できるため、Prisma schemaとmigrationは変更せず6.19.3を維持する
 - **理由:** 90日の保持仕様を、対戦中の実際の更新と終了時刻に対応させ、HTTPやRedisを新たな障害点にせず、単一・複数プロセスの双方で冪等かつ競合に安全な最小バッチとして実現するため
 - **影響:** 現行DBの複合indexは`(status, startedAt)`であり、本タスクが使用する`updatedAt / endedAt`向けindexはDB変更禁止に従い追加していない。データ量増加後に実行計画上の問題が出た場合は、前進migrationを別タスクで検討する
+
+## 2026-07-26 ログイン・登録画面(WEB-005)
+
+### D-046: 認証ルートとブラウザ内トークン保存
+
+- **判断:** 認証画面は `/login` と `/register`、認証後の最小保護画面は `/` とする。未認証の保護ルートは `/login`、認証済みの認証ルートは `/` へ置換遷移し、後続画面でも再利用できるroute guardを用意する
+- **判断:** access tokenはZustandのメモリ内だけに保持し、永続ストレージへ保存しない。refresh token、refresh有効期限、公開Userだけをversion付きstrictスキーマで `sessionStorage` へ保存し、ページ再読み込み時はrefresh APIでaccess tokenを再発行する。破損・期限切れ・refresh失敗時は保存情報を破棄する
+- **判断:** `localStorage` はブラウザ終了後も秘密情報が残るため使用せず、現行APIにHttpOnly Cookie契約がない範囲でタブ単位の `sessionStorage` に限定する。sessionStorageもXSSからは読み取れるため、画面へ未信頼HTMLを挿入せず、将来Cookie APIを追加する場合はCSRF対策と同じタスクで移行する
+- **判断:** 認証APIクライアントはsharedのrequest/response ZodスキーマとRFC 9457スキーマを通し、Bearer付与、期限切れ前refresh、401時のrefresh後1回だけ再試行を担う。同時refreshは単一Promiseへ集約し、失敗時は認証情報を破棄して無限retryしない
+- **判断:** AUTH-003にログアウト失効APIがないため、WEB-005のログアウトはクライアント内のメモリとsessionStorageの破棄だけを行う。サーバー側refresh tokenの即時失効はAPI契約追加を伴う後続認証タスクとする
+- **理由:** 現行のJSON token APIを変更せずに再読み込み復元、複数リクエストの安全なrefresh、未認証リダイレクトを実現し、長期間残るブラウザ保存とaccess token露出を最小化するため
+- **影響:** タブを閉じるとログイン状態は失われる。別タブにはログイン状態を共有しない。後続の保護APIクライアントは同じ認証アダプターを通す
