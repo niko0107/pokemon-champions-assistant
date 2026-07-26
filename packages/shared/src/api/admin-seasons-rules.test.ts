@@ -67,24 +67,33 @@ describe("ARCHETYPE-003 season admin schemas", () => {
 
 describe("ARCHETYPE-003 rule admin schemas", () => {
   it("正常なルール作成入力を受理する", () => {
-    expect(adminRuleCreateSchema.parse({ name: " シングル ", teamSize: 6, pickSize: 3 })).toEqual({
+    expect(
+      adminRuleCreateSchema.parse({
+        name: " シングル ",
+        teamSize: 6,
+        pickSize: 3,
+        battleLevel: 50,
+      }),
+    ).toEqual({
       name: "シングル",
       teamSize: 6,
       pickSize: 3,
+      battleLevel: 50,
     });
   });
 
   it.each([
-    ["pickSizeがteamSizeを超過", { name: "R", teamSize: 3, pickSize: 6 }],
-    ["teamSizeが範囲外", { name: "R", teamSize: 7, pickSize: 3 }],
-    ["pickSizeが0", { name: "R", teamSize: 6, pickSize: 0 }],
-    ["空の名前", { name: " ", teamSize: 6, pickSize: 3 }],
+    ["pickSizeがteamSizeを超過", { name: "R", teamSize: 3, pickSize: 6, battleLevel: 50 }],
+    ["teamSizeが範囲外", { name: "R", teamSize: 7, pickSize: 3, battleLevel: 50 }],
+    ["pickSizeが0", { name: "R", teamSize: 6, pickSize: 0, battleLevel: 50 }],
+    ["空の名前", { name: " ", teamSize: 6, pickSize: 3, battleLevel: 50 }],
+    ["battleLevelが0", { name: "R", teamSize: 6, pickSize: 3, battleLevel: 0 }],
   ])("%sを拒否する", (_label, input) => {
     expect(adminRuleCreateSchema.safeParse(input).success).toBe(false);
   });
 
   it("ルールレスポンス・一覧を検証する", () => {
-    const rule = { id: 1, name: "シングル", teamSize: 6, pickSize: 3 };
+    const rule = { id: 1, name: "シングル", teamSize: 6, pickSize: 3, battleLevel: 50 };
     expect(adminRuleSchema.parse(rule)).toEqual(rule);
     expect(adminRuleListResponseSchema.parse({ items: [rule] }).items).toHaveLength(1);
     expect(adminRuleSchema.safeParse({ ...rule, extra: 1 }).success).toBe(false);

@@ -20,6 +20,14 @@ const validRequest = {
       itemId: 1,
       itemAlternatives: [2],
       abilityId: 1,
+      actualStats: {
+        hp: 215,
+        attack: 132,
+        defense: 187,
+        specialAttack: 88,
+        specialDefense: 93,
+        speed: 67,
+      },
       role: "lead",
       moves: [{ moveId: 1, adoptionRate: 1 }],
     },
@@ -79,6 +87,16 @@ describe("ARCHETYPE-005 shared preview schemas", () => {
     ).toBe(false);
     expect(
       adminArchetypePreviewRequestSchema.safeParse({ ...validRequest, seasonId: 0 }).success,
+    ).toBe(false);
+  });
+
+  it("プレビューでもactualStatsを必須にする", () => {
+    const { actualStats: _actualStats, ...pokemon } = validRequest.pokemons[0];
+    expect(
+      adminArchetypePreviewRequestSchema.safeParse({
+        ...validRequest,
+        pokemons: [pokemon],
+      }).success,
     ).toBe(false);
   });
 

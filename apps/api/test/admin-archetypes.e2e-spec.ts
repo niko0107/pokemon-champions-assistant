@@ -34,6 +34,14 @@ const writeInput = adminArchetypeWriteSchema.parse({
       itemId: 20,
       itemAlternatives: [],
       abilityId: 30,
+      actualStats: {
+        hp: 215,
+        attack: 132,
+        defense: 187,
+        specialAttack: 88,
+        specialDefense: 93,
+        speed: 67,
+      },
       role: "lead",
       moves: [{ moveId: 40 }],
     },
@@ -258,6 +266,29 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       status: 400,
       code: "VALIDATION_ERROR",
     });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("actualStats不足・不正値をDB呼び出し前に400にする", async () => {
+    const { actualStats: _actualStats, ...withoutActualStats } = writeInput.pokemons[0]!;
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, pokemons: [withoutActualStats] })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        ...writeInput,
+        pokemons: [
+          {
+            ...writeInput.pokemons[0],
+            actualStats: { ...writeInput.pokemons[0]!.actualStats, hp: 0 },
+          },
+        ],
+      })
+      .expect(400);
     expect(create).not.toHaveBeenCalled();
   });
 

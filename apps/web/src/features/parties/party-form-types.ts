@@ -2,7 +2,6 @@ import type {
   AbilitySummary,
   ItemSummary,
   MoveSummary,
-  PartyActualStats,
   PartyEvs,
   PartyIvs,
   PokemonSummary,
@@ -19,6 +18,15 @@ export const PARTY_STAT_LABELS: Readonly<Record<PartyStatKey, string>> = {
   spd: "特防",
   spe: "素早さ",
 };
+
+export const PARTY_COMBAT_STAT_KEYS = {
+  hp: "hp",
+  atk: "attack",
+  def: "defense",
+  spa: "specialAttack",
+  spd: "specialDefense",
+  spe: "speed",
+} as const;
 
 export const TERA_TYPES = [
   "ノーマル",
@@ -60,7 +68,7 @@ export interface PartyPokemonFormState {
   teraType: string;
   evs: PartyEvs;
   ivs: PartyIvs;
-  actualStatOverrides: Partial<PartyActualStats>;
+  actualStatOverrides: Partial<Record<PartyStatKey, number>>;
   moves: Array<MoveSummary | null>;
 }
 

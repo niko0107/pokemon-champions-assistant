@@ -27,6 +27,14 @@ const baseRaw = {
       itemId: 20,
       itemAlternatives: [21, 22],
       abilityId: 30,
+      actualStats: {
+        hp: 215,
+        attack: 132,
+        defense: 187,
+        specialAttack: 88,
+        specialDefense: 93,
+        speed: 67,
+      },
       role: "lead",
       moves: [{ moveId: 40 }, { moveId: 41 }],
     },
@@ -36,6 +44,14 @@ const baseRaw = {
       itemId: 23,
       itemAlternatives: [],
       abilityId: 31,
+      actualStats: {
+        hp: 180,
+        attack: 172,
+        defense: 95,
+        specialAttack: 120,
+        specialDefense: 95,
+        speed: 194,
+      },
       role: "sweeper",
       // 40 は 10 と 11 の両方が持つ(別ポケモンの同一技)
       moves: [{ moveId: 40 }, { moveId: 42 }],
@@ -242,7 +258,13 @@ describe("buildPreviewObservations", () => {
     const raw = {
       ...baseRaw,
       pokemons: [
-        { slot: 1, pokemonId: 10, role: "lead", moves: [{ moveId: 40 }] },
+        {
+          slot: 1,
+          pokemonId: 10,
+          actualStats: baseRaw.pokemons[0].actualStats,
+          role: "lead",
+          moves: [{ moveId: 40 }],
+        },
         baseRaw.pokemons[1],
       ],
       defaultLeads: [1, 2],

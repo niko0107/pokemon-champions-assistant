@@ -2,11 +2,13 @@ import { z } from "zod";
 
 const ruleNameSchema = z.string().trim().min(1, "ルール名は1文字以上必要です");
 const partySizeSchema = z.number().int().min(1).max(6);
+export const battleLevelSchema = z.number().int().safe().min(1).max(100);
 
 const ruleFields = {
   name: ruleNameSchema,
   teamSize: partySizeSchema,
   pickSize: partySizeSchema,
+  battleLevel: battleLevelSchema,
 } as const;
 
 const ruleRecordFields = {

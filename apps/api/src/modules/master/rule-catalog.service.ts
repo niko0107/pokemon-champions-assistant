@@ -8,6 +8,7 @@ const masterRuleSelect = {
   name: true,
   teamSize: true,
   pickSize: true,
+  battleLevel: true,
 } satisfies Prisma.RuleSelect;
 
 @Injectable()

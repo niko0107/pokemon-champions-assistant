@@ -8,6 +8,7 @@ import {
   archetypePopularityTierSchema,
   archetypeStatusSchema,
 } from "../archetype";
+import { combatActualStatsSchema } from "../combat-stats";
 import {
   CONTRADICTION_CODES,
   EXCLUSION_CODES,
@@ -35,43 +36,55 @@ export const adminArchetypeMoveInputSchema = z
   })
   .strict();
 
-export const adminArchetypePokemonInputSchema = z
-  .object({
-    slot: z.number().int().min(1).max(ARCHETYPE_TEAM_SIZE_MAX),
-    pokemonId: positiveMasterIdSchema,
-    itemId: positiveMasterIdSchema.nullable().default(null),
-    itemAlternatives: archetypeItemAlternativeIdsSchema.default([]),
-    abilityId: positiveMasterIdSchema.nullable().default(null),
-    nature: nullableTextSchema.default(null),
-    teraType: nullableTextSchema.default(null),
-    evs: archetypeEvsSchema.nullable().default(null),
-    role: archetypePokemonRoleSchema,
-    usageRate: rateSchema.default(1),
-    threatNotes: nullableTextSchema.default(null),
-    moves: z.array(adminArchetypeMoveInputSchema).min(1, "技を1件以上指定してください"),
-  })
-  .strict()
-  .superRefine((pokemon, context) => {
-    if (
-      pokemon.itemId !== null &&
-      pokemon.itemAlternatives.some((itemId) => itemId === pokemon.itemId)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "定番持ち物を代替持ち物へ重複指定できません",
-        path: ["itemAlternatives"],
-      });
-    }
+const adminArchetypePokemonFields = {
+  slot: z.number().int().min(1).max(ARCHETYPE_TEAM_SIZE_MAX),
+  pokemonId: positiveMasterIdSchema,
+  itemId: positiveMasterIdSchema.nullable().default(null),
+  itemAlternatives: archetypeItemAlternativeIdsSchema.default([]),
+  abilityId: positiveMasterIdSchema.nullable().default(null),
+  nature: nullableTextSchema.default(null),
+  teraType: nullableTextSchema.default(null),
+  evs: archetypeEvsSchema.nullable().default(null),
+  actualStats: combatActualStatsSchema,
+  role: archetypePokemonRoleSchema,
+  usageRate: rateSchema.default(1),
+  threatNotes: nullableTextSchema.default(null),
+  moves: z.array(adminArchetypeMoveInputSchema).min(1, "技を1件以上指定してください"),
+} as const;
 
-    const moveIds = pokemon.moves.map((move) => move.moveId);
-    if (new Set(moveIds).size !== moveIds.length) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "同じポケモンへ同じ技を重複指定できません",
-        path: ["moves"],
-      });
-    }
-  });
+function validateAdminArchetypePokemon(
+  pokemon: {
+    itemId: number | null;
+    itemAlternatives: number[];
+    moves: Array<{ moveId: number }>;
+  },
+  context: z.RefinementCtx,
+): void {
+  if (
+    pokemon.itemId !== null &&
+    pokemon.itemAlternatives.some((itemId) => itemId === pokemon.itemId)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "定番持ち物を代替持ち物へ重複指定できません",
+      path: ["itemAlternatives"],
+    });
+  }
+
+  const moveIds = pokemon.moves.map((move) => move.moveId);
+  if (new Set(moveIds).size !== moveIds.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "同じポケモンへ同じ技を重複指定できません",
+      path: ["moves"],
+    });
+  }
+}
+
+export const adminArchetypePokemonInputSchema = z
+  .object(adminArchetypePokemonFields)
+  .strict()
+  .superRefine(validateAdminArchetypePokemon);
 
 export const adminArchetypeSourceInputSchema = z
   .object({
@@ -149,7 +162,13 @@ export type AdminArchetypePokemonInput = z.infer<typeof adminArchetypePokemonInp
 const timestampSchema = z.string().datetime({ offset: true });
 
 export const adminArchetypeMoveSchema = adminArchetypeMoveInputSchema;
-export const adminArchetypePokemonSchema = adminArchetypePokemonInputSchema;
+export const adminArchetypePokemonSchema = z
+  .object({
+    ...adminArchetypePokemonFields,
+    actualStats: combatActualStatsSchema.nullable(),
+  })
+  .strict()
+  .superRefine(validateAdminArchetypePokemon);
 export const adminArchetypeSourceSchema = adminArchetypeSourceInputSchema;
 
 export const adminArchetypeDetailSchema = z

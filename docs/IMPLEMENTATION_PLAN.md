@@ -711,6 +711,16 @@
 - **前提タスク:** MATCHUP-006
 - **対象外:** 自然文の立ち回り生成(LLM タスク)
 
+### ✅ MATCHUP-008A 戦闘能力値スナップショット基盤
+
+- **目的:** MATCHUP-008でParty・Archetype双方の正確なダメージ計算入力を構築できるよう、Ruleの対戦レベルとArchetypeの確定実数値を永続化する
+- **作業範囲:** Rule.battleLevel、ArchetypePokemon.actualStats、共通shared契約、admin/public Rule API、admin Archetype CRUD・preview、Party作成画面のRuleレベル連動、新規forward migration
+- **変更予定パッケージ:** packages/database, packages/shared, apps/api, apps/web, docs
+- **完了条件:** 既存RuleをbattleLevel=50へ移行し、新規Rule・Archetype入力とParty画面が明示値だけを保存・利用し、DB/API/Webを含む全検証が成功する
+- **必要なテスト:** shared境界・DB制約/migration・Rule/Archetype API・Party実数値再計算・375px/1440px E2E
+- **前提タスク:** MATCHUP-007, PARTY-002, ARCHETYPE-002, MASTER-010, MASTER-011, WEB-006
+- **対象外:** MATCHUP-008 counterplan API、Snapshot変換、能力値の自動推定、Pokemon単位level列
+
 ### ⬜ MATCHUP-008 counterplan API
 
 - **目的:** GET /sessions/{id}/counterplan(§10.3)を実装する
@@ -808,7 +818,7 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-001〜002 → PARTY-001〜002
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
-  → MATCHUP-002〜008 → WEB-007〜008 → LLM-001〜003 → WEB-009
+  → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 

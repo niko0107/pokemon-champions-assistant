@@ -6,6 +6,7 @@ const rule = {
   name: "シングル",
   teamSize: 6,
   pickSize: 3,
+  battleLevel: 50,
 };
 
 describe("MASTER-010 public Rule schemas", () => {
@@ -30,6 +31,7 @@ describe("MASTER-010 public Rule schemas", () => {
     ["名前が空", { ...rule, name: " " }],
     ["teamSizeが範囲外", { ...rule, teamSize: 7 }],
     ["pickSizeがteamSizeを超過", { ...rule, teamSize: 3, pickSize: 4 }],
+    ["battleLevelが範囲外", { ...rule, battleLevel: 101 }],
   ])("%sのRuleを拒否する", (_label, input) => {
     expect(masterRuleSchema.safeParse(input).success).toBe(false);
   });

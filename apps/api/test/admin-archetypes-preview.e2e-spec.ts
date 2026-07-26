@@ -32,6 +32,14 @@ const previewInput = adminArchetypeWriteSchema.parse({
       pokemonId: 10,
       itemId: 20,
       abilityId: 30,
+      actualStats: {
+        hp: 215,
+        attack: 132,
+        defense: 187,
+        specialAttack: 88,
+        specialDefense: 93,
+        speed: 67,
+      },
       role: "lead",
       moves: [{ moveId: 40 }],
     },
@@ -156,6 +164,21 @@ describe("ARCHETYPE-005 admin archetype preview API", () => {
       .post("/api/v1/admin/archetypes/preview")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ ...previewInput, sources: [] })
+      .expect(400);
+
+    expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+    expect(preview).not.toHaveBeenCalled();
+  });
+
+  it("actualStats不足をDB呼び出し前に400にする", async () => {
+    const { actualStats: _actualStats, ...pokemon } = previewInput.pokemons[0]!;
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes/preview")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...previewInput, pokemons: [pokemon] })
       .expect(400);
 
     expect(problemDetailsSchema.parse(response.body)).toMatchObject({

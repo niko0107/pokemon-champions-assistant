@@ -130,10 +130,10 @@ export function calculateActualStats(input: {
       ) +
       input.level +
       10,
-    atk: Math.floor(beforeNature("atk") * natureMultiplier(nature, "atk")),
-    def: Math.floor(beforeNature("def") * natureMultiplier(nature, "def")),
-    spa: Math.floor(beforeNature("spa") * natureMultiplier(nature, "spa")),
-    spd: Math.floor(beforeNature("spd") * natureMultiplier(nature, "spd")),
-    spe: Math.floor(beforeNature("spe") * natureMultiplier(nature, "spe")),
+    attack: Math.floor(beforeNature("atk") * natureMultiplier(nature, "atk")),
+    defense: Math.floor(beforeNature("def") * natureMultiplier(nature, "def")),
+    specialAttack: Math.floor(beforeNature("spa") * natureMultiplier(nature, "spa")),
+    specialDefense: Math.floor(beforeNature("spd") * natureMultiplier(nature, "spd")),
+    speed: Math.floor(beforeNature("spe") * natureMultiplier(nature, "spe")),
   };
 }

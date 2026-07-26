@@ -267,6 +267,7 @@ seasons / rules
 | name | text | 「シーズン12」「シングル」等 |
 | starts_at / ends_at | date | 期間(seasonsのみ) |
 | team_size / pick_size | int | 6/3 等(rulesのみ) |
+| battle_level | int | 対戦時の共通レベル。1〜100、NOT NULL(rulesのみ) |
 
 ### 6.3 ユーザー系テーブル
 
@@ -307,7 +308,11 @@ seasons / rules
 | can_mega | bool | メガシンカ枠か |
 | evs | jsonb | `{"hp":252,"atk":0,...}` |
 | ivs | jsonb nullable | 個体値(省略時31) |
-| actual_stats | jsonb nullable | 実数値(直接入力可) |
+| actual_stats | jsonb nullable | 確定済み実数値。`hp/attack/defense/specialAttack/specialDefense/speed` |
+
+対戦計算ではPartyPokemonごとのlevelを保存せず、`party_pokemons.actual_stats`と参照Ruleの
+`battle_level`を組み合わせる。新規PartyのAPI契約は従来どおりactualStatsを検証して保存し、
+DB直接操作等によりnullが残る場合はcounterplan計算不能な不整合として扱う。
 
 #### party_pokemon_moves
 
@@ -350,9 +355,14 @@ seasons / rules
 | nature | text nullable | |
 | tera_type | text nullable | |
 | evs | jsonb nullable | 定番の努力値配分 |
+| actual_stats | jsonb nullable | 確定済み実数値。構造はparty_pokemonsと共通 |
 | role | text | `lead` / `sweeper` / `wall` / `pivot` / `support` 等 |
 | usage_rate | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現 |
 | threat_notes | text | このポケモンの警戒ポイント |
+
+Archetypeの対戦計算では`archetype_pokemons.actual_stats`と参照Ruleの`battle_level`を使用する。
+既存データへ根拠のないIV・EV・性格・レベルを仮定しないためDB列はnullableとする一方、
+adminの新規作成・PUT全置換・preview入力では6能力を必須とする。種族値からの自動補完は行わない。
 
 #### archetype_pokemon_moves
 

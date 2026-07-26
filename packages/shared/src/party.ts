@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { archetypeEvsSchema } from "./archetype";
+import { combatActualStatsSchema, type CombatActualStats } from "./combat-stats";
 
 export const PARTY_NAME_MAX_LENGTH = 100;
 export const PARTY_TEAM_SIZE_MIN = 1;
@@ -13,7 +14,6 @@ const nullableMasterIdSchema = positiveMasterIdSchema.nullable().default(null);
 const requiredTextSchema = z.string().trim().min(1);
 const nullableTextSchema = requiredTextSchema.nullable().default(null);
 const individualValueSchema = z.number().int().min(0).max(PARTY_IV_STAT_MAX);
-const actualStatSchema = z.number().int().positive();
 
 export const partySlotSchema = z.number().int().min(1).max(PARTY_TEAM_SIZE_MAX);
 export const partyMoveSlotSchema = z.number().int().min(1).max(PARTY_MOVE_COUNT_MAX);
@@ -36,17 +36,8 @@ export const partyIvsSchema = z
   })
   .strict();
 
-/** party_pokemons.actual_stats。直接入力する場合は6能力を揃える。 */
-export const partyActualStatsSchema = z
-  .object({
-    hp: actualStatSchema,
-    atk: actualStatSchema,
-    def: actualStatSchema,
-    spa: actualStatSchema,
-    spd: actualStatSchema,
-    spe: actualStatSchema,
-  })
-  .strict();
+/** party_pokemons.actual_stats。直接入力する場合は確定済みの6能力を揃える。 */
+export const partyActualStatsSchema = combatActualStatsSchema;
 
 export const partyPokemonMoveSchema = z
   .object({
@@ -130,7 +121,7 @@ export const partySchema = z
 
 export type PartyEvs = z.infer<typeof partyEvsSchema>;
 export type PartyIvs = z.infer<typeof partyIvsSchema>;
-export type PartyActualStats = z.infer<typeof partyActualStatsSchema>;
+export type PartyActualStats = CombatActualStats;
 export type PartyPokemonMove = z.infer<typeof partyPokemonMoveSchema>;
 export type PartyPokemon = z.infer<typeof partyPokemonSchema>;
 export type Party = z.infer<typeof partySchema>;

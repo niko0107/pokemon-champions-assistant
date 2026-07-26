@@ -15,8 +15,8 @@ describe("RuleCatalogService", () => {
 
   it("必要項目だけをname ASC、id ASCで取得する", async () => {
     const rules = [
-      { id: 2, name: "ダブル", teamSize: 6, pickSize: 4 },
-      { id: 1, name: "シングル", teamSize: 6, pickSize: 3 },
+      { id: 2, name: "ダブル", teamSize: 6, pickSize: 4, battleLevel: 50 },
+      { id: 1, name: "シングル", teamSize: 6, pickSize: 3, battleLevel: 50 },
     ];
     findMany.mockResolvedValue(rules);
 
@@ -27,6 +27,7 @@ describe("RuleCatalogService", () => {
         name: true,
         teamSize: true,
         pickSize: true,
+        battleLevel: true,
       },
       orderBy: [{ name: "asc" }, { id: "asc" }],
     });
@@ -39,7 +40,9 @@ describe("RuleCatalogService", () => {
   });
 
   it("不正なDB値を内部情報なしの500として扱う", async () => {
-    findMany.mockResolvedValue([{ id: 1, name: "broken", teamSize: 2, pickSize: 3 }]);
+    findMany.mockResolvedValue([
+      { id: 1, name: "broken", teamSize: 2, pickSize: 3, battleLevel: 50 },
+    ]);
 
     await expect(service.list()).rejects.toMatchObject({
       response: {

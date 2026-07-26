@@ -70,16 +70,16 @@ export function PokemonSlotEditor({
     }
   }
 
-  const displayedActualStats: PartyActualStats | null =
+  const displayedActualStats: Readonly<Record<PartyStatKey, number>> | null =
     calculated === null
       ? null
       : {
           hp: value.actualStatOverrides.hp ?? calculated.hp,
-          atk: value.actualStatOverrides.atk ?? calculated.atk,
-          def: value.actualStatOverrides.def ?? calculated.def,
-          spa: value.actualStatOverrides.spa ?? calculated.spa,
-          spd: value.actualStatOverrides.spd ?? calculated.spd,
-          spe: value.actualStatOverrides.spe ?? calculated.spe,
+          atk: value.actualStatOverrides.atk ?? calculated.attack,
+          def: value.actualStatOverrides.def ?? calculated.defense,
+          spa: value.actualStatOverrides.spa ?? calculated.specialAttack,
+          spd: value.actualStatOverrides.spd ?? calculated.specialDefense,
+          spe: value.actualStatOverrides.spe ?? calculated.speed,
         };
 
   function resetCalculatedOverrides(next: PartyPokemonFormState): void {
@@ -370,7 +370,7 @@ export function PokemonSlotEditor({
           </div>
           {calculated === null && (
             <p className="mt-2 text-xs text-slate-500">
-              ポケモン・性格・画面上部の計算レベルを選ぶと実数値を表示します。
+              ポケモン・性格・Ruleの対戦レベルが揃うと実数値を表示します。
             </p>
           )}
           <p className="mt-2 text-xs text-slate-500">

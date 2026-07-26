@@ -33,7 +33,14 @@ describe("calculateActualStats", () => {
         level: 50,
         nature: "まじめ",
       }),
-    ).toEqual({ hp: 170, atk: 145, def: 99, spa: 80, spd: 120, spe: 101 });
+    ).toEqual({
+      hp: 170,
+      attack: 145,
+      defense: 99,
+      specialAttack: 80,
+      specialDefense: 120,
+      speed: 101,
+    });
   });
 
   it("EVのfloorと性格上昇・下降補正を反映する", () => {
@@ -45,7 +52,14 @@ describe("calculateActualStats", () => {
         level: 50,
         nature: "いじっぱり",
       }),
-    ).toEqual({ hp: 202, atk: 194, def: 99, spa: 72, spd: 120, spe: 102 });
+    ).toEqual({
+      hp: 202,
+      attack: 194,
+      defense: 99,
+      specialAttack: 72,
+      specialDefense: 120,
+      speed: 102,
+    });
   });
 
   it("レベル1と100の境界を計算できる", () => {
