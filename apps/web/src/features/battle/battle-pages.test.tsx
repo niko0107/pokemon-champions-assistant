@@ -87,6 +87,18 @@ const fireBlast = {
   power: 110,
   accuracy: 85,
 };
+const candidate = {
+  archetypeId: "30000000-0000-4000-8000-000000000001",
+  name: "リザードン展開",
+  matchRate: 87.5,
+  rank: 1,
+  popularityTier: "high" as const,
+  matched: [],
+  contradictions: [],
+  exclusionCodes: [],
+  likelyUnseen: [],
+  threatMoveIds: [],
+};
 
 interface FetchMockOptions {
   partyItems?: typeof parties;
@@ -106,6 +118,12 @@ interface FetchMockOptions {
   moveObservationProblem?: unknown;
   moveObservationDelayMs?: number;
   moveObservationNetworkError?: boolean;
+  candidateResponses?: unknown[];
+  candidateDelaysMs?: number[];
+  candidateStatus?: number;
+  candidateProblem?: unknown;
+  candidateNetworkError?: boolean;
+  candidateRequiresRefresh?: boolean;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -117,8 +135,12 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function createFetchMock(options: FetchMockOptions = {}) {
   let observationSeq = 0;
+  let candidateRequestCount = 0;
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/auth/refresh") && init?.method === "POST") {
+      return Promise.resolve(jsonResponse(authResponse));
+    }
     if (url.endsWith("/sessions") && init?.method === "POST") {
       const response =
         options.createSessionStatus && options.createSessionStatus >= 400
@@ -186,6 +208,27 @@ function createFetchMock(options: FetchMockOptions = {}) {
         : options.observationDelayMs;
       return responseDelay
         ? new Promise<Response>((resolve) => setTimeout(() => resolve(response), responseDelay))
+        : Promise.resolve(response);
+    }
+    if (url.endsWith(`/sessions/${sessionId}/candidates`)) {
+      candidateRequestCount += 1;
+      if (options.candidateNetworkError) {
+        return Promise.reject(new Error("network unavailable"));
+      }
+      if (options.candidateRequiresRefresh && candidateRequestCount === 1) {
+        return Promise.resolve(jsonResponse(problem("UNAUTHORIZED", 401), 401));
+      }
+      const response =
+        options.candidateStatus && options.candidateStatus >= 400
+          ? jsonResponse(options.candidateProblem, options.candidateStatus)
+          : jsonResponse(
+              options.candidateResponses?.[
+                Math.min(candidateRequestCount - 1, options.candidateResponses.length - 1)
+              ] ?? { sessionId, candidates: [] },
+            );
+      const delay = options.candidateDelaysMs?.[candidateRequestCount - 1];
+      return delay
+        ? new Promise<Response>((resolve) => setTimeout(() => resolve(response), delay))
         : Promise.resolve(response);
     }
     if (url.endsWith(`/sessions/${sessionId}`)) {
@@ -692,6 +735,171 @@ describe("WEB-001 / WEB-002 battle pages", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("通信環境");
     expect(screen.getByText("まだ技観測はありません")).toBeVisible();
+  });
+
+  it("Pokemon・Move Observation成功後だけ候補を再取得し、更新中も直前候補を保つ", async () => {
+    const afterPokemon = {
+      sessionId,
+      candidates: [
+        {
+          ...candidate,
+          name: "Pokemon一致候補",
+          matched: [
+            {
+              observationSeq: 1,
+              kind: "pokemon",
+              matched: true,
+              points: 10,
+              pokemonId: 6,
+            },
+          ],
+        },
+      ],
+    };
+    const afterMove = {
+      sessionId,
+      candidates: [
+        {
+          ...candidate,
+          name: "技一致候補",
+          matchRate: 100,
+          matched: [
+            {
+              observationSeq: 1,
+              kind: "pokemon",
+              matched: true,
+              points: 10,
+              pokemonId: 6,
+            },
+            {
+              observationSeq: 2,
+              kind: "move",
+              matched: true,
+              points: 15,
+              pokemonId: 6,
+              moveId: 53,
+            },
+          ],
+        },
+      ],
+    };
+    const fetchMock = createFetchMock({
+      candidateResponses: [{ sessionId, candidates: [] }, afterPokemon, afterMove],
+      candidateDelaysMs: [0, 50, 50],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    expect(await screen.findByText("表示できる候補はまだありません")).toBeVisible();
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(await screen.findByText("候補を更新中…")).toBeVisible();
+    expect(await screen.findByText("Pokemon一致候補")).toBeVisible();
+    expect(screen.getByText("一致")).toBeVisible();
+    expect(screen.getAllByText("リザードン").length).toBeGreaterThan(0);
+
+    await user.type(screen.getByLabelText("技名"), "かえ");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "かえんほうしゃをリザードンの技として追加",
+      }),
+    );
+    expect(screen.getByText("Pokemon一致候補")).toBeVisible();
+    expect(await screen.findByText("技一致候補")).toBeVisible();
+    expect(screen.getByText("リザードン · かえんほうしゃ")).toBeVisible();
+
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).endsWith(`/sessions/${sessionId}/candidates`),
+      ),
+    ).toHaveLength(3);
+  });
+
+  it("Observation失敗時は候補を再取得しない", async () => {
+    const fetchMock = createFetchMock({
+      observationStatus: 400,
+      observationProblem: problem("INVALID_MASTER_REFERENCE", 400),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    expect(await screen.findByText("表示できる候補はまだありません")).toBeVisible();
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("選び直してください");
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).endsWith(`/sessions/${sessionId}/candidates`),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("候補取得は401時に既存refreshを使い、不正レスポンスと別Sessionを表示しない", async () => {
+    const fetchMock = createFetchMock({
+      candidateRequiresRefresh: true,
+      candidateResponses: [{ sessionId, candidates: [candidate] }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const first = renderApp(`/battle/${sessionId}`);
+
+    expect(await screen.findByText("リザードン展開")).toBeVisible();
+    expect(
+      fetchMock.mock.calls.filter(([input]) => String(input).endsWith("/auth/refresh")),
+    ).toHaveLength(1);
+    first.unmount();
+
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        candidateResponses: [
+          {
+            sessionId,
+            candidates: [{ ...candidate, rawScore: 99 }],
+          },
+        ],
+      }),
+    );
+    const invalid = renderApp(`/battle/${sessionId}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent("候補を取得できません");
+    expect(screen.queryByText("リザードン展開")).not.toBeInTheDocument();
+    invalid.unmount();
+
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        candidateResponses: [
+          {
+            sessionId: "10000000-0000-4000-8000-000000000002",
+            candidates: [candidate],
+          },
+        ],
+      }),
+    );
+    renderApp(`/battle/${sessionId}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent("候補を取得できません");
+    expect(screen.queryByText("リザードン展開")).not.toBeInTheDocument();
+  });
+
+  it("連続更新で遅い旧候補レスポンスが新しい候補を上書きしない", async () => {
+    const fetchMock = createFetchMock({
+      candidateResponses: [
+        { sessionId, candidates: [{ ...candidate, name: "古い候補" }] },
+        { sessionId, candidates: [{ ...candidate, name: "新しい候補" }] },
+      ],
+      candidateDelaysMs: [1_000, 10],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await user.type(await screen.findByLabelText("相手ポケモン"), "リザ");
+    await user.click(await screen.findByRole("button", { name: "リザードン（normal）を追加" }));
+    expect(await screen.findByText("新しい候補")).toBeVisible();
+    await new Promise((resolve) => setTimeout(resolve, 1_050));
+    expect(screen.getByText("新しい候補")).toBeVisible();
+    expect(screen.queryByText("古い候補")).not.toBeInTheDocument();
   });
 
   it("ended Sessionでは状態を表示しPokemon入力を無効化する", async () => {
