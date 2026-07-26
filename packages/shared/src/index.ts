@@ -6,6 +6,7 @@ export * from "./api/master-abilities";
 export * from "./api/master-items";
 export * from "./api/master-moves";
 export * from "./api/master-pokemons";
+export * from "./api/master-rules";
 export * from "./api/master-search";
 export * from "./api/parties";
 export * from "./api/sessions";
