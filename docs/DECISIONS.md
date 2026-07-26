@@ -500,3 +500,14 @@
 - **判断:** Prismaで4列だけを単一`findMany`し、並び順は既存admin Rule一覧と同じ`name ASC → id ASC`とする。名前一意制約下でもIDを最終キーに含めて決定性を明示し、0件は`200 { items: [] }`とする
 - **理由:** 一般ユーザーが管理APIへ依存せず、Party作成前に有効な`ruleId`と`teamSize`を取得できるようにしながら、管理権限と公開情報を最小範囲に保つため
 - **影響:** WEB-006はこのAPIからRule選択肢と人数制約を取得できる。Rule作成・更新・削除、Season公開、Pokemon種族値公開はMASTER-010の対象外
+
+## 2026-07-26 公開ポケモン詳細・種族値API(MASTER-011)
+
+### D-048: 選択済みPokemon詳細と検索レスポンスの責務分離
+
+- **判断:** Party入力で選択済みPokemonの種族値を取得するAPIとして、RESTの単体リソース形式に合わせて`GET /api/v1/master/pokemons/:id`を1本だけ追加する。既存master参照APIと同じく認証なしで公開し、admin guardは適用しない
+- **判断:** 既存`GET /api/v1/master/pokemons?q=`はオートコンプリート用の軽量契約を維持し、種族値を追加しない。詳細は検索結果と共通の`id / dexNo / nameJa / nameEn / form / type1 / type2 / isMega / basePokemonId`に、PrismaのcamelCase名どおり`baseHp / baseAtk / baseDef / baseSpa / baseSpd / baseSpe`だけを加えたstrictレスポンスとする。abilitiesは既存の特性候補API、習得技は既存の技検索APIが担う
+- **判断:** `id`は正数かつPostgreSQL `int4`上限以内で検証し、不正形式は`400 VALIDATION_ERROR`、不存在は`404 NOT_FOUND`とする。Prisma `findUnique`は必要15列だけをselectし、種族値1〜255を含む公開契約に反するDB値やPrismaエラーは内部情報を含まない`500 INTERNAL_ERROR`とする
+- **判断:** PRODUCT_SPECに実数値計算レベルの固定値がないため、レベルは詳細レスポンスへ含めない。HP・その他能力・性格補正の計算およびレベルのUI仕様はWEB-006で扱う
+- **理由:** 検索候補の転送量と責務を増やさず、選択後だけ計算に必要な正確な種族値を取得できるようにし、abilities・PokemonMove・内部情報の重複公開を避けるため
+- **影響:** WEB-006は検索でPokemonを選択した後、この詳細APIから6種族値を取得して実数値計算へ利用できる

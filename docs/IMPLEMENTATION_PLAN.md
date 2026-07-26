@@ -229,6 +229,16 @@
 - **前提タスク:** MASTER-004, SETUP-009
 - **対象外:** Rule変更、admin API変更、Season公開、WEB-006、DB変更
 
+### ✅ MASTER-011 公開ポケモン詳細・種族値API
+
+- **目的:** 一般ユーザーがParty入力の実数値計算に必要な選択済みPokemonの種族値を取得できるようにする
+- **作業範囲:** `GET /master/pokemons/:id`、sharedのstrict params・詳細スキーマ、必要表示項目と6種族値だけの単体取得
+- **変更予定パッケージ:** packages/shared, apps/api
+- **完了条件:** 認証なしで通常・メガ形態の詳細と6種族値を取得でき、不正ID・不存在・不正DB値をRFC 9457形式で安全に扱える
+- **必要なテスト:** sharedスキーマ、Service、APIテスト（通常・メガ・種族値・strict・400・404・500・検索API非破壊）
+- **前提タスク:** MASTER-001, MASTER-006, SETUP-009
+- **対象外:** Pokemon検索レスポンス変更、実数値計算、WEB-006、DB・admin・Rule変更
+
 ---
 
 ## フェーズ1: 認証(AUTH)
@@ -797,7 +807,7 @@
 SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-001〜002 → PARTY-001〜002
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
-  → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → WEB-006 → WEB-001〜004
+  → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜008 → WEB-007〜008 → LLM-001〜003 → WEB-009
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
