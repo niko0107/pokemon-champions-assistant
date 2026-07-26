@@ -10,7 +10,7 @@ import {
   type ProblemDetails,
   type RegisterRequest,
 } from "@pokemon-champions/shared";
-import type { ZodSchema } from "zod";
+import type { ZodType, ZodTypeDef } from "zod";
 import { useAuthStore } from "../stores/auth-store";
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
@@ -39,7 +39,7 @@ export class ApiError extends Error {
 interface ApiRequestOptions<T> {
   method?: "GET" | "POST";
   body?: unknown;
-  responseSchema: ZodSchema<T>;
+  responseSchema: ZodType<T, ZodTypeDef, unknown>;
   authenticated?: boolean;
 }
 
@@ -205,6 +205,6 @@ const authSessionAdapter: ApiAuthSessionAdapter = {
 
 export const apiClient = new ApiClient((input, init) => fetch(input, init), authSessionAdapter);
 
-export function apiGet<T>(path: string, schema: ZodSchema<T>): Promise<T> {
+export function apiGet<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T> {
   return apiClient.request(path, { responseSchema: schema });
 }

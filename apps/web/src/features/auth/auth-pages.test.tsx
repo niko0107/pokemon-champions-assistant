@@ -32,8 +32,15 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function defaultFetch(input: RequestInfo | URL): Promise<Response> {
-  if (String(input).endsWith("/health")) {
+  const url = String(input);
+  if (url.endsWith("/health")) {
     return Promise.resolve(jsonResponse({ status: "ok" }));
+  }
+  if (url.endsWith("/parties")) {
+    return Promise.resolve(jsonResponse({ items: [] }));
+  }
+  if (url.endsWith("/master/rules")) {
+    return Promise.resolve(jsonResponse({ items: [] }));
   }
   return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
 }

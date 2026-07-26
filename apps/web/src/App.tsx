@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AccountPage } from "./features/auth/account-page";
 import { AnonymousOnly, RequireAuth } from "./features/auth/auth-route";
 import { AuthLayout } from "./features/auth/auth-layout";
 import { LoginPage } from "./features/auth/login-page";
 import { RegisterPage } from "./features/auth/register-page";
+import { HomePage } from "./features/parties/home-page";
+import { PartyCreatePage } from "./features/parties/party-create-page";
 import { apiClient } from "./lib/api-client";
 import { useAuthStore } from "./stores/auth-store";
 
@@ -27,7 +28,8 @@ export function App() {
           </Route>
         </Route>
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<AccountPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/parties/new" element={<PartyCreatePage />} />
         </Route>
         <Route
           path="*"
