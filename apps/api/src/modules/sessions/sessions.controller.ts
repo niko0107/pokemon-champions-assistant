@@ -18,6 +18,8 @@ import {
   battleSessionEndSchema,
   battleSessionIdParamsSchema,
   battleSessionResponseSchema,
+  sessionCounterplanParamsSchema,
+  sessionCounterplanResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
   undoObservationParamsSchema,
@@ -33,6 +35,8 @@ import {
   type BattleSessionResponse,
   type ObservationCreate,
   type ObservationResponse,
+  type SessionCounterplanParams,
+  type SessionCounterplanResponse,
   type UndoObservationParams,
   type UndoObservationResponse,
 } from "@pokemon-champions/shared";
@@ -40,12 +44,16 @@ import { CurrentUser } from "../../common/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { BattleRateLimitGuard } from "./battle-rate-limit.guard";
+import { SessionCounterplanService } from "./session-counterplan.service";
 import { SessionsService } from "./sessions.service";
 
 @Controller("sessions")
 @UseGuards(JwtAuthGuard)
 export class SessionsController {
-  constructor(private readonly sessions: SessionsService) {}
+  constructor(
+    private readonly sessions: SessionsService,
+    private readonly counterplans: SessionCounterplanService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -87,6 +95,15 @@ export class SessionsController {
     return battleCandidatesResponseSchema.parse(
       await this.sessions.getCandidates(user.id, params.id),
     );
+  }
+
+  @Get(":id/counterplan")
+  async getCounterplan(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(sessionCounterplanParamsSchema))
+    params: SessionCounterplanParams,
+  ): Promise<SessionCounterplanResponse> {
+    return sessionCounterplanResponseSchema.parse(await this.counterplans.get(user.id, params.id));
   }
 
   @Post(":id/select")

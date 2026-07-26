@@ -10,6 +10,11 @@ import type {
   BaseTypeEffectivenessMultiplier,
   MoveCategory,
   MoveTag,
+  CounterplanCautionMoveTagValue,
+  CounterplanStrategyCodeValue,
+  KnockoutClassificationValue,
+  MatchupReasonCodeValue,
+  MatchupVerdictValue,
   PokemonRole,
   PokemonType,
 } from "@pokemon-champions/shared";
@@ -102,14 +107,7 @@ export type StabMultiplier = 1 | 1.5;
  * ダメージ範囲から得られる確定数の分類。
  * 現行仕様は乱数なしだが、範囲入力時も境界を失わない構造にする。
  */
-export type KnockoutClassification =
-  | "guaranteed_one_hit"
-  | "possible_one_hit"
-  | "guaranteed_two_hit"
-  | "possible_two_hit"
-  | "guaranteed_three_plus_hits"
-  | "possible_three_plus_hits"
-  | "cannot_ko";
+export type KnockoutClassification = KnockoutClassificationValue;
 
 /** 確定数だけを独立して算出する入力。 */
 export interface KnockoutCountInput {
@@ -191,8 +189,7 @@ export interface MatchupScoreBreakdown {
 }
 
 /** 有利/不利の区分(§9.2 のしきい値に対応) */
-export type MatchupVerdict =
-  "favorable" | "slightly_favorable" | "even" | "slightly_unfavorable" | "unfavorable";
+export type MatchupVerdict = MatchupVerdictValue;
 
 /** MATCHUP-004で扱う1対1評価の入力。レベルは保存Snapshotと分離して明示する。 */
 export interface MatchupScoreInput {
@@ -203,18 +200,7 @@ export interface MatchupScoreInput {
 }
 
 /** 1対1評価の根拠を後続層へ伝える、表示文に依存しないコード。 */
-export type MatchupReasonCode =
-  | "BEST_MOVE_SUPER_EFFECTIVE"
-  | "BEST_MOVE_RESISTED"
-  | "BEST_MOVE_IMMUNE"
-  | "RESISTS_THREAT"
-  | "IMMUNE_TO_THREAT"
-  | "TAKES_SUPER_EFFECTIVE_DAMAGE"
-  | "WINS_DAMAGE_RACE"
-  | "LOSES_DAMAGE_RACE"
-  | "EVEN_DAMAGE_RACE"
-  | "NO_DAMAGING_MOVE"
-  | "OPPONENT_NO_DAMAGING_MOVE";
+export type MatchupReasonCode = MatchupReasonCodeValue;
 
 /** 1対1相性スコア(−100〜+100 に正規化)。 */
 export interface MatchupScore {
@@ -331,11 +317,10 @@ export interface SelectionRecommendation {
 }
 
 /** MATCHUP-007で警戒対象にするMoveTag。pivot単独は対象外。 */
-export type CautionMoveTag = Exclude<MoveTag, "pivot">;
+export type CautionMoveTag = CounterplanCautionMoveTagValue;
 
 /** 警戒タグを自然文へ変換せず伝える立ち回りコード。 */
-export type StrategyCode =
-  "PREVENT_SETUP" | "LIMIT_HAZARDS" | "STALL_SCREEN_TURNS" | "RESPECT_PRIORITY" | "MANAGE_STATUS";
+export type StrategyCode = CounterplanStrategyCodeValue;
 
 /** MATCHUP-007がArchetypeから必要とする最小の技Snapshot。 */
 export interface CounterplanArchetypeMoveSnapshot {

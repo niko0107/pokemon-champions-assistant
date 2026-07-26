@@ -654,3 +654,16 @@
 - **判断:** 公開`GET /api/v1/master/rules`と管理`GET /api/v1/admin/rules`は`id / name / teamSize / pickSize / battleLevel`だけを返し、admin Rule作成もbattleLevelを保存する。D-047の公開4列契約とD-049のUI専用level入力は本判断で置き換え、Party画面は選択RuleのbattleLevelを読取表示して既存純粋関数へ渡す。自由level入力、根拠のない50固定、levelのParty API送信は行わず、Rule未取得時は計算・保存しない
 - **理由:** MATCHUP-003〜005のダメージ計算は双方の正確なレベルと確定実数値を要求するが、従来はレベルがWebの一時入力だけでArchetypeには確定実数値がなかったため。共通Rule条件と明示入力を永続化し、MATCHUP-008が推測なしで純粋関数用Snapshotを構築できるようにする
 - **影響:** 既存ArchetypeのactualStatsはnullのままであり、後続MATCHUP-008では内部不整合として拒否する必要がある。既存Ruleはmigration時だけ50になるが、以後の作成・読取・計算に暗黙値は存在しない。counterplan API、CombatantSnapshot変換、Observation合成はMATCHUP-008へ残す
+
+## 2026-07-27 counterplan API(MATCHUP-008)
+
+### D-061: 所有Session起点の読み取り専用合成と観測技優先
+
+- **判断:** PRODUCT_SPEC §10.2の正式URLである`GET /api/v1/sessions/:id/counterplan`だけを追加する。`JwtAuthGuard`と`@CurrentUser()`を使い、Sessionを`id + userId`で取得してから同じnested selectでRule・Party・選択Archetype・未取消Move観測を読み込む。counterplan・Session・Observation・selectedArchetypeを保存せず、RedisやBATTLE候補キャッシュも使用しない
+- **判断:** `active`と`ended`は取得可能、`archived`は`INVALID_SESSION_STATE`とする。selectedArchetype未設定、選択構築のRule不一致・archivedは`INVALID_ARCHETYPE_SELECTION`、PartyのRule不一致やpickSize超過は`INVALID_PARTY_STATE`とする。他人のSessionと不存在Sessionは同じ404を返す。actualStats・Decimal・JSON・defaultLeads等の不正な永続値や純粋関数の入力不整合は内容を公開しない500へ変換する
+- **判断:** PartyとArchetypeのCombatantはD-060どおり、それぞれの`actualStats`と共通Ruleの`battleLevel`から構築する。種族値・EV・IV・性格による再計算やlevelのフォールバックは行わない。テンプレ技は全件のMove ID重複とadoptionRateを検証した後、`adoptionRate DESC → moveId ASC`で最大4件を選ぶ
+- **判断:** 現行Observationは同じ行の`pokemonId`と`moveId`によって観測技の使用者を一意に関連付けられるため、未取消のMove観測をcounterplanへ合成する。観測技は`seq`順で先に採用し、同じPokemon内でmoveId重複を除去し、残りをテンプレ順位で補完して最大4技とする。観測技のadoptionRateは実測を表す1とし、テンプレ外でも外部キーで解決されたMoveマスタを使用する。1体へ5種類以上の観測技、または選択構築に存在しないPokemonへ結び付く技観測は、推測や無視をせず`INVALID_SESSION_STATE`とする
+- **判断:** `priorityOpponentPokemonIds`は`defaultLeads`の配列順を保ってslotからPokemon IDへ解決し、空・nullは空配列、不明slotや重複IDは内部不整合とする。`Rule.pickSize`をそのまま使用し、API層は`buildMatchupMatrix → buildSelectionRecommendation → buildCounterplan`の順で既存純粋関数を呼ぶ。playstyleNotesは保存値を意味解析せずMATCHUP-007へ渡す
+- **判断:** レスポンスはMATCHUP-007の構造化結果へ`sessionId / selectedArchetypeId`を付けたID中心のstrict契約とし、Pokemon名・Move名は既存master APIへ委ねる。MATCHUPのclassification・reason code・strategy code・確定数分類はsharedのliteralを単一の正として両層で再利用し、Prisma Decimal・Date・BigInt・userId・内部timestamps・非有限数を返さない
+- **理由:** 正確な保存Snapshotと観測実測を優先しつつ、相性・選出・警戒情報の唯一の計算根拠をMATCHUP-005〜007へ限定し、所有権・決定性・読み取り専用性をAPI境界で保証するため
+- **影響:** Web表示・名称解決・自然文生成・キャッシュは後続タスクのままとする。Archetype actualStatsがnullの既存データはcounterplanを生成できず、管理入力で明示値を整備する必要がある

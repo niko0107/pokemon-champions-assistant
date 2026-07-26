@@ -10,6 +10,7 @@ import { BATTLE_RATE_LIMIT_CONFIG, resolveBattleRateLimitConfig } from "./battle
 import { BattleRateLimitGuard } from "./battle-rate-limit.guard";
 import { BattleRateLimitService } from "./battle-rate-limit.service";
 import { BattleCandidatesCache } from "./session-candidates-cache";
+import { SessionCounterplanService } from "./session-counterplan.service";
 import { SessionsController } from "./sessions.controller";
 import { SessionsService } from "./sessions.service";
 
@@ -39,6 +40,7 @@ import { SessionsService } from "./sessions.service";
     BattleCandidatesCache,
     BattleRateLimitGuard,
     BattleRateLimitService,
+    SessionCounterplanService,
     SessionsService,
   ],
 })

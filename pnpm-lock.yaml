@@ -50,6 +50,9 @@ importers:
       '@pokemon-champions/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@pokemon-champions/matchup':
+        specifier: workspace:*
+        version: link:../../packages/matchup
       '@pokemon-champions/scoring':
         specifier: workspace:*
         version: link:../../packages/scoring
