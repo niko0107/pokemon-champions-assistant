@@ -3,6 +3,7 @@ import { AbilitySearchService } from "./ability-search.service";
 import { ItemSearchService } from "./item-search.service";
 import { MasterController } from "./master.controller";
 import { MoveSearchService } from "./move-search.service";
+import { PokemonDetailService } from "./pokemon-detail.service";
 import { PokemonSearchService } from "./pokemon-search.service";
 import { RuleCatalogService } from "./rule-catalog.service";
 
@@ -14,6 +15,7 @@ import { RuleCatalogService } from "./rule-catalog.service";
     ItemSearchService,
     AbilitySearchService,
     RuleCatalogService,
+    PokemonDetailService,
   ],
 })
 export class MasterModule {}

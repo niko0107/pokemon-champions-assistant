@@ -14,12 +14,21 @@ export const POKEMON_SEARCH_MAX_QUERY_LENGTH = 50;
 /** 返却件数の上限(オートコンプリート表示分のみ) */
 export const POKEMON_SEARCH_RESULT_LIMIT = 10;
 
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const baseStatSchema = z.number().int().min(1).max(255);
+
 export const pokemonSearchQuerySchema = z.object({
   q: z
     .string({ required_error: "検索語 q は必須です" })
     .trim()
-    .min(POKEMON_SEARCH_MIN_QUERY_LENGTH, `検索語は${POKEMON_SEARCH_MIN_QUERY_LENGTH}文字以上必要です`)
-    .max(POKEMON_SEARCH_MAX_QUERY_LENGTH, `検索語は${POKEMON_SEARCH_MAX_QUERY_LENGTH}文字以下にしてください`),
+    .min(
+      POKEMON_SEARCH_MIN_QUERY_LENGTH,
+      `検索語は${POKEMON_SEARCH_MIN_QUERY_LENGTH}文字以上必要です`,
+    )
+    .max(
+      POKEMON_SEARCH_MAX_QUERY_LENGTH,
+      `検索語は${POKEMON_SEARCH_MAX_QUERY_LENGTH}文字以下にしてください`,
+    ),
 });
 
 export type PokemonSearchQuery = z.infer<typeof pokemonSearchQuerySchema>;
@@ -48,3 +57,29 @@ export const pokemonSearchResponseSchema = z.object({
 });
 
 export type PokemonSearchResponse = z.infer<typeof pokemonSearchResponseSchema>;
+
+/** GET /api/v1/master/pokemons/:id のパスパラメータ。 */
+export const masterPokemonIdParamsSchema = z
+  .object({
+    id: z.coerce.number().int().positive().safe().max(POSTGRES_INTEGER_MAX),
+  })
+  .strict();
+
+export type MasterPokemonIdParams = z.infer<typeof masterPokemonIdParamsSchema>;
+
+/**
+ * 選択済みPokemonの表示と実数値計算に必要な公開詳細。
+ * abilitiesは専用API、習得技は技検索APIから取得するため含めない。
+ */
+export const masterPokemonDetailSchema = pokemonSummarySchema
+  .extend({
+    baseHp: baseStatSchema,
+    baseAtk: baseStatSchema,
+    baseDef: baseStatSchema,
+    baseSpa: baseStatSchema,
+    baseSpd: baseStatSchema,
+    baseSpe: baseStatSchema,
+  })
+  .strict();
+
+export type MasterPokemonDetail = z.infer<typeof masterPokemonDetailSchema>;

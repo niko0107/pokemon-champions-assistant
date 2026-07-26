@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import {
   API_PREFIX,
+  masterPokemonDetailSchema,
   pokemonSearchResponseSchema,
   problemDetailsSchema,
 } from "@pokemon-champions/shared";
@@ -34,9 +35,30 @@ const megaGyarados = {
   basePokemonId: 1,
 };
 
+const gyaradosDetail = {
+  ...gyarados,
+  baseHp: 95,
+  baseAtk: 125,
+  baseDef: 79,
+  baseSpa: 60,
+  baseSpd: 100,
+  baseSpe: 81,
+};
+
+const megaGyaradosDetail = {
+  ...megaGyarados,
+  baseHp: 95,
+  baseAtk: 155,
+  baseDef: 109,
+  baseSpa: 70,
+  baseSpd: 130,
+  baseSpe: 81,
+};
+
 describe("GET /api/v1/master/pokemons", () => {
   let app: INestApplication;
   const findMany = vi.fn();
+  const findUnique = vi.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -46,7 +68,7 @@ describe("GET /api/v1/master/pokemons", () => {
       .useValue({
         onModuleInit: vi.fn().mockResolvedValue(undefined),
         onModuleDestroy: vi.fn().mockResolvedValue(undefined),
-        pokemon: { findMany },
+        pokemon: { findMany, findUnique },
       })
       .compile();
 
@@ -57,7 +79,9 @@ describe("GET /api/v1/master/pokemons", () => {
 
   beforeEach(() => {
     findMany.mockReset();
+    findUnique.mockReset();
     findMany.mockResolvedValue([]);
+    findUnique.mockResolvedValue(null);
   });
 
   afterAll(async () => {
@@ -95,6 +119,60 @@ describe("GET /api/v1/master/pokemons", () => {
       .expect(200);
 
     expect(res.body).toEqual({ items: [] });
+  });
+
+  it("通常ポケモンの詳細と6種族値を認証なしで返す", async () => {
+    findUnique.mockResolvedValue(gyaradosDetail);
+
+    const res = await request(app.getHttpServer()).get("/api/v1/master/pokemons/1").expect(200);
+
+    expect(res.body).toEqual(gyaradosDetail);
+    expect(masterPokemonDetailSchema.safeParse(res.body).success).toBe(true);
+  });
+
+  it("メガ形態の詳細を返す", async () => {
+    findUnique.mockResolvedValue(megaGyaradosDetail);
+
+    const res = await request(app.getHttpServer()).get("/api/v1/master/pokemons/4").expect(200);
+
+    expect(res.body).toEqual(megaGyaradosDetail);
+  });
+
+  it("存在しないIDは404 NOT_FOUNDを返す", async () => {
+    const res = await request(app.getHttpServer()).get("/api/v1/master/pokemons/9999").expect(404);
+
+    expect(problemDetailsSchema.parse(res.body)).toMatchObject({
+      status: 404,
+      code: "NOT_FOUND",
+    });
+  });
+
+  it.each(["0", "-1", "1.5", "abc", "2147483648", "9007199254740992"])(
+    "不正なID %s は400 VALIDATION_ERRORを返す",
+    async (id) => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/master/pokemons/${id}`)
+        .expect(400);
+
+      expect(problemDetailsSchema.parse(res.body)).toMatchObject({
+        status: 400,
+        code: "VALIDATION_ERROR",
+      });
+      expect(findUnique).not.toHaveBeenCalled();
+    },
+  );
+
+  it("不正なPokemon詳細DB値は内部情報なしの500を返す", async () => {
+    findUnique.mockResolvedValue({ ...gyaradosDetail, baseHp: 0 });
+
+    const res = await request(app.getHttpServer()).get("/api/v1/master/pokemons/1").expect(500);
+
+    expect(res.body).toEqual({
+      type: "about:blank",
+      title: "Master Data Integrity Error",
+      status: 500,
+      code: "INTERNAL_ERROR",
+    });
   });
 
   it.each([

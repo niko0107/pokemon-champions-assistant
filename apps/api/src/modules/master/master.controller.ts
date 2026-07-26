@@ -1,10 +1,12 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Param, Query } from "@nestjs/common";
 import {
   abilitySearchQuerySchema,
   abilitySearchResponseSchema,
   itemSearchQuerySchema,
   itemSearchResponseSchema,
   masterRulesResponseSchema,
+  masterPokemonDetailSchema,
+  masterPokemonIdParamsSchema,
   moveSearchQuerySchema,
   moveSearchResponseSchema,
   pokemonSearchQuerySchema,
@@ -14,6 +16,8 @@ import {
   type ItemSearchQuery,
   type ItemSearchResponse,
   type MasterRulesResponse,
+  type MasterPokemonDetail,
+  type MasterPokemonIdParams,
   type MoveSearchQuery,
   type MoveSearchResponse,
   type PokemonSearchQuery,
@@ -24,6 +28,7 @@ import { AbilitySearchService } from "./ability-search.service";
 import { ItemSearchService } from "./item-search.service";
 import { MoveSearchService } from "./move-search.service";
 import { PokemonSearchService } from "./pokemon-search.service";
+import { PokemonDetailService } from "./pokemon-detail.service";
 import { RuleCatalogService } from "./rule-catalog.service";
 
 @Controller("master")
@@ -34,6 +39,7 @@ export class MasterController {
     private readonly itemSearch: ItemSearchService,
     private readonly abilitySearch: AbilitySearchService,
     private readonly ruleCatalog: RuleCatalogService,
+    private readonly pokemonDetail: PokemonDetailService,
   ) {}
 
   @Get("pokemons")
@@ -43,6 +49,13 @@ export class MasterController {
     const items = await this.pokemonSearch.search(query);
     // API 入出力は zod で検証する(開発ルール)。出力側も共有スキーマを通す。
     return pokemonSearchResponseSchema.parse({ items });
+  }
+
+  @Get("pokemons/:id")
+  async getPokemon(
+    @Param(new ZodValidationPipe(masterPokemonIdParamsSchema)) params: MasterPokemonIdParams,
+  ): Promise<MasterPokemonDetail> {
+    return masterPokemonDetailSchema.parse(await this.pokemonDetail.get(params.id));
   }
 
   @Get("moves")
