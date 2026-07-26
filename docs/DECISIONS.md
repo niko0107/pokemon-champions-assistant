@@ -606,3 +606,14 @@
 - **判断:** 相手の想定技は呼び出し側で既に選択された配列だけを評価し、`calculateMatchupScore`内では観測済み判定や採用率上位4技の抽出を行わない。採用率による技選定は、観測情報を優先して`ArchetypeSnapshot`から`CombatantSnapshot`を組み立てる後続層の責務とする。承認済み範囲に従い、素早さ、先制技、状態異常耐性、積み対応、特性・持ち物補正は今回の統合値へ加えず、MATCHUP-001互換breakdown上は0を返す
 - **理由:** PRODUCT_SPEC §9.2だけでは未定義だった倍率ごとの配点・正規化・境界・技選択順を承認済み仕様で確定し、既存のタイプ相性表やダメージ式を重複させず、同一Snapshotから常に同じ構造化結果を得るため
 - **影響:** 現在のスコアは渡された通常威力技とタイプ・実数値・レベルだけを評価する。採用率上位技の抽出、素早さ・先制技等の追加軸、持ち物・特性・テラスタルによる補正を導入する場合は、既存の−45〜45中心化レンジと正規化式を暗黙に変更せず、別タスクで配点契約を再定義する必要がある
+
+## 2026-07-27 相性マトリクス・相手別おすすめ(MATCHUP-005)
+
+### D-057: Pokemon ID順の全組み合わせ・既存スコアだけによる相手別上位3体
+
+- **判断:** `CombatantSnapshot`を破壊的に変更せず、各陣営を`combatant + level`のreadonly配列として受け取るMATCHUP-005専用入力を追加する。Party・Archetypeのslotや実数値、相手の想定技は呼び出し側で変換・選択済みとし、本関数内でDB値の補完、採用率による技抽出、仮想技の追加を行わない
+- **判断:** 行を自分Pokemon、列を相手Pokemonとし、双方をPokemon ID昇順へ正規化してから全組み合わせへ既存`calculateMatchupScore`を1回ずつ適用する。1〜6体を受理し、空配列、6体超、同一陣営内のPokemon ID重複はRangeErrorで拒否する。最大計算量は36セルであり、キャッシュ、並列処理、Worker、メモ化は追加しない
+- **判断:** 相手ごとのおすすめは付録Bの`recommend.display_count=3`をshared定数から再利用し、`totalScore`、`offensiveScore`、`defensiveScore`、`damageRaceScore`の降順、最後に自分Pokemon ID昇順で決定する。全候補が負でも最も高い3体を返し、入力順やJavaScriptのsort安定性へ依存しない。各順位は対応するMATCHUP-004結果とliteralのreason codeをそのまま保持し、警戒技配列はMATCHUP-007まで空とする
+- **判断:** 既存`avoidMyPokemonIds`は独自の点数境界を追加せず、MATCHUP-004が既に`unfavorable`と分類したセルだけをPokemon ID昇順で返す。`favorable`等の分類、タイプ相性、ダメージ、確定数、総合点をMATCHUP-005側で再計算・補正しない
+- **理由:** PRODUCT_SPEC §9.4の36セル、§10.3の相手別表示、付録Bの上位3体を、MATCHUP-004を唯一のセル計算根拠として決定的・非破壊に提供し、MATCHUP-006の3体選出や役割・補完の加重評価を先取りしないため
+- **影響:** `buildMatchupMatrix`はマトリクスと相手別順位までを返し、最終`buildCounterplan`はMATCHUP-006以降も未完成のままとする。相手の採用率上位技選択、選出3体、先発・控え・エース、警戒技、立ち回りは後続層の責務である
