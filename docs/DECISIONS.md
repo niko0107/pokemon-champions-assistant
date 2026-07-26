@@ -629,3 +629,16 @@
 - **判断:** マトリクスは自分・相手各1〜6体、ID重複なし、全組のcellが過不足・重複なく存在し、各cellのID・主要スコア・分類・互換alias・内訳がMATCHUP-004契約に適合することを実行時に検証する。不正値を補完せずRangeErrorとし、入力順・cell順を正規化して入力を変更しない
 - **理由:** PRODUCT_SPEC §9.4に具体配点がなかった選出評価を、承認済み仕様どおり既存1対1評価の比較だけで構成し、任意pickSize、priority対象への対応、担当の冗長性を決定的に比較するため
 - **影響:** 出力は最良の1組だけで、ace/back、役割シナジー、素早さ、先制技、警戒技、立ち回り文章を含まない。呼び出し側は相手のdefault lead・主軸を解決してpriority IDを渡す必要があり、`buildCounterplan`はMATCHUP-007完了まで明示的な未実装エラーを維持する
+
+## 2026-07-27 警戒技・立ち回り構造化(MATCHUP-007)
+
+### D-059: 警戒タグ優先順・非推測note・既存選出を保持する構造化Counterplan
+
+- **判断:** 警戒技は既存`MoveTag`のうち`setup / hazard / screen / priority / status`を1つ以上持つ相手技だけとし、`pivot`単独は対象外とする。primary tagはこの順で決め、全警戒技をprimary tag順、技採用率降順、所有Pokemon使用率降順、相手Pokemon ID昇順、Move ID昇順で並べる。同じMove IDを別Pokemonが持つ場合は重複排除せず、Pokemonとの関連、対象タグ、採用率を保持する
+- **判断:** strategy codeは警戒タグだけから`PREVENT_SETUP / LIMIT_HAZARDS / STALL_SCREEN_TURNS / RESPECT_PRIORITY / MANAGE_STATUS`へ1対1で写像し、同じ順序で重複排除する。`threatNotes`と`playstyleNotes`の自由文章は意味解析せず、空白だけを除外またはnull化して原文を保持する。同一noteでもPokemonとの関連が異なる場合は失わない
+- **判断:** 相手ごとのおすすめ上位3体はMATCHUP-005の公開比較関数を再利用し、MATCHUP-004の結果・classification・reason codeを変更せず保持する。avoidは`unfavorable`だけをtotalScore昇順、Pokemon ID昇順で返し、`slightly_unfavorable`へ独自境界を広げない
+- **判断:** MATCHUP-006の`SelectionRecommendation`は入力整合性を検証してdeep copyしたうえでそのまま返し、選出・担当・coverage・先発を再計算しない。ace/backの正式判定式はないため推測せず、固定3役の既存`TeamPlan`は後方互換のため変更・流用しない
+- **判断:** matchupパッケージからscoringやDBへ依存しないため、既存Archetype情報から`pokemonId / usageRate / threatNotes / moveId / adoptionRate / tags / playstyleNotes`だけを射影する最小readonly入力型を定義する。MATCHUP-008の合成層が既存ArchetypeSnapshotと保存済みplaystyleNotesからこの入力を組み立て、不足値を名前や外部知識から推測しない
+- **判断:** MATCHUP-007は構造化データ生成だけを担当し、LLMを呼び出さない。後続LLMは確定済みreason code・スコア・playstyle note・strategy codeを短い文章へ変換するだけで、おすすめ、選出、警戒技の追加・変更を行わない
+- **理由:** PRODUCT_SPEC §9.5・§10.3・§12の計算と文章化の責務を分離し、MATCHUP-004〜006の決定結果を唯一の根拠として、後続API・Web・LLMが同じ警戒情報を決定的に利用できるようにするため
+- **影響:** playstyleNotesは現行scoringのArchetypeSnapshotに含まれないため、MATCHUP-008ではDB/API層が保存値を同じ入力へ明示的に射影する必要がある。自然文生成、観測による技上書き、ace/back推定は後続または別仕様のままとする

@@ -1,24 +1,48 @@
-import { DEFAULT_RECOMMEND_DISPLAY_COUNT, PARTY_TEAM_SIZE_MAX } from "@pokemon-champions/shared";
+import {
+  DEFAULT_RECOMMEND_DISPLAY_COUNT,
+  MOVE_TAGS,
+  PARTY_TEAM_SIZE_MAX,
+} from "@pokemon-champions/shared";
 import { DAMAGE_LEVEL_MAX, DAMAGE_LEVEL_MIN } from "./damage-estimation";
 import { calculateMatchupScore, classifyMatchupScore } from "./matchup-score";
 import type {
+  CautionMoveTag,
+  CounterplanInput,
   CounterplanResult,
   MatchupMatrixCombatant,
   MatchupMatrixInput,
   MatchupMatrixResult,
   MatchupScore,
-  MyPartySnapshot,
   OpponentRecommendation,
-  PredictedTeamSnapshot,
   RankedOpponentRecommendation,
   SelectionAssignment,
   SelectionMetrics,
   SelectionRecommendation,
   SelectionRecommendationInput,
+  StrategyCode,
+  StructuredCautionMove,
+  StructuredOpponentCounterplan,
+  StructuredOpponentRecommendation,
+  StructuredThreatNote,
 } from "./types";
 
 const DAMAGE_RACE_SCORES: ReadonlySet<number> = new Set([-15, -10, -5, 0, 5, 10, 15]);
 const TYPE_MULTIPLIERS: ReadonlySet<number> = new Set([0, 0.25, 0.5, 1, 2, 4]);
+const MOVE_TAG_SET: ReadonlySet<string> = new Set(MOVE_TAGS);
+const CAUTION_TAG_PRIORITY = [
+  "setup",
+  "hazard",
+  "screen",
+  "priority",
+  "status",
+] as const satisfies readonly CautionMoveTag[];
+const STRATEGY_CODE_BY_TAG: Readonly<Record<CautionMoveTag, StrategyCode>> = {
+  setup: "PREVENT_SETUP",
+  hazard: "LIMIT_HAZARDS",
+  screen: "STALL_SCREEN_TURNS",
+  priority: "RESPECT_PRIORITY",
+  status: "MANAGE_STATUS",
+};
 
 function assertPositiveSafeInteger(value: number, path: string): void {
   if (!Number.isSafeInteger(value) || value <= 0) {
@@ -276,6 +300,10 @@ function validateSelectionMatrix(result: MatchupMatrixResult): ValidatedSelectio
   return { selfPokemonIds, opponentPokemonIds, cellsByPair };
 }
 
+function arraysEqual<T>(left: readonly T[], right: readonly T[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
 function compareIdLists(left: readonly number[], right: readonly number[]): number {
   for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
     const difference = (left[index] ?? 0) - (right[index] ?? 0);
@@ -465,6 +493,63 @@ function cloneMatchupScore(score: MatchupScore): MatchupScore {
   };
 }
 
+function damageResultsEqual(
+  left: MatchupScore["outgoingDamage"],
+  right: MatchupScore["outgoingDamage"],
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  return (
+    left.moveId === right.moveId &&
+    left.category === right.category &&
+    left.minDamage === right.minDamage &&
+    left.maxDamage === right.maxDamage &&
+    left.minDamagePercent === right.minDamagePercent &&
+    left.maxDamagePercent === right.maxDamagePercent &&
+    left.typeMultiplier === right.typeMultiplier &&
+    left.stabMultiplier === right.stabMultiplier &&
+    left.attackerStat === right.attackerStat &&
+    left.defenderStat === right.defenderStat &&
+    left.canDamage === right.canDamage &&
+    left.isImmune === right.isImmune &&
+    left.knockoutCount === right.knockoutCount &&
+    left.possibleKnockoutCount === right.possibleKnockoutCount &&
+    left.knockoutClassification === right.knockoutClassification
+  );
+}
+
+function matchupScoresEqual(left: MatchupScore, right: MatchupScore): boolean {
+  return (
+    left.selfPokemonId === right.selfPokemonId &&
+    left.myPokemonId === right.myPokemonId &&
+    left.opponentPokemonId === right.opponentPokemonId &&
+    left.offensiveScore === right.offensiveScore &&
+    left.defensiveScore === right.defensiveScore &&
+    left.damageRaceScore === right.damageRaceScore &&
+    left.totalScore === right.totalScore &&
+    left.classification === right.classification &&
+    left.bestOffensiveMoveId === right.bestOffensiveMoveId &&
+    left.mostThreateningMoveId === right.mostThreateningMoveId &&
+    damageResultsEqual(left.outgoingDamage, right.outgoingDamage) &&
+    damageResultsEqual(left.incomingDamage, right.incomingDamage) &&
+    left.outgoingKnockoutCount === right.outgoingKnockoutCount &&
+    left.incomingKnockoutCount === right.incomingKnockoutCount &&
+    left.offensiveTypeMultiplier === right.offensiveTypeMultiplier &&
+    left.defensiveTypeMultiplier === right.defensiveTypeMultiplier &&
+    arraysEqual(left.reasonCodes, right.reasonCodes) &&
+    left.score === right.score &&
+    left.verdict === right.verdict &&
+    left.breakdown.offense === right.breakdown.offense &&
+    left.breakdown.defense === right.breakdown.defense &&
+    left.breakdown.speed === right.breakdown.speed &&
+    left.breakdown.damageRace === right.breakdown.damageRace &&
+    left.breakdown.priority === right.breakdown.priority &&
+    left.breakdown.statusResist === right.breakdown.statusResist &&
+    left.breakdown.setupCounter === right.breakdown.setupCounter
+  );
+}
+
 /** 承認済み辞書式比較により、任意pickSizeの最良選出組とpriority基準の先発を返す。 */
 export function buildSelectionRecommendation(
   input: SelectionRecommendationInput,
@@ -523,15 +608,357 @@ export function buildSelectionRecommendation(
   };
 }
 
-/**
- * 相性マトリクス(6×6)からおすすめ選出・警戒技を算出する(設計書 §9.4〜9.5)。
- * 純粋関数として実装すること。
- *
- * 実装タスク: MATCHUP-005(マトリクス)/ MATCHUP-006(選出提案)/ MATCHUP-007(警戒技)
- */
-export function buildCounterplan(
-  _myParty: MyPartySnapshot,
-  _predictedTeam: PredictedTeamSnapshot,
-): CounterplanResult {
-  throw new Error("Not implemented yet — MATCHUP-007 以降のタスクで実装する");
+function assertRate(value: number, path: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new RangeError(`${path} must be a finite number between 0 and 1`);
+  }
+}
+
+interface ValidatedArchetype {
+  readonly opponentPokemonIds: readonly number[];
+  readonly pokemons: readonly CounterplanInput["archetype"]["pokemons"][number][];
+  readonly playstyleNotes: string | null;
+}
+
+function validateArchetype(input: CounterplanInput["archetype"]): ValidatedArchetype {
+  if (!Array.isArray(input.pokemons) || input.pokemons.length === 0) {
+    throw new RangeError("archetype.pokemons must contain at least one Pokemon");
+  }
+  if (input.pokemons.length > PARTY_TEAM_SIZE_MAX) {
+    throw new RangeError(`archetype.pokemons must contain at most ${PARTY_TEAM_SIZE_MAX} Pokemon`);
+  }
+  if (
+    input.playstyleNotes !== undefined &&
+    input.playstyleNotes !== null &&
+    typeof input.playstyleNotes !== "string"
+  ) {
+    throw new RangeError("archetype.playstyleNotes must be a string or null");
+  }
+
+  const pokemonIds = new Set<number>();
+  for (const [pokemonIndex, pokemon] of input.pokemons.entries()) {
+    const pokemonPath = `archetype.pokemons[${pokemonIndex}]`;
+    assertPositiveSafeInteger(pokemon.pokemonId, `${pokemonPath}.pokemonId`);
+    if (pokemonIds.has(pokemon.pokemonId)) {
+      throw new RangeError("archetype.pokemons must not contain duplicate pokemonId values");
+    }
+    pokemonIds.add(pokemon.pokemonId);
+    assertRate(pokemon.usageRate, `${pokemonPath}.usageRate`);
+    if (
+      pokemon.threatNotes !== undefined &&
+      pokemon.threatNotes !== null &&
+      typeof pokemon.threatNotes !== "string"
+    ) {
+      throw new RangeError(`${pokemonPath}.threatNotes must be a string or null`);
+    }
+    if (!Array.isArray(pokemon.moves)) {
+      throw new RangeError(`${pokemonPath}.moves must be an array`);
+    }
+
+    const moveIds = new Set<number>();
+    for (const [moveIndex, move] of pokemon.moves.entries()) {
+      const movePath = `${pokemonPath}.moves[${moveIndex}]`;
+      assertPositiveSafeInteger(move.moveId, `${movePath}.moveId`);
+      if (moveIds.has(move.moveId)) {
+        throw new RangeError(`${pokemonPath}.moves must not contain duplicate moveId values`);
+      }
+      moveIds.add(move.moveId);
+      assertRate(move.adoptionRate, `${movePath}.adoptionRate`);
+      if (!Array.isArray(move.tags)) {
+        throw new RangeError(`${movePath}.tags must be an array`);
+      }
+      const tags = new Set<string>();
+      for (const tag of move.tags) {
+        if (!MOVE_TAG_SET.has(tag)) {
+          throw new RangeError(`${movePath}.tags contains an unsupported MoveTag`);
+        }
+        if (tags.has(tag)) {
+          throw new RangeError(`${movePath}.tags must not contain duplicates`);
+        }
+        tags.add(tag);
+      }
+    }
+  }
+
+  return {
+    opponentPokemonIds: [...pokemonIds].sort((left, right) => left - right),
+    pokemons: input.pokemons,
+    playstyleNotes:
+      input.playstyleNotes === undefined ||
+      input.playstyleNotes === null ||
+      input.playstyleNotes.trim().length === 0
+        ? null
+        : input.playstyleNotes,
+  };
+}
+
+function assertStrictlyAscending(values: readonly number[], path: string): void {
+  for (let index = 1; index < values.length; index += 1) {
+    if ((values[index - 1] ?? 0) >= (values[index] ?? 0)) {
+      throw new RangeError(`${path} must be strictly ascending`);
+    }
+  }
+}
+
+function validateSelection(
+  selection: SelectionRecommendation,
+  matrix: ValidatedSelectionMatrix,
+): void {
+  const selectedPokemonIds = normalizeIdList(
+    selection.selectedPokemonIds,
+    "selection.selectedPokemonIds",
+    { allowEmpty: false },
+  );
+  assertStrictlyAscending(selection.selectedPokemonIds, "selection.selectedPokemonIds");
+  const selfIdSet = new Set(matrix.selfPokemonIds);
+  for (const pokemonId of selectedPokemonIds) {
+    if (!selfIdSet.has(pokemonId)) {
+      throw new RangeError("selection.selectedPokemonIds must be a subset of matrix self IDs");
+    }
+  }
+
+  if (selection.leadPokemonId !== null) {
+    assertPositiveSafeInteger(selection.leadPokemonId, "selection.leadPokemonId");
+    if (!selectedPokemonIds.includes(selection.leadPokemonId)) {
+      throw new RangeError("selection.leadPokemonId must be included in selectedPokemonIds");
+    }
+  }
+
+  if (!Array.isArray(selection.assignmentsByOpponent)) {
+    throw new RangeError("selection.assignmentsByOpponent must be an array");
+  }
+  if (selection.assignmentsByOpponent.length !== matrix.opponentPokemonIds.length) {
+    throw new RangeError("selection.assignmentsByOpponent must contain every opponent");
+  }
+
+  const assignmentsByOpponent = new Map<number, SelectionAssignment>();
+  for (const [index, assignment] of selection.assignmentsByOpponent.entries()) {
+    const path = `selection.assignmentsByOpponent[${index}]`;
+    assertPositiveSafeInteger(assignment.opponentPokemonId, `${path}.opponentPokemonId`);
+    assertPositiveSafeInteger(assignment.assignedSelfPokemonId, `${path}.assignedSelfPokemonId`);
+    if (assignmentsByOpponent.has(assignment.opponentPokemonId)) {
+      throw new RangeError("selection.assignmentsByOpponent must not contain duplicates");
+    }
+    if (!selectedPokemonIds.includes(assignment.assignedSelfPokemonId)) {
+      throw new RangeError(`${path}.assignedSelfPokemonId must be selected`);
+    }
+    const cell = getCell(
+      matrix.cellsByPair,
+      assignment.assignedSelfPokemonId,
+      assignment.opponentPokemonId,
+    );
+    assertMatchupScore(assignment.matchupResult, `${path}.matchupResult`);
+    if (!matchupScoresEqual(assignment.matchupResult, cell)) {
+      throw new RangeError(`${path}.matchupResult must match the matrix cell`);
+    }
+
+    const ranked = selectedPokemonIds
+      .map((selfPokemonId) =>
+        getCell(matrix.cellsByPair, selfPokemonId, assignment.opponentPokemonId),
+      )
+      .sort(compareMatchupRecommendations);
+    if (ranked[0]?.selfPokemonId !== assignment.assignedSelfPokemonId) {
+      throw new RangeError(`${path} must assign the best selected Pokemon`);
+    }
+    assignmentsByOpponent.set(assignment.opponentPokemonId, assignment);
+  }
+  if (
+    !arraysEqual(
+      [...assignmentsByOpponent.keys()].sort((left, right) => left - right),
+      matrix.opponentPokemonIds,
+    )
+  ) {
+    throw new RangeError("selection.assignmentsByOpponent IDs must match matrix opponents");
+  }
+
+  const expectedCovered = matrix.opponentPokemonIds.filter(
+    (opponentPokemonId) =>
+      (assignmentsByOpponent.get(opponentPokemonId)?.matchupResult.totalScore ?? -100) >= -9,
+  );
+  const expectedUncovered = matrix.opponentPokemonIds.filter(
+    (opponentPokemonId) =>
+      (assignmentsByOpponent.get(opponentPokemonId)?.matchupResult.totalScore ?? 100) <= -10,
+  );
+  if (
+    !arraysEqual(selection.coveredOpponentPokemonIds, expectedCovered) ||
+    !arraysEqual(selection.uncoveredOpponentPokemonIds, expectedUncovered)
+  ) {
+    throw new RangeError("selection coverage IDs must match assignment classifications");
+  }
+
+  const bestScores = matrix.opponentPokemonIds.map(
+    (opponentPokemonId) =>
+      assignmentsByOpponent.get(opponentPokemonId)?.matchupResult.totalScore ?? 0,
+  );
+  const secondBestScoreSum = matrix.opponentPokemonIds.reduce(
+    (sum, opponentPokemonId) =>
+      sum +
+      (selectedPokemonIds
+        .map((selfPokemonId) => getCell(matrix.cellsByPair, selfPokemonId, opponentPokemonId))
+        .sort(compareMatchupRecommendations)[1]?.totalScore ?? 0),
+    0,
+  );
+  const expectedMetrics: Omit<SelectionMetrics, "priorityCoveredCount"> = {
+    coveredCount: expectedCovered.length,
+    worstBestScore: Math.min(...bestScores),
+    bestScoreSum: bestScores.reduce((sum, score) => sum + score, 0),
+    secondBestScoreSum,
+  };
+  assertIntegerInRange(
+    selection.metrics.priorityCoveredCount,
+    0,
+    expectedCovered.length,
+    "selection.metrics.priorityCoveredCount",
+  );
+  for (const key of Object.keys(expectedMetrics) as Array<keyof typeof expectedMetrics>) {
+    if (selection.metrics[key] !== expectedMetrics[key]) {
+      throw new RangeError(`selection.metrics.${key} must match the matrix`);
+    }
+  }
+}
+
+function compareCautionMoves(left: StructuredCautionMove, right: StructuredCautionMove): number {
+  return (
+    CAUTION_TAG_PRIORITY.indexOf(left.primaryTag) -
+      CAUTION_TAG_PRIORITY.indexOf(right.primaryTag) ||
+    right.adoptionRate - left.adoptionRate ||
+    right.opponentUsageRate - left.opponentUsageRate ||
+    left.opponentPokemonId - right.opponentPokemonId ||
+    left.moveId - right.moveId
+  );
+}
+
+function buildCautionMoves(archetype: ValidatedArchetype): StructuredCautionMove[] {
+  const cautionMoves: StructuredCautionMove[] = [];
+  for (const pokemon of archetype.pokemons) {
+    for (const move of pokemon.moves) {
+      const tags = CAUTION_TAG_PRIORITY.filter((tag) => move.tags.includes(tag));
+      const primaryTag = tags[0];
+      if (primaryTag === undefined) {
+        continue;
+      }
+      cautionMoves.push({
+        moveId: move.moveId,
+        opponentPokemonId: pokemon.pokemonId,
+        tags,
+        primaryTag,
+        adoptionRate: move.adoptionRate,
+        opponentUsageRate: pokemon.usageRate,
+      });
+    }
+  }
+  return cautionMoves.sort(compareCautionMoves);
+}
+
+function buildThreatNotes(archetype: ValidatedArchetype): StructuredThreatNote[] {
+  return archetype.pokemons
+    .filter(
+      (
+        pokemon,
+      ): pokemon is typeof pokemon & {
+        readonly threatNotes: string;
+      } => typeof pokemon.threatNotes === "string" && pokemon.threatNotes.trim().length > 0,
+    )
+    .map((pokemon) => ({
+      opponentPokemonId: pokemon.pokemonId,
+      note: pokemon.threatNotes,
+      usageRate: pokemon.usageRate,
+    }))
+    .sort(
+      (left, right) =>
+        right.usageRate - left.usageRate ||
+        left.opponentPokemonId - right.opponentPokemonId ||
+        left.note.localeCompare(right.note),
+    )
+    .map(({ opponentPokemonId, note }) => ({ opponentPokemonId, note }));
+}
+
+function buildStrategyCodes(cautionMoves: readonly StructuredCautionMove[]): StrategyCode[] {
+  const presentTags = new Set(cautionMoves.flatMap((move) => move.tags));
+  return CAUTION_TAG_PRIORITY.filter((tag) => presentTags.has(tag)).map(
+    (tag) => STRATEGY_CODE_BY_TAG[tag],
+  );
+}
+
+function toStructuredRecommendation(
+  result: MatchupScore,
+  rank: number,
+): StructuredOpponentRecommendation {
+  const matchupResult = cloneMatchupScore(result);
+  return {
+    rank,
+    selfPokemonId: result.selfPokemonId,
+    opponentPokemonId: result.opponentPokemonId,
+    totalScore: result.totalScore,
+    classification: result.classification,
+    reasonCodes: [...result.reasonCodes],
+    matchupResult,
+  };
+}
+
+function buildStructuredPerOpponent(
+  matrix: ValidatedSelectionMatrix,
+  cautionMoves: readonly StructuredCautionMove[],
+  threatNotes: readonly StructuredThreatNote[],
+): StructuredOpponentCounterplan[] {
+  return matrix.opponentPokemonIds.map((opponentPokemonId) => {
+    const ranked = matrix.selfPokemonIds
+      .map((selfPokemonId) => getCell(matrix.cellsByPair, selfPokemonId, opponentPokemonId))
+      .sort(compareMatchupRecommendations);
+    return {
+      opponentPokemonId,
+      recommendations: ranked
+        .slice(0, DEFAULT_RECOMMEND_DISPLAY_COUNT)
+        .map((result, index) => toStructuredRecommendation(result, index + 1)),
+      avoidSelfPokemonIds: ranked
+        .filter((result) => result.classification === "unfavorable")
+        .sort(
+          (left, right) =>
+            left.totalScore - right.totalScore || left.selfPokemonId - right.selfPokemonId,
+        )
+        .map((result) => result.selfPokemonId),
+      cautionMoves: cautionMoves
+        .filter((move) => move.opponentPokemonId === opponentPokemonId)
+        .map((move) => ({ ...move, tags: [...move.tags] })),
+      threatNotes: threatNotes
+        .filter((note) => note.opponentPokemonId === opponentPokemonId)
+        .map((note) => ({ ...note })),
+    };
+  });
+}
+
+function cloneSelection(selection: SelectionRecommendation): SelectionRecommendation {
+  return {
+    selectedPokemonIds: [...selection.selectedPokemonIds],
+    leadPokemonId: selection.leadPokemonId,
+    assignmentsByOpponent: selection.assignmentsByOpponent.map((assignment) => ({
+      opponentPokemonId: assignment.opponentPokemonId,
+      assignedSelfPokemonId: assignment.assignedSelfPokemonId,
+      matchupResult: cloneMatchupScore(assignment.matchupResult),
+    })),
+    coveredOpponentPokemonIds: [...selection.coveredOpponentPokemonIds],
+    uncoveredOpponentPokemonIds: [...selection.uncoveredOpponentPokemonIds],
+    metrics: { ...selection.metrics },
+  };
+}
+
+/** MATCHUP-005〜006の確定結果とArchetype情報から構造化対策情報だけを生成する。 */
+export function buildCounterplan(input: CounterplanInput): CounterplanResult {
+  const matrix = validateSelectionMatrix(input.matrix);
+  const archetype = validateArchetype(input.archetype);
+  if (!arraysEqual(matrix.opponentPokemonIds, archetype.opponentPokemonIds)) {
+    throw new RangeError("matrix opponent IDs must match archetype Pokemon IDs");
+  }
+  validateSelection(input.selection, matrix);
+
+  const cautionMoves = buildCautionMoves(archetype);
+  const threatNotes = buildThreatNotes(archetype);
+  return {
+    perOpponent: buildStructuredPerOpponent(matrix, cautionMoves, threatNotes),
+    selection: cloneSelection(input.selection),
+    playstyleNotes: archetype.playstyleNotes,
+    strategyCodes: buildStrategyCodes(cautionMoves),
+    cautionMoves: cautionMoves.map((move) => ({ ...move, tags: [...move.tags] })),
+    threatNotes: threatNotes.map((note) => ({ ...note })),
+  };
 }

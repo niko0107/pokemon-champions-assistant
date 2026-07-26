@@ -701,15 +701,15 @@
 - **前提タスク:** MATCHUP-005
 - **対象外:** 警戒技(MATCHUP-007)
 
-### ⬜ MATCHUP-007 警戒技・立ち回り構造化
+### ✅ MATCHUP-007 警戒技・立ち回り構造化
 
 - **目的:** §9.5 の警戒技列挙と立ち回り方針の構造化データ生成を実装する
-- **作業範囲:** タグ(setup/hazard/screen/priority/status)+threat_notes の優先度順列挙、strategyCodes
+- **作業範囲:** タグ(setup/hazard/screen/priority/status)と採用率による警戒技列挙、threat_notes、strategyCodes、相手別上位3体・avoid、MATCHUP-006選出結果の統合
 - **変更予定パッケージ:** packages/matchup
-- **完了条件:** CounterplanResult が完成形で返る
-- **必要なテスト:** 単体テスト(優先度順・タグ判定)
+- **完了条件:** MATCHUP-004〜006を再計算せず、後続API・Web・LLMが利用できる構造化CounterplanResultが決定的に返る
+- **必要なテスト:** 単体テスト(警戒技、note、strategyCodes、相手別表示、選出統合、不正入力、決定性・非破壊性)
 - **前提タスク:** MATCHUP-006
-- **対象外:** 文章化(LLM 系)
+- **対象外:** 自然文の立ち回り生成(LLM タスク)
 
 ### ⬜ MATCHUP-008 counterplan API
 
@@ -812,4 +812,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **MATCHUP-007(警戒技・立ち回り構造化)**。
+次に着手すべきタスク: **MATCHUP-008(counterplan API)**。
