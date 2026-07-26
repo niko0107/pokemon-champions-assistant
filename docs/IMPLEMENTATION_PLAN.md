@@ -721,7 +721,7 @@
 - **前提タスク:** MATCHUP-007, PARTY-002, ARCHETYPE-002, MASTER-010, MASTER-011, WEB-006
 - **対象外:** MATCHUP-008 counterplan API、Snapshot変換、能力値の自動推定、Pokemon単位level列
 
-### ⬜ MATCHUP-008 counterplan API
+### ✅ MATCHUP-008 counterplan API
 
 - **目的:** GET /sessions/{id}/counterplan(§10.3)を実装する
 - **作業範囲:** 観測実測+テンプレ補完のスナップショット合成、matchup 呼び出し、§10.3 形式レスポンス
@@ -822,4 +822,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **MATCHUP-008(counterplan API)**。
+次に着手すべきタスク: **WEB-007 対策タブ**。

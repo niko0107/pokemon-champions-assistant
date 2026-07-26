@@ -16,6 +16,7 @@ import {
   observationResponseSchema,
   partyListResponseSchema,
   problemDetailsSchema,
+  sessionCounterplanResponseSchema,
   undoObservationResponseSchema,
   type BattleSessionResponse,
   type BattleCandidatesResponse,
@@ -23,6 +24,7 @@ import {
   type BattleSessionEndResponse,
   type ObservationCreate,
   type ObservationResponse,
+  type SessionCounterplanResponse,
 } from "@pokemon-champions/shared";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,6 +37,7 @@ import {
   type RedisOperationResult,
 } from "../src/modules/redis/redis-adapter";
 import { buildObservationRateLimitKey } from "../src/modules/sessions/battle-rate-limit.service";
+import { SessionCounterplanService } from "../src/modules/sessions/session-counterplan.service";
 import { SessionsService } from "../src/modules/sessions/sessions.service";
 
 const TEST_ACCESS_SECRET = "battle-001-api-access-secret-at-least-32-bytes";
@@ -136,6 +139,85 @@ const endedResponse: BattleSessionEndResponse = battleSessionEndResponseSchema.p
   updatedAt: timestamp,
 });
 
+const counterplanMatchupResult = {
+  selfPokemonId: 1,
+  myPokemonId: 1,
+  opponentPokemonId: 101,
+  offensiveScore: 25,
+  defensiveScore: 20,
+  damageRaceScore: 5,
+  totalScore: 44,
+  classification: "slightly_favorable",
+  bestOffensiveMoveId: 11,
+  mostThreateningMoveId: 21,
+  outgoingDamage: null,
+  incomingDamage: null,
+  outgoingKnockoutCount: 2,
+  incomingKnockoutCount: null,
+  offensiveTypeMultiplier: 2,
+  defensiveTypeMultiplier: null,
+  reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+  score: 44,
+  verdict: "slightly_favorable",
+  breakdown: {
+    offense: 25,
+    defense: 20,
+    speed: 0,
+    damageRace: 5,
+    priority: 0,
+    statusResist: 0,
+    setupCounter: 0,
+  },
+} as const;
+
+const counterplanResponse: SessionCounterplanResponse = sessionCounterplanResponseSchema.parse({
+  sessionId,
+  selectedArchetypeId: archetypeId,
+  perOpponent: [
+    {
+      opponentPokemonId: 101,
+      recommendations: [
+        {
+          rank: 1,
+          selfPokemonId: 1,
+          opponentPokemonId: 101,
+          totalScore: 44,
+          classification: "slightly_favorable",
+          reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+          matchupResult: counterplanMatchupResult,
+        },
+      ],
+      avoidSelfPokemonIds: [],
+      cautionMoves: [],
+      threatNotes: [],
+    },
+  ],
+  selection: {
+    selectedPokemonIds: [1],
+    leadPokemonId: 1,
+    assignmentsByOpponent: [
+      {
+        opponentPokemonId: 101,
+        assignedSelfPokemonId: 1,
+        matchupResult: counterplanMatchupResult,
+      },
+    ],
+    coveredOpponentPokemonIds: [101],
+    uncoveredOpponentPokemonIds: [],
+    metrics: {
+      priorityCoveredCount: 1,
+      coveredCount: 1,
+      worstBestScore: 44,
+      bestScoreSum: 44,
+      secondBestScoreSum: 0,
+    },
+  },
+  playstyleNotes: "壁から展開する",
+  strategyCodes: [],
+  cautionMoves: [],
+  threatNotes: [],
+});
+
 interface RateLimitCounter {
   count: number;
   expiresAt: number;
@@ -215,6 +297,7 @@ describe("BATTLE-001〜006 session API", () => {
   const getCandidates = vi.fn();
   const selectCandidate = vi.fn();
   const end = vi.fn();
+  const getCounterplan = vi.fn();
   const pokemonFindMany = vi.fn();
   const partyFindMany = vi.fn();
   const rateLimitRedis = new ApiRateLimitRedisAdapter();
@@ -241,6 +324,8 @@ describe("BATTLE-001〜006 session API", () => {
         selectCandidate,
         end,
       })
+      .overrideProvider(SessionCounterplanService)
+      .useValue({ get: getCounterplan })
       .overrideProvider(REDIS_ADAPTER)
       .useValue(rateLimitRedis)
       .compile();
@@ -305,6 +390,11 @@ describe("BATTLE-001〜006 session API", () => {
     end.mockImplementation((callerId: string, requestedSessionId: string) =>
       callerId === userAId && requestedSessionId === sessionId
         ? Promise.resolve(endedResponse)
+        : Promise.reject(notFound()),
+    );
+    getCounterplan.mockImplementation((callerId: string, requestedSessionId: string) =>
+      callerId === userAId && requestedSessionId === sessionId
+        ? Promise.resolve(counterplanResponse)
         : Promise.reject(notFound()),
     );
     pokemonFindMany.mockResolvedValue([]);
@@ -937,6 +1027,78 @@ describe("BATTLE-001〜006 session API", () => {
     expect(response.body).not.toHaveProperty("userId");
     expect(response.body).not.toHaveProperty("accessToken");
     expect(end).toHaveBeenCalledWith(userAId, sessionId, { result: "win" });
+  });
+
+  it("選択済みの自分のSessionからcounterplanを取得できる", async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(200);
+
+    expect(sessionCounterplanResponseSchema.parse(response.body)).toEqual(counterplanResponse);
+    expect(getCounterplan).toHaveBeenCalledWith(userAId, sessionId);
+    expect(response.body).not.toHaveProperty("userId");
+    expect(response.body).not.toHaveProperty("createdAt");
+    expect(JSON.stringify(response.body)).not.toContain("passwordHash");
+  });
+
+  it("counterplanは未認証401、不正params 400、他人・admin・不存在Session 404にする", async () => {
+    const unauthorized = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .expect(401);
+    expect(problemDetailsSchema.parse(unauthorized.body)).toMatchObject({
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+
+    const invalid = await request(app.getHttpServer())
+      .get("/api/v1/sessions/not-a-uuid/counterplan")
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(400);
+    expect(problemDetailsSchema.parse(invalid.body)).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+
+    for (const [token, requestedSessionId] of [
+      [userBToken, sessionId],
+      [adminToken, sessionId],
+      [userAToken, missingSessionId],
+    ] as const) {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/sessions/${requestedSessionId}/counterplan`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(404);
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 404,
+        code: "NOT_FOUND",
+      });
+    }
+  });
+
+  it.each([
+    ["selected未設定", "INVALID_ARCHETYPE_SELECTION"],
+    ["archived Session", "INVALID_SESSION_STATE"],
+  ])("counterplanの%sをRFC 9457形式の400にする", async (_label, code) => {
+    getCounterplan.mockRejectedValueOnce(
+      new BadRequestException({
+        type: "about:blank",
+        title:
+          code === "INVALID_SESSION_STATE"
+            ? "Invalid Session State"
+            : "Invalid Archetype Selection",
+        status: 400,
+        code,
+      }),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .set("Authorization", `Bearer ${userAToken}`)
+      .expect(400);
+    expect(problemDetailsSchema.parse(response.body)).toMatchObject({ status: 400, code });
+    expect(response.body).not.toHaveProperty("stack");
+    expect(response.body).not.toHaveProperty("actualStats");
   });
 
   it("終了入力はstrictで、認証なしは401にする", async () => {
