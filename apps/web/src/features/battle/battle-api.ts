@@ -12,6 +12,8 @@ import { apiClient } from "../../lib/api-client";
 export const battleQueryKeys = {
   session: (sessionId: string) => ["battle", "session", sessionId] as const,
   pokemonSearch: (query: string) => ["battle", "pokemon-search", query] as const,
+  moveSearch: (pokemonId: number, query: string) =>
+    ["battle", "move-search", pokemonId, query] as const,
 };
 
 export function createBattleSession(input: BattleSessionCreate): Promise<BattleSessionResponse> {
@@ -37,6 +39,19 @@ export function addPokemonObservation(
   return apiClient.request<ObservationResponse>(`/sessions/${sessionId}/observations`, {
     method: "POST",
     body: observationCreateSchema.parse({ kind: "pokemon", pokemonId }),
+    authenticated: true,
+    responseSchema: observationResponseSchema,
+  });
+}
+
+export function addMoveObservation(
+  sessionId: string,
+  pokemonId: number,
+  moveId: number,
+): Promise<ObservationResponse> {
+  return apiClient.request<ObservationResponse>(`/sessions/${sessionId}/observations`, {
+    method: "POST",
+    body: observationCreateSchema.parse({ kind: "move", pokemonId, moveId }),
     authenticated: true,
     responseSchema: observationResponseSchema,
   });
