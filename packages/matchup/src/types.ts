@@ -67,6 +67,82 @@ export interface MoveSnapshot {
   adoptionRate: number;
 }
 
+/** MATCHUP-003の簡易ダメージ計算に必要な攻撃側情報。 */
+export interface DamageAttackerSnapshot extends DefensiveTyping {
+  readonly pokemonId: number;
+  readonly level: number;
+  readonly attack: number;
+  readonly specialAttack: number;
+}
+
+/** MATCHUP-003の簡易ダメージ計算に必要な防御側情報。 */
+export interface DamageDefenderSnapshot extends DefensiveTyping {
+  readonly pokemonId: number;
+  readonly hp: number;
+  readonly defense: number;
+  readonly specialDefense: number;
+}
+
+/** 既存MoveSnapshotから、簡易ダメージ計算で参照する項目だけを受け取る。 */
+export type DamageMoveSnapshot = Readonly<
+  Pick<MoveSnapshot, "moveId" | "type" | "category" | "power">
+>;
+
+/** MATCHUP-003の簡易ダメージ計算入力。 */
+export interface DamageCalculationInput {
+  readonly attacker: DamageAttackerSnapshot;
+  readonly defender: DamageDefenderSnapshot;
+  readonly move: DamageMoveSnapshot;
+}
+
+/** PRODUCT_SPEC §9.3のタイプ一致補正。 */
+export type StabMultiplier = 1 | 1.5;
+
+/**
+ * ダメージ範囲から得られる確定数の分類。
+ * 現行仕様は乱数なしだが、範囲入力時も境界を失わない構造にする。
+ */
+export type KnockoutClassification =
+  | "guaranteed_one_hit"
+  | "possible_one_hit"
+  | "guaranteed_two_hit"
+  | "possible_two_hit"
+  | "guaranteed_three_plus_hits"
+  | "possible_three_plus_hits"
+  | "cannot_ko";
+
+/** 確定数だけを独立して算出する入力。 */
+export interface KnockoutCountInput {
+  readonly defenderHp: number;
+  readonly minDamage: number;
+  readonly maxDamage: number;
+}
+
+/** 下限ダメージによる保証回数と、上限ダメージによる最短回数。 */
+export interface KnockoutCountResult {
+  /** PRODUCT_SPEC §9.3のceil(HP / damage下限)。倒せない場合はnull。 */
+  readonly knockoutCount: number | null;
+  /** 上限ダメージを引いた場合の最短回数。倒せない場合はnull。 */
+  readonly possibleKnockoutCount: number | null;
+  readonly knockoutClassification: KnockoutClassification;
+}
+
+/** 簡易ダメージ計算結果。表示文ではなく後続ロジック向けの構造化データ。 */
+export interface DamageRangeResult extends KnockoutCountResult {
+  readonly moveId: number;
+  readonly category: MoveCategory;
+  readonly minDamage: number;
+  readonly maxDamage: number;
+  readonly minDamagePercent: number;
+  readonly maxDamagePercent: number;
+  readonly typeMultiplier: TypeEffectivenessMultiplier;
+  readonly stabMultiplier: StabMultiplier;
+  readonly attackerStat: number | null;
+  readonly defenderStat: number | null;
+  readonly canDamage: boolean;
+  readonly isImmune: boolean;
+}
+
 /** 相性計算に使うポケモン情報(自分側・相手側共通) */
 export interface CombatantSnapshot {
   pokemonId: number;

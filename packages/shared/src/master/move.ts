@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { MOVE_CATEGORIES, MOVE_TAGS } from "../enums";
 
+export const MOVE_POWER_MIN = 1;
+export const MOVE_POWER_MAX = 300;
+
 const moveNameSchema = z.string().trim().min(1, "技名は1文字以上必要です");
 const moveTypeSchema = z.string().trim().min(1, "技タイプは1文字以上必要です");
 
@@ -23,7 +26,7 @@ export const moveMasterSchema = z.object({
   nameEn: moveNameSchema,
   type: moveTypeSchema,
   category: moveCategorySchema,
-  power: z.number().int().min(1).max(300).nullable(),
+  power: z.number().int().min(MOVE_POWER_MIN).max(MOVE_POWER_MAX).nullable(),
   accuracy: z.number().int().min(1).max(100).nullable(),
   priority: z.number().int().min(-7).max(5),
   tags: moveTagsSchema,
