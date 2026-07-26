@@ -194,12 +194,54 @@ export interface MatchupScoreBreakdown {
 export type MatchupVerdict =
   "favorable" | "slightly_favorable" | "even" | "slightly_unfavorable" | "unfavorable";
 
-/** 1対1相性スコア(−100〜+100 に正規化) */
+/** MATCHUP-004で扱う1対1評価の入力。レベルは保存Snapshotと分離して明示する。 */
+export interface MatchupScoreInput {
+  readonly self: CombatantSnapshot;
+  readonly selfLevel: number;
+  readonly opponent: CombatantSnapshot;
+  readonly opponentLevel: number;
+}
+
+/** 1対1評価の根拠を後続層へ伝える、表示文に依存しないコード。 */
+export type MatchupReasonCode =
+  | "BEST_MOVE_SUPER_EFFECTIVE"
+  | "BEST_MOVE_RESISTED"
+  | "BEST_MOVE_IMMUNE"
+  | "RESISTS_THREAT"
+  | "IMMUNE_TO_THREAT"
+  | "TAKES_SUPER_EFFECTIVE_DAMAGE"
+  | "WINS_DAMAGE_RACE"
+  | "LOSES_DAMAGE_RACE"
+  | "EVEN_DAMAGE_RACE"
+  | "NO_DAMAGING_MOVE"
+  | "OPPONENT_NO_DAMAGING_MOVE";
+
+/** 1対1相性スコア(−100〜+100 に正規化)。 */
 export interface MatchupScore {
+  /** MATCHUP-004以降の標準名。 */
+  selfPokemonId: number;
+  /** MATCHUP-001の既存利用側との互換エイリアス。 */
   myPokemonId: number;
   opponentPokemonId: number;
+  offensiveScore: number;
+  defensiveScore: number;
+  damageRaceScore: number;
+  totalScore: number;
+  classification: MatchupVerdict;
+  bestOffensiveMoveId: number | null;
+  mostThreateningMoveId: number | null;
+  outgoingDamage: DamageRangeResult | null;
+  incomingDamage: DamageRangeResult | null;
+  outgoingKnockoutCount: number | null;
+  incomingKnockoutCount: number | null;
+  offensiveTypeMultiplier: TypeEffectivenessMultiplier | null;
+  defensiveTypeMultiplier: TypeEffectivenessMultiplier | null;
+  reasonCodes: MatchupReasonCode[];
+  /** MATCHUP-001の既存利用側との互換エイリアス。 */
   score: number;
+  /** MATCHUP-001の既存利用側との互換エイリアス。 */
   verdict: MatchupVerdict;
+  /** 承認済みMATCHUP-004対象外の軸は0で保持する互換内訳。 */
   breakdown: MatchupScoreBreakdown;
 }
 
