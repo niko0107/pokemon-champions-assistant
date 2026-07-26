@@ -4,6 +4,7 @@ import {
   abilitySearchResponseSchema,
   itemSearchQuerySchema,
   itemSearchResponseSchema,
+  masterRulesResponseSchema,
   moveSearchQuerySchema,
   moveSearchResponseSchema,
   pokemonSearchQuerySchema,
@@ -12,6 +13,7 @@ import {
   type AbilitySearchResponse,
   type ItemSearchQuery,
   type ItemSearchResponse,
+  type MasterRulesResponse,
   type MoveSearchQuery,
   type MoveSearchResponse,
   type PokemonSearchQuery,
@@ -22,6 +24,7 @@ import { AbilitySearchService } from "./ability-search.service";
 import { ItemSearchService } from "./item-search.service";
 import { MoveSearchService } from "./move-search.service";
 import { PokemonSearchService } from "./pokemon-search.service";
+import { RuleCatalogService } from "./rule-catalog.service";
 
 @Controller("master")
 export class MasterController {
@@ -30,6 +33,7 @@ export class MasterController {
     private readonly moveSearch: MoveSearchService,
     private readonly itemSearch: ItemSearchService,
     private readonly abilitySearch: AbilitySearchService,
+    private readonly ruleCatalog: RuleCatalogService,
   ) {}
 
   @Get("pokemons")
@@ -63,5 +67,11 @@ export class MasterController {
   ): Promise<AbilitySearchResponse> {
     const items = await this.abilitySearch.search(query);
     return abilitySearchResponseSchema.parse({ items });
+  }
+
+  @Get("rules")
+  async listRules(): Promise<MasterRulesResponse> {
+    const items = await this.ruleCatalog.list();
+    return masterRulesResponseSchema.parse({ items });
   }
 }

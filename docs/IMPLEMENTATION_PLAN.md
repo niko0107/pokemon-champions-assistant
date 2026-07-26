@@ -219,6 +219,16 @@
 - **前提タスク:** MASTER-005, MASTER-008
 - **対象外:** コード変更
 
+### ✅ MASTER-010 公開Rule一覧API
+
+- **目的:** 一般ユーザーがParty作成に利用できるRule一覧を取得できるようにする
+- **作業範囲:** `GET /master/rules`、sharedのstrictレスポンススキーマ、必要4項目だけの決定的な一覧取得
+- **変更予定パッケージ:** packages/shared, apps/api
+- **完了条件:** 認証なしでRuleの`id`・`name`・`teamSize`・`pickSize`を取得でき、0件・不正DB値を安全に扱える
+- **必要なテスト:** sharedスキーマ、Service、APIテスト（正常・0件・公開範囲・並び順・不正DB値）
+- **前提タスク:** MASTER-004, SETUP-009
+- **対象外:** Rule変更、admin API変更、Season公開、WEB-006、DB変更
+
 ---
 
 ## フェーズ1: 認証(AUTH)
@@ -787,9 +797,9 @@
 SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-001〜002 → PARTY-001〜002
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
-  → BATTLE-001〜004 → MASTER-006〜007 → WEB-005, WEB-006 → WEB-001〜004
+  → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜008 → WEB-007〜008 → LLM-001〜003 → WEB-009
   → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **BATTLE-006(レート制限)**。
+次に着手すべきタスク: **WEB-006(ホーム・パーティ登録画面)**。

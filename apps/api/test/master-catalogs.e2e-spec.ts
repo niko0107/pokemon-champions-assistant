@@ -4,6 +4,7 @@ import {
   abilitySearchResponseSchema,
   API_PREFIX,
   itemSearchResponseSchema,
+  masterRulesResponseSchema,
   moveSearchResponseSchema,
   problemDetailsSchema,
 } from "@pokemon-champions/shared";
@@ -55,6 +56,7 @@ describe("MASTER-007 catalog search APIs", () => {
   const moveFindMany = vi.fn();
   const itemFindMany = vi.fn();
   const abilityFindMany = vi.fn();
+  const ruleFindMany = vi.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -71,6 +73,7 @@ describe("MASTER-007 catalog search APIs", () => {
         move: { findMany: moveFindMany },
         item: { findMany: itemFindMany },
         ability: { findMany: abilityFindMany },
+        rule: { findMany: ruleFindMany },
       })
       .compile();
 
@@ -85,11 +88,13 @@ describe("MASTER-007 catalog search APIs", () => {
     moveFindMany.mockReset();
     itemFindMany.mockReset();
     abilityFindMany.mockReset();
+    ruleFindMany.mockReset();
     pokemonFindMany.mockResolvedValue([]);
     pokemonFindUnique.mockResolvedValue(null);
     moveFindMany.mockResolvedValue([]);
     itemFindMany.mockResolvedValue([]);
     abilityFindMany.mockResolvedValue([]);
+    ruleFindMany.mockResolvedValue([]);
   });
 
   afterAll(async () => {
@@ -195,6 +200,48 @@ describe("MASTER-007 catalog search APIs", () => {
 
     expect(res.body).toEqual({ items: [] });
     expect(abilityFindMany).not.toHaveBeenCalled();
+  });
+
+  it("Rule一覧を認証なしで決定的な順序のまま返す", async () => {
+    const rules = [
+      { id: 2, name: "ダブル", teamSize: 6, pickSize: 4 },
+      { id: 1, name: "シングル", teamSize: 6, pickSize: 3 },
+    ];
+    ruleFindMany.mockResolvedValue(rules);
+
+    const res = await request(app.getHttpServer()).get("/api/v1/master/rules").expect(200);
+
+    expect(res.body).toEqual({ items: rules });
+    expect(masterRulesResponseSchema.safeParse(res.body).success).toBe(true);
+    expect(ruleFindMany).toHaveBeenCalledWith({
+      select: {
+        id: true,
+        name: true,
+        teamSize: true,
+        pickSize: true,
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    });
+  });
+
+  it("Ruleが0件の場合は200で空配列を返す", async () => {
+    const res = await request(app.getHttpServer()).get("/api/v1/master/rules").expect(200);
+
+    expect(res.body).toEqual({ items: [] });
+  });
+
+  it("不正なRuleのDB値は内部情報を返さず500にする", async () => {
+    ruleFindMany.mockResolvedValue([{ id: 1, name: "broken", teamSize: 2, pickSize: 3 }]);
+
+    const res = await request(app.getHttpServer()).get("/api/v1/master/rules").expect(500);
+
+    expect(res.body).toEqual({
+      type: "about:blank",
+      title: "Master Data Integrity Error",
+      status: 500,
+      code: "INTERNAL_ERROR",
+    });
+    expect(JSON.stringify(res.body)).not.toContain("broken");
   });
 
   it.each([

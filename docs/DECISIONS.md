@@ -490,3 +490,13 @@
 - **判断:** AUTH-003にログアウト失効APIがないため、WEB-005のログアウトはクライアント内のメモリとsessionStorageの破棄だけを行う。サーバー側refresh tokenの即時失効はAPI契約追加を伴う後続認証タスクとする
 - **理由:** 現行のJSON token APIを変更せずに再読み込み復元、複数リクエストの安全なrefresh、未認証リダイレクトを実現し、長期間残るブラウザ保存とaccess token露出を最小化するため
 - **影響:** タブを閉じるとログイン状態は失われる。別タブにはログイン状態を共有しない。後続の保護APIクライアントは同じ認証アダプターを通す
+
+## 2026-07-26 公開Rule一覧API(MASTER-010)
+
+### D-047: 一般ユーザー向けRule一覧の公開範囲と決定順
+
+- **判断:** Party作成に必要なRule参照APIとして、既存masterリソース命名に合わせて`GET /api/v1/master/rules`を1本だけ追加する。Pokemon・Move・Item・Abilityのmaster APIと同様に認証なしで公開し、admin guardは適用しない。既存`GET /api/v1/admin/rules`の認証・認可・作成責務は変更しない
+- **判断:** レスポンスは`{ items: [{ id, name, teamSize, pickSize }] }`のみとし、timestampsや管理情報を返さない。管理・公開Ruleが同じ値制約を維持できるよう、保存済みRuleのstrict Zodスキーマを共有する。DB値がID・名前・人数範囲・`pickSize <= teamSize`を満たさない場合は、壊れた値を返さず内部情報を含まない`500 INTERNAL_ERROR`とする
+- **判断:** Prismaで4列だけを単一`findMany`し、並び順は既存admin Rule一覧と同じ`name ASC → id ASC`とする。名前一意制約下でもIDを最終キーに含めて決定性を明示し、0件は`200 { items: [] }`とする
+- **理由:** 一般ユーザーが管理APIへ依存せず、Party作成前に有効な`ruleId`と`teamSize`を取得できるようにしながら、管理権限と公開情報を最小範囲に保つため
+- **影響:** WEB-006はこのAPIからRule選択肢と人数制約を取得できる。Rule作成・更新・削除、Season公開、Pokemon種族値公開はMASTER-010の対象外

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ruleMasterSchema } from "../master/rule";
+import { ruleMasterSchema, ruleRecordSchema } from "../master/rule";
 import { calendarDateSchema, seasonMasterSchema } from "../master/season";
 
 /**
@@ -11,8 +11,6 @@ import { calendarDateSchema, seasonMasterSchema } from "../master/season";
 
 const masterIdSchema = z.number().int().positive();
 const seasonNameSchema = z.string().trim().min(1).max(100);
-const ruleNameSchema = z.string().trim().min(1).max(100);
-const partySizeSchema = z.number().int().min(1).max(6);
 const nonNegativeIntSchema = z.number().int().nonnegative();
 
 /** 数値パスパラメータ(/admin/seasons/:id 等)。文字列を安全に整数へ変換する。 */
@@ -49,14 +47,7 @@ export type AdminSeasonListResponse = z.infer<typeof adminSeasonListResponseSche
 export const adminRuleCreateSchema = ruleMasterSchema;
 export type AdminRuleCreate = z.infer<typeof adminRuleCreateSchema>;
 
-export const adminRuleSchema = z
-  .object({
-    id: masterIdSchema,
-    name: ruleNameSchema,
-    teamSize: partySizeSchema,
-    pickSize: partySizeSchema,
-  })
-  .strict();
+export const adminRuleSchema = ruleRecordSchema;
 
 export type AdminRule = z.infer<typeof adminRuleSchema>;
 
