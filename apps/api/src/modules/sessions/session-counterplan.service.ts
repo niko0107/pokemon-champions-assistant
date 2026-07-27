@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -16,6 +17,10 @@ import {
   type ProblemDetails,
   type SessionCounterplanResponse,
 } from "@pokemon-champions/shared";
+import {
+  EXPLANATION_GENERATOR,
+  type ExplanationGenerator,
+} from "../explanations/explanation-generator";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   InvalidObservedMoveStateError,
@@ -139,7 +144,11 @@ type CounterplanSessionRecord = Prisma.BattleSessionGetPayload<{
 
 @Injectable()
 export class SessionCounterplanService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(EXPLANATION_GENERATOR)
+    private readonly explanationGenerator: ExplanationGenerator,
+  ) {}
 
   async get(userId: string, sessionId: string): Promise<SessionCounterplanResponse> {
     try {
@@ -151,7 +160,7 @@ export class SessionCounterplanService {
         this.throwNotFound();
       }
 
-      return this.buildResponse(session, userId);
+      return await this.buildResponse(session, userId);
     } catch (error: unknown) {
       if (error instanceof HttpException) {
         throw error;
@@ -163,10 +172,10 @@ export class SessionCounterplanService {
     }
   }
 
-  private buildResponse(
+  private async buildResponse(
     session: CounterplanSessionRecord,
     expectedUserId: string,
-  ): SessionCounterplanResponse {
+  ): Promise<SessionCounterplanResponse> {
     if (session.userId !== expectedUserId) {
       this.throwInternalError();
     }
@@ -233,11 +242,13 @@ export class SessionCounterplanService {
       matrix,
       selection,
     });
+    const explanation = await this.explanationGenerator.generateCounterplanExplanation(counterplan);
 
     return sessionCounterplanResponseSchema.parse({
       sessionId: session.id,
       selectedArchetypeId: selectedArchetype.id,
       ...counterplan,
+      explanation,
     });
   }
 

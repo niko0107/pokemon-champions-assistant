@@ -688,3 +688,14 @@
 - **判断:** 詳細画面はSessionを失わず候補一覧へ戻れるよう`/battle/:sessionId/archetypes/:archetypeId`とし、候補カードに既存選択buttonとは独立した`構築詳細を見る`linkを置く。画面はAPIの表示値をそのまま構造化し、候補推定・counterplan計算・不足値の推定を行わない
 - **理由:** 候補選択と対策表示を壊さず、管理APIや追加master照会へ依存せずに、公開が確定した構築の根拠と全体像を安全かつ決定的に確認できるようにするため
 - **影響:** お気に入り、編集、閲覧数、LLM理由文は追加しない。詳細URLはBattle Session文脈を要求するため、Session外の独立した構築カタログ画面が必要になった場合は別タスクで導線を定義する
+
+## 2026-07-28 LLMアダプター・テンプレ文フォールバック(LLM-001)
+
+### D-064: 確定済みCounterplanだけを文章化する差し替え可能な生成境界
+
+- **判断:** NestJSの実行時DIには`Symbol`の`EXPLANATION_GENERATOR` tokenを使い、Promiseを返す`ExplanationGenerator.generateCounterplanExplanation(CounterplanResult)`契約を定義する。LLM-001ではtokenを`TemplateExplanationGenerator`へ`useExisting`で結び、`ANTHROPIC_API_KEY`の未設定・空・空白に関係なく同じ実装を使用する
+- **判断:** 説明出力は`summary / selectionExplanation / perOpponent[{ opponentPokemonId, explanation }] / strategyExplanation`の用途別strict構造とし、既存`GET /api/v1/sessions/:id/counterplan`レスポンスの`explanation`へ追加する。MATCHUP-005〜007完了後に生成器を1回だけ呼び、perOpponent、selection、score、code、警戒情報を上書きしない
+- **判断:** テンプレはclassification、全reason code、全strategy codeを網羅する明示的な対応表から短い日本語を生成する。rank 1、選出・先発・担当・coverage、caution move、保存済みthreat/playstyle noteだけを使用し、同じ入力から同じ文章を返す。現行Counterplanには表示名がないためDBやmaster APIを追加参照せず、PokemonとMoveはそれぞれ`ポケモンID n`、`技ID n`と表す
+- **判断:** reason codeはMATCHUPが確定した順序を維持して重複だけを除き、strategy codeはsharedの正式順序で重複排除する。未知のclassification・reason code・strategy code、rank 1欠落は補完や黙示的無視をせず内部不整合として検知し、Session API境界で詳細を含まない`500 INTERNAL_ERROR`へ変換する
+- **理由:** PRODUCT_SPEC §12の「LLMは判定せず、障害時も対戦支援を止めない」を、外部依存なしの即時テンプレと将来差し替え可能な境界で実現し、計算結果・ユーザー情報・DBへ文章生成責務を混入させないため
+- **影響:** sharedのcounterplanレスポンスには必須`explanation`が加わるが、WEB-007は既存構造化フィールドだけを引き続き表示し、説明文の表示はWEB-009まで行わない。Anthropic API・prompt・失敗時のTemplateへの切替実装はLLM-002、Redisキャッシュ・非同期化はLLM-003へ残す

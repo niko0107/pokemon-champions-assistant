@@ -203,6 +203,17 @@ const counterplanResponse = {
     },
   ],
   threatNotes: [{ opponentPokemonId: 10006, note: "積み展開に注意" }],
+  explanation: {
+    summary: "相手ポケモン1体への対策です。",
+    selectionExplanation: "選出はポケモンID 6です。",
+    perOpponent: [
+      {
+        opponentPokemonId: 10006,
+        explanation: "ポケモンID 10006にはポケモンID 6がおすすめです。",
+      },
+    ],
+    strategyExplanation: "積み技を自由に使わせない。",
+  },
 };
 
 interface FetchMockOptions {

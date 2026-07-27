@@ -123,6 +123,17 @@ const counterplan: SessionCounterplanResponse = sessionCounterplanResponseSchema
     },
   ],
   threatNotes: [{ opponentPokemonId: 101, note: "あくびからの展開に注意" }],
+  explanation: {
+    summary: "相手ポケモン1体への対策です。",
+    selectionExplanation: "選出はポケモンID 1です。",
+    perOpponent: [
+      {
+        opponentPokemonId: 101,
+        explanation: "ポケモンID 101にはポケモンID 1がおすすめです。",
+      },
+    ],
+    strategyExplanation: "場に設置する技を警戒する。",
+  },
 });
 
 function wrapper() {
