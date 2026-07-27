@@ -678,3 +678,13 @@
 - **判断:** counterplan未取得、取得中、再取得中、RFC 9457エラー、名称の部分取得失敗を別状態として表示する。`INVALID_ARCHETYPE_SELECTION`、`INVALID_SESSION_STATE`、`INVALID_PARTY_STATE`、`NOT_FOUND`、`UNAUTHORIZED`を安全な固定文へ写像し、archivedや未選択を空表示に変換せず、APIのdetail・内部情報は表示しない
 - **理由:** MATCHUP-008のstrictなID中心レスポンスを計算根拠の正として保ち、既存の認証・API client・Query管理・master APIを再利用しながら、候補選択からモバイルで読める対策表示までを一連にするため
 - **影響:** LLM文の差し替えはWEB-009、構築の全情報と出典はWEB-008へ残る。現行Move master検索は1回最大10件でMove ID単体取得契約がないため、範囲外の技名はID表示となる。完全な名称解決を必須化する場合は、別タスクで公開master契約を定義する必要がある
+
+## 2026-07-28 構築詳細画面(WEB-008)
+
+### D-063: 公開構築詳細の取得境界とSession文脈を保つ画面URL
+
+- **判断:** PRODUCT_SPECに単体詳細の正式URLがないため、認証済み一般ユーザー向けの読み取り専用APIとして`GET /api/v1/archetypes/:id`を1本だけ追加する。`JwtAuthGuard`を適用し、`status = published`だけをnested select 1回で取得する。不存在・archived・DB上に想定外の非公開statusがある場合は同じ`404 NOT_FOUND`とし、status、人気度集計、管理用timestamps、siteRankは返さない
+- **判断:** 公開レスポンスは構築・Rule・Season、slot順のPokemonと表示用master情報、持ち物・特性・技、保存済み設定値、defaultLeads、playstyleNotes、出典だけをstrictに返す。技は保存上のslotがないため`adoptionRate DESC → moveId ASC`、出典は保存順の列がないため`title ASC → url ASC`で決定的に並べ、出典URLはhttp/httpsだけを許可する
+- **判断:** 詳細画面はSessionを失わず候補一覧へ戻れるよう`/battle/:sessionId/archetypes/:archetypeId`とし、候補カードに既存選択buttonとは独立した`構築詳細を見る`linkを置く。画面はAPIの表示値をそのまま構造化し、候補推定・counterplan計算・不足値の推定を行わない
+- **理由:** 候補選択と対策表示を壊さず、管理APIや追加master照会へ依存せずに、公開が確定した構築の根拠と全体像を安全かつ決定的に確認できるようにするため
+- **影響:** お気に入り、編集、閲覧数、LLM理由文は追加しない。詳細URLはBattle Session文脈を要求するため、Session外の独立した構築カタログ画面が必要になった場合は別タスクで導線を定義する

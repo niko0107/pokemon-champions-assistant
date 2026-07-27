@@ -4,6 +4,7 @@ import { AnonymousOnly, RequireAuth } from "./features/auth/auth-route";
 import { AuthLayout } from "./features/auth/auth-layout";
 import { LoginPage } from "./features/auth/login-page";
 import { RegisterPage } from "./features/auth/register-page";
+import { ArchetypeDetailPage } from "./features/archetypes/archetype-detail-page";
 import { BattleInputPage } from "./features/battle/battle-input-page";
 import { BattleStartPage } from "./features/battle/battle-start-page";
 import { HomePage } from "./features/parties/home-page";
@@ -34,6 +35,10 @@ export function App() {
           <Route path="/parties/new" element={<PartyCreatePage />} />
           <Route path="/battle/new" element={<BattleStartPage />} />
           <Route path="/battle/:sessionId" element={<BattleInputPage />} />
+          <Route
+            path="/battle/:sessionId/archetypes/:archetypeId"
+            element={<ArchetypeDetailPage />}
+          />
         </Route>
         <Route
           path="*"

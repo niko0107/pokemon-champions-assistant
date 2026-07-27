@@ -403,6 +403,78 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       },
     });
   });
+  await page.route("**/api/v1/archetypes/30000000-0000-4000-8000-000000000001", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        id: "30000000-0000-4000-8000-000000000001",
+        name: "リザードン展開",
+        description: "壁からメガリザードンを展開する構築",
+        rule: {
+          id: 1,
+          name: "シングルバトル",
+          teamSize: 6,
+          pickSize: 3,
+          battleLevel: 50,
+        },
+        season: { id: 1, name: "シーズン1" },
+        defaultLeads: [1, 2, 3],
+        playstyleNotes: "壁から積みエースを展開する",
+        pokemons: Array.from({ length: 6 }, (_, index) => ({
+          slot: index + 1,
+          usageRate: index === 0 ? 0.9 : 1,
+          nature: index === 0 ? "ようき" : null,
+          teraType: index === 0 ? "fire" : null,
+          evs: index === 0 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+          actualStats:
+            index === 0
+              ? {
+                  hp: 153,
+                  attack: 150,
+                  defense: 100,
+                  specialAttack: 90,
+                  specialDefense: 105,
+                  speed: 167,
+                }
+              : null,
+          role: index === 0 ? "lead" : "support",
+          threatNotes: index === 0 ? "積み展開に注意" : null,
+          pokemon: {
+            id: index + 1,
+            nameJa: index === 0 ? "メガリザードンX" : `ポケモン${index + 1}`,
+            nameEn: index === 0 ? "Mega Charizard X" : `Pokemon ${index + 1}`,
+            form: index === 0 ? "mega-x" : "normal",
+            type1: index === 0 ? "fire" : "normal",
+            type2: index === 0 ? "dragon" : null,
+            isMega: index === 0,
+          },
+          item: index === 0 ? { id: 1, nameJa: "リザードナイトX", nameEn: "Charizardite X" } : null,
+          ability: index === 0 ? { id: 1, nameJa: "かたいツメ", nameEn: "Tough Claws" } : null,
+          moves: [
+            {
+              moveId: index + 1,
+              nameJa: index === 0 ? "フレアドライブ" : `技${index + 1}`,
+              nameEn: index === 0 ? "Flare Blitz" : `Move ${index + 1}`,
+              type: index === 0 ? "fire" : "normal",
+              category: "physical",
+              power: 120,
+              accuracy: 100,
+              priority: 0,
+              tags: [],
+              adoptionRate: 1,
+            },
+          ],
+        })),
+        sources: [
+          {
+            title: "公式大会結果",
+            url: "https://example.com/archetype",
+            siteName: "Example",
+          },
+        ],
+      },
+    });
+  });
   await page.route(`**/api/v1/sessions/${sessionId}`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -610,3 +682,49 @@ test("1440pxで技をキーボード入力でき、429を安全に表示して�
     ),
   ).toBe(true);
 });
+
+for (const viewport of [
+  { width: 375, height: 812 },
+  { width: 1440, height: 900 },
+]) {
+  test(`${viewport.width}pxで候補から構築詳細へ遷移し、6体・技・持ち物・基本選出・出典と戻る導線を表示する`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await mockBattleApis(page);
+    await login(page);
+    await page.goto(`/battle/${sessionId}`);
+
+    await page.getByLabel("相手ポケモン").fill("リザ");
+    await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+    await expect(page.getByRole("heading", { name: "リザードン展開" })).toBeVisible();
+    await page.getByRole("link", { name: "構築詳細を見る" }).first().click();
+
+    await expect(page).toHaveURL(
+      `/battle/${sessionId}/archetypes/30000000-0000-4000-8000-000000000001`,
+    );
+    await expect(page.getByRole("heading", { name: "リザードン展開" })).toBeVisible();
+    await expect(page.getByText(/^SLOT /u)).toHaveCount(6);
+    await expect(page.getByRole("heading", { name: "メガリザードンX" })).toBeVisible();
+    await expect(page.getByText("フレアドライブ")).toBeVisible();
+    await expect(page.getByText("リザードナイトX")).toBeVisible();
+    await expect(page.getByText("壁から積みエースを展開する")).toBeVisible();
+    await expect(page.getByText("積み展開に注意")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "基本選出" })).toBeVisible();
+    const source = page.getByRole("link", {
+      name: "公式大会結果（外部サイトを新しいタブで開く）",
+    });
+    await expect(source).toHaveAttribute("href", "https://example.com/archetype");
+    await expect(source).toHaveAttribute("target", "_blank");
+    await expect(source).toHaveAttribute("rel", "noopener noreferrer");
+
+    await page.getByRole("link", { name: "← 対戦画面へ戻る" }).click();
+    await expect(page).toHaveURL(`/battle/${sessionId}`);
+    await expect(page.getByRole("button", { name: "この構築で対策を見る" }).first()).toBeEnabled();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
