@@ -24,6 +24,7 @@ export const partyQueryKeys = {
   rules: ["master", "rules"] as const,
   pokemonSearch: (query: string) => ["master", "pokemons", "search", query] as const,
   pokemonDetail: (id: number) => ["master", "pokemons", id] as const,
+  pokemonMoves: (pokemonId: number) => ["master", "moves", "pokemon", pokemonId] as const,
   moveSearch: (pokemonId: number, query: string) => ["master", "moves", pokemonId, query] as const,
   itemSearch: (query: string) => ["master", "items", query] as const,
   abilities: (pokemonId: number) => ["master", "abilities", pokemonId] as const,
@@ -72,6 +73,15 @@ export function fetchPokemonDetail(id: number): Promise<MasterPokemonDetail> {
 export function searchMoves(pokemonId: number, query: string): Promise<MoveSearchResponse> {
   return apiClient.request<MoveSearchResponse>(
     `/master/moves?${queryString({ q: query, pokemon_id: pokemonId })}`,
+    {
+      responseSchema: moveSearchResponseSchema,
+    },
+  );
+}
+
+export function fetchPokemonMoves(pokemonId: number): Promise<MoveSearchResponse> {
+  return apiClient.request<MoveSearchResponse>(
+    `/master/moves?${queryString({ pokemon_id: pokemonId })}`,
     {
       responseSchema: moveSearchResponseSchema,
     },
