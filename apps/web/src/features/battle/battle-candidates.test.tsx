@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { BattleCandidate, BattleCandidatesResponse } from "@pokemon-champions/shared";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -142,19 +143,22 @@ function panel(
   response: BattleCandidatesResponse | undefined,
   overrides: Partial<React.ComponentProps<typeof BattleCandidatesPanel>> = {},
 ) {
-  return (
-    <BattleCandidatesPanel
-      sessionId={sessionId}
-      isActive
-      response={response}
-      observations={observations}
-      isLoading={false}
-      isFetching={false}
-      error={null}
-      onRetry={() => undefined}
-      {...overrides}
-    />
-  );
+  const props: React.ComponentProps<typeof BattleCandidatesPanel> = {
+    sessionId,
+    isActive: true,
+    response,
+    observations,
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    selectedArchetypeId: null,
+    selectingArchetypeId: null,
+    selectionError: null,
+    onSelect: () => undefined,
+    onRetry: () => undefined,
+    ...overrides,
+  };
+  return <BattleCandidatesPanel {...props} />;
 }
 
 describe("WEB-003 candidate panel", () => {
@@ -339,5 +343,50 @@ describe("WEB-003 candidate panel", () => {
 
     render(panel(undefined, { error: new ApiError("network") }), { wrapper: createWrapper() });
     expect(screen.getByRole("alert")).toHaveTextContent("通信環境");
+  });
+
+  it("候補を一度だけ選択し、選択中・選択済み・失敗を明示する", async () => {
+    const onSelect = vi.fn();
+    const response = { sessionId, candidates: [candidate] };
+    const user = userEvent.setup();
+    const rendered = render(panel(response, { onSelect }), { wrapper: createWrapper() });
+
+    await user.click(screen.getByRole("button", { name: "この構築で対策を見る" }));
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith(candidate.archetypeId);
+
+    rendered.rerender(
+      panel(response, {
+        onSelect,
+        selectingArchetypeId: candidate.archetypeId,
+      }),
+    );
+    expect(screen.getByRole("button", { name: "選択中…" })).toBeDisabled();
+
+    rendered.rerender(
+      panel(response, {
+        onSelect,
+        selectedArchetypeId: candidate.archetypeId,
+      }),
+    );
+    expect(screen.getByRole("button", { name: "選択済み" })).toBeDisabled();
+
+    rendered.rerender(
+      panel(response, {
+        onSelect,
+        selectionError: new ApiError("internal", {
+          status: 409,
+          problem: {
+            type: "about:blank",
+            title: "internal",
+            status: 409,
+            detail: "secret",
+            code: "BATTLE_CONFLICT",
+          },
+        }),
+      }),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("すでに選択済み");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("secret");
   });
 });

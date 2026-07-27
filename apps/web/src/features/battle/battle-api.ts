@@ -1,14 +1,19 @@
 import {
+  battleCandidateSelectResponseSchema,
+  battleCandidateSelectSchema,
   battleCandidatesResponseSchema,
   battleSessionCreateSchema,
   battleSessionResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
+  sessionCounterplanResponseSchema,
   undoObservationResponseSchema,
+  type BattleCandidateSelectResponse,
   type BattleCandidatesResponse,
   type BattleSessionCreate,
   type BattleSessionResponse,
   type ObservationResponse,
+  type SessionCounterplanResponse,
   type UndoObservationResponse,
 } from "@pokemon-champions/shared";
 import { ApiError, apiClient } from "../../lib/api-client";
@@ -16,6 +21,7 @@ import { ApiError, apiClient } from "../../lib/api-client";
 export const battleQueryKeys = {
   session: (sessionId: string) => ["battle", "session", sessionId] as const,
   candidates: (sessionId: string) => ["battle", "candidates", sessionId] as const,
+  counterplan: (sessionId: string) => ["battle", "counterplan", sessionId] as const,
   pokemonSearch: (query: string) => ["battle", "pokemon-search", query] as const,
   moveSearch: (pokemonId: number, query: string) =>
     ["battle", "move-search", pokemonId, query] as const,
@@ -43,6 +49,41 @@ export async function fetchBattleCandidates(sessionId: string): Promise<BattleCa
     {
       authenticated: true,
       responseSchema: battleCandidatesResponseSchema,
+    },
+  );
+  if (response.sessionId !== sessionId) {
+    throw new ApiError("APIレスポンスの形式が正しくありません。");
+  }
+  return response;
+}
+
+export async function selectBattleCandidate(
+  sessionId: string,
+  archetypeId: string,
+): Promise<BattleCandidateSelectResponse> {
+  const response = await apiClient.request<BattleCandidateSelectResponse>(
+    `/sessions/${sessionId}/select`,
+    {
+      method: "POST",
+      body: battleCandidateSelectSchema.parse({ archetypeId }),
+      authenticated: true,
+      responseSchema: battleCandidateSelectResponseSchema,
+    },
+  );
+  if (response.sessionId !== sessionId || response.selectedArchetypeId !== archetypeId) {
+    throw new ApiError("APIレスポンスの形式が正しくありません。");
+  }
+  return response;
+}
+
+export async function fetchBattleCounterplan(
+  sessionId: string,
+): Promise<SessionCounterplanResponse> {
+  const response = await apiClient.request<SessionCounterplanResponse>(
+    `/sessions/${sessionId}/counterplan`,
+    {
+      authenticated: true,
+      responseSchema: sessionCounterplanResponseSchema,
     },
   );
   if (response.sessionId !== sessionId) {

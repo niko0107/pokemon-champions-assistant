@@ -667,3 +667,14 @@
 - **判断:** レスポンスはMATCHUP-007の構造化結果へ`sessionId / selectedArchetypeId`を付けたID中心のstrict契約とし、Pokemon名・Move名は既存master APIへ委ねる。MATCHUPのclassification・reason code・strategy code・確定数分類はsharedのliteralを単一の正として両層で再利用し、Prisma Decimal・Date・BigInt・userId・内部timestamps・非有限数を返さない
 - **理由:** 正確な保存Snapshotと観測実測を優先しつつ、相性・選出・警戒情報の唯一の計算根拠をMATCHUP-005〜007へ限定し、所有権・決定性・読み取り専用性をAPI境界で保証するため
 - **影響:** Web表示・名称解決・自然文生成・キャッシュは後続タスクのままとする。Archetype actualStatsがnullの既存データはcounterplanを生成できず、管理入力で明示値を整備する必要がある
+
+## 2026-07-28 対策タブ(WEB-007)
+
+### D-062: 構造化counterplanの表示責務と既存masterによる名称解決
+
+- **判断:** 候補カードの選択操作は既存`POST /api/v1/sessions/:id/select`を1回呼び、成功後にTanStack Queryで`GET /api/v1/sessions/:id/counterplan`を取得する。対策は既存対戦画面の入力・候補と同じページに積み上げ、3区分のナビゲーションで各sectionへ移動する。保存済み選択を持つ`active`または`ended` Sessionは「対策」から直接取得できる
+- **判断:** Webはcounterplanの`selection / perOpponent / cautionMoves / playstyleNotes / strategyCodes / threatNotes`とmatchup内訳を表示用ラベルへ射影するだけとし、スコア、順位、priority、選出、警戒技、strategy codeを再計算・推測しない。D-059どおりace/backの正式判定はないため、`leadPokemonId`だけを先発候補として表示し、残りへ独自の役割を割り当てない
+- **判断:** Pokemon IDは既存`GET /api/v1/master/pokemons/:id`、Move IDは関連Pokemonごとの既存`GET /api/v1/master/moves?pokemon_id=`とTanStack Queryの共有cacheを使って日本語名へ結合する。名称取得が失敗または既存技検索の返却上限外ならcounterplan本体を失わずIDへフォールバックし、その旨を明示する。名称専用APIやcounterplanレスポンスへの重複表示データはWEB-007では追加しない
+- **判断:** counterplan未取得、取得中、再取得中、RFC 9457エラー、名称の部分取得失敗を別状態として表示する。`INVALID_ARCHETYPE_SELECTION`、`INVALID_SESSION_STATE`、`INVALID_PARTY_STATE`、`NOT_FOUND`、`UNAUTHORIZED`を安全な固定文へ写像し、archivedや未選択を空表示に変換せず、APIのdetail・内部情報は表示しない
+- **理由:** MATCHUP-008のstrictなID中心レスポンスを計算根拠の正として保ち、既存の認証・API client・Query管理・master APIを再利用しながら、候補選択からモバイルで読める対策表示までを一連にするため
+- **影響:** LLM文の差し替えはWEB-009、構築の全情報と出典はWEB-008へ残る。現行Move master検索は1回最大10件でMove ID単体取得契約がないため、範囲外の技名はID表示となる。完全な名称解決を必須化する場合は、別タスクで公開master契約を定義する必要がある

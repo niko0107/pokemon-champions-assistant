@@ -6,7 +6,7 @@ import {
 } from "@pokemon-champions/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchPokemonDetail, partyQueryKeys } from "../parties/party-api";
-import { getBattleCandidatesErrorMessage } from "./battle-errors";
+import { getBattleCandidatesErrorMessage, getBattleSelectionErrorMessage } from "./battle-errors";
 import type { StoredBattleObservation } from "./battle-session-storage";
 
 const MAX_POKEMON_DETAIL_REQUESTS = 3 * ARCHETYPE_TEAM_SIZE_MAX;
@@ -40,6 +40,10 @@ interface CandidatePanelProps {
   isLoading: boolean;
   isFetching: boolean;
   error: unknown;
+  selectedArchetypeId: string | null;
+  selectingArchetypeId: string | null;
+  selectionError: unknown;
+  onSelect: (archetypeId: string) => void;
   onRetry: () => void;
 }
 
@@ -123,6 +127,10 @@ export function BattleCandidatesPanel({
   isLoading,
   isFetching,
   error,
+  selectedArchetypeId,
+  selectingArchetypeId,
+  selectionError,
+  onSelect,
   onRetry,
 }: CandidatePanelProps) {
   const previousRanks = useRef<Map<string, number> | null>(null);
@@ -213,8 +221,9 @@ export function BattleCandidatesPanel({
 
   return (
     <section
+      id={`battle-candidates-${sessionId}`}
       aria-labelledby={`battle-candidates-heading-${sessionId}`}
-      className="mb-10 border-y-2 border-blue-950 bg-white py-7 sm:mb-12 sm:py-9"
+      className="mb-10 scroll-mt-5 border-y-2 border-blue-950 bg-white py-7 sm:mb-12 sm:py-9"
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -272,6 +281,15 @@ export function BattleCandidatesPanel({
           className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
         >
           最新候補を取得できなかったため、直前の候補を表示しています。
+        </p>
+      )}
+
+      {selectionError !== null && (
+        <p
+          role="alert"
+          className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-900"
+        >
+          {getBattleSelectionErrorMessage(selectionError)}
         </p>
       )}
 
@@ -420,6 +438,28 @@ export function BattleCandidatesPanel({
                       </ul>
                     </div>
                   )}
+
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+                    <p className="text-xs leading-5 text-slate-500">
+                      選択後、保存済みパーティとの対策を表示します。
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(candidate.archetypeId)}
+                      disabled={
+                        !isActive ||
+                        selectingArchetypeId !== null ||
+                        selectedArchetypeId === candidate.archetypeId
+                      }
+                      className="min-h-11 rounded-xl bg-blue-950 px-5 py-2.5 text-sm font-black text-white outline-none transition hover:bg-blue-800 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {selectingArchetypeId === candidate.archetypeId
+                        ? "選択中…"
+                        : selectedArchetypeId === candidate.archetypeId
+                          ? "選択済み"
+                          : "この構築で対策を見る"}
+                    </button>
+                  </div>
                 </div>
               </li>
             );

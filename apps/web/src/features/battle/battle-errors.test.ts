@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../../lib/api-client";
 import {
   getBattleCandidatesErrorMessage,
+  getBattleCounterplanErrorMessage,
   getBattleErrorMessage,
+  getBattleSelectionErrorMessage,
   getBattleUndoErrorMessage,
 } from "./battle-errors";
 
@@ -102,5 +104,61 @@ describe("getBattleUndoErrorMessage", () => {
 
   it("通信エラーを区別する", () => {
     expect(getBattleUndoErrorMessage(new ApiError("network"))).toContain("通信環境");
+  });
+});
+
+describe("getBattleSelectionErrorMessage", () => {
+  it.each([
+    ["INVALID_SESSION_STATE", 400, "選択できません"],
+    ["INVALID_ARCHETYPE_SELECTION", 400, "選び直してください"],
+    ["BATTLE_CONFLICT", 409, "すでに選択済み"],
+    ["NOT_FOUND", 404, "見つかりません"],
+    ["UNAUTHORIZED", 401, "ログイン"],
+  ])("%sを安全な候補選択エラーへ変換する", (code, status, message) => {
+    const result = getBattleSelectionErrorMessage(
+      new ApiError("internal title", {
+        status,
+        problem: {
+          type: "about:blank",
+          title: "internal title",
+          status,
+          detail: "表示してはいけない内部情報",
+          code,
+        },
+      }),
+    );
+    expect(result).toContain(message);
+    expect(result).not.toContain("表示してはいけない内部情報");
+  });
+});
+
+describe("getBattleCounterplanErrorMessage", () => {
+  it.each([
+    ["VALIDATION_ERROR", 400, "ID"],
+    ["INVALID_SESSION_STATE", 400, "archived"],
+    ["INVALID_PARTY_STATE", 400, "パーティ"],
+    ["INVALID_ARCHETYPE_SELECTION", 400, "まだ選択されていない"],
+    ["NOT_FOUND", 404, "権限"],
+    ["UNAUTHORIZED", 401, "ログイン"],
+    ["INTERNAL_ERROR", 500, "対策を計算できません"],
+  ])("%sを握りつぶさず安全な対策エラーへ変換する", (code, status, message) => {
+    const result = getBattleCounterplanErrorMessage(
+      new ApiError("internal title", {
+        status,
+        problem: {
+          type: "about:blank",
+          title: "internal title",
+          status,
+          detail: "actualStatsを含む内部情報",
+          code,
+        },
+      }),
+    );
+    expect(result).toContain(message);
+    expect(result).not.toContain("actualStats");
+  });
+
+  it("通信エラーを区別する", () => {
+    expect(getBattleCounterplanErrorMessage(new ApiError("network"))).toContain("通信環境");
   });
 });

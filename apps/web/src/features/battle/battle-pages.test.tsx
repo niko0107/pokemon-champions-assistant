@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { resetAuthStoreForTests, useAuthStore } from "../../stores/auth-store";
+import { useUiStore } from "../../stores/ui-store";
 import { loadBattleObservations } from "./battle-session-storage";
 
 const partyId = "00000000-0000-4000-8000-000000000001";
@@ -107,6 +108,103 @@ const candidate = {
   threatMoveIds: [],
 };
 
+const counterplanMatchupResult = {
+  selfPokemonId: 6,
+  myPokemonId: 6,
+  opponentPokemonId: 10006,
+  offensiveScore: 25,
+  defensiveScore: 20,
+  damageRaceScore: 5,
+  totalScore: 44,
+  classification: "slightly_favorable",
+  bestOffensiveMoveId: 53,
+  mostThreateningMoveId: 53,
+  outgoingDamage: null,
+  incomingDamage: null,
+  outgoingKnockoutCount: null,
+  incomingKnockoutCount: null,
+  offensiveTypeMultiplier: 2,
+  defensiveTypeMultiplier: 1,
+  reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+  score: 44,
+  verdict: "slightly_favorable",
+  breakdown: {
+    offense: 25,
+    defense: 20,
+    speed: 4,
+    damageRace: 5,
+    priority: 2,
+    statusResist: 1,
+    setupCounter: 3,
+  },
+};
+
+const counterplanResponse = {
+  sessionId,
+  selectedArchetypeId: candidate.archetypeId,
+  perOpponent: [
+    {
+      opponentPokemonId: 10006,
+      recommendations: [
+        {
+          rank: 1,
+          selfPokemonId: 6,
+          opponentPokemonId: 10006,
+          totalScore: 44,
+          classification: "slightly_favorable",
+          reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+          matchupResult: counterplanMatchupResult,
+        },
+      ],
+      avoidSelfPokemonIds: [],
+      cautionMoves: [
+        {
+          moveId: 53,
+          opponentPokemonId: 10006,
+          tags: ["setup"],
+          primaryTag: "setup",
+          adoptionRate: 1,
+          opponentUsageRate: 1,
+        },
+      ],
+      threatNotes: [{ opponentPokemonId: 10006, note: "積み展開に注意" }],
+    },
+  ],
+  selection: {
+    selectedPokemonIds: [6],
+    leadPokemonId: 6,
+    assignmentsByOpponent: [
+      {
+        opponentPokemonId: 10006,
+        assignedSelfPokemonId: 6,
+        matchupResult: counterplanMatchupResult,
+      },
+    ],
+    coveredOpponentPokemonIds: [10006],
+    uncoveredOpponentPokemonIds: [],
+    metrics: {
+      priorityCoveredCount: 1,
+      coveredCount: 1,
+      worstBestScore: 44,
+      bestScoreSum: 44,
+      secondBestScoreSum: 0,
+    },
+  },
+  playstyleNotes: "壁から積みエースを展開する",
+  strategyCodes: ["PREVENT_SETUP"],
+  cautionMoves: [
+    {
+      moveId: 53,
+      opponentPokemonId: 10006,
+      tags: ["setup"],
+      primaryTag: "setup",
+      adoptionRate: 1,
+      opponentUsageRate: 1,
+    },
+  ],
+  threatNotes: [{ opponentPokemonId: 10006, note: "積み展開に注意" }],
+};
+
 interface FetchMockOptions {
   partyItems?: typeof parties;
   createSessionStatus?: number;
@@ -137,6 +235,11 @@ interface FetchMockOptions {
   candidateProblem?: unknown;
   candidateNetworkError?: boolean;
   candidateRequiresRefresh?: boolean;
+  selectionStatus?: number;
+  selectionProblem?: unknown;
+  counterplanStatus?: number;
+  counterplanProblem?: unknown;
+  counterplanDelayMs?: number;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -287,6 +390,30 @@ function createFetchMock(options: FetchMockOptions = {}) {
         ? new Promise<Response>((resolve) => setTimeout(() => resolve(response), delay))
         : Promise.resolve(response);
     }
+    if (url.endsWith(`/sessions/${sessionId}/select`) && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { archetypeId: string };
+      return Promise.resolve(
+        options.selectionStatus && options.selectionStatus >= 400
+          ? jsonResponse(options.selectionProblem, options.selectionStatus)
+          : jsonResponse({
+              sessionId,
+              selectedArchetypeId: body.archetypeId,
+              status: "active",
+              updatedAt: "2026-07-26T00:00:00.000Z",
+            }),
+      );
+    }
+    if (url.endsWith(`/sessions/${sessionId}/counterplan`)) {
+      const response =
+        options.counterplanStatus && options.counterplanStatus >= 400
+          ? jsonResponse(options.counterplanProblem, options.counterplanStatus)
+          : jsonResponse(counterplanResponse);
+      return options.counterplanDelayMs
+        ? new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(response), options.counterplanDelayMs),
+          )
+        : Promise.resolve(response);
+    }
     if (url.endsWith(`/sessions/${sessionId}`)) {
       return Promise.resolve(
         jsonResponse({
@@ -313,6 +440,32 @@ function createFetchMock(options: FetchMockOptions = {}) {
           { items: options.searchItems ?? [charizard, megaCharizard] },
           options.searchStatus ?? 200,
         ),
+      );
+    }
+    if (url.endsWith("/master/pokemons/6")) {
+      return Promise.resolve(
+        jsonResponse({
+          ...charizard,
+          baseHp: 78,
+          baseAtk: 84,
+          baseDef: 78,
+          baseSpa: 109,
+          baseSpd: 85,
+          baseSpe: 100,
+        }),
+      );
+    }
+    if (url.endsWith("/master/pokemons/10006")) {
+      return Promise.resolve(
+        jsonResponse({
+          ...megaCharizard,
+          baseHp: 78,
+          baseAtk: 130,
+          baseDef: 111,
+          baseSpa: 130,
+          baseSpd: 85,
+          baseSpe: 100,
+        }),
       );
     }
     if (url.includes("/master/moves?")) {
@@ -352,6 +505,7 @@ describe("WEB-001 / WEB-002 battle pages", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     resetAuthStoreForTests();
+    useUiStore.setState({ activeTab: "input" });
     useAuthStore.getState().setAuthenticated(authResponse);
   });
 
@@ -1149,6 +1303,68 @@ describe("WEB-001 / WEB-002 battle pages", () => {
     expect(
       refreshMock.mock.calls.filter(([input]) => String(input).endsWith("/auth/refresh")),
     ).toHaveLength(1);
+  });
+
+  it("候補選択からcounterplanを取得し、master名称付きの対策へ遷移する", async () => {
+    const fetchMock = createFetchMock({
+      candidateResponses: [{ sessionId, candidates: [candidate] }],
+      counterplanDelayMs: 40,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await screen.findByRole("heading", { name: "リザードン展開" });
+    await user.click(screen.getByRole("button", { name: "この構築で対策を見る" }));
+
+    expect(await screen.findByText("対策を計算しています…")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "おすすめ選出" })).toBeVisible();
+    expect(screen.getByText("先発候補")).toBeVisible();
+    expect(screen.getAllByText("リザードン").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("メガリザードンX").length).toBeGreaterThan(0);
+    expect(screen.getByText(/優先対象への対応/u)).toHaveTextContent("1");
+    expect(screen.getByText("MATCHUP 内訳")).toBeVisible();
+    expect(screen.getAllByText("かえんほうしゃ").length).toBeGreaterThan(0);
+    expect(screen.getByText("壁から積みエースを展開する")).toBeVisible();
+    expect(screen.getByText("・積み技を許さない")).toBeVisible();
+    expect(screen.getAllByText("積み展開に注意").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "対策" })).toHaveAttribute("aria-pressed", "true");
+
+    const selectCalls = fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        String(input).endsWith(`/sessions/${sessionId}/select`) && init?.method === "POST",
+    );
+    expect(selectCalls).toHaveLength(1);
+    expect(JSON.parse(String(selectCalls[0]?.[1]?.body))).toEqual({
+      archetypeId: candidate.archetypeId,
+    });
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).endsWith(`/sessions/${sessionId}/counterplan`),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ["INVALID_ARCHETYPE_SELECTION", "構築候補がまだ選択されていない"],
+    ["INVALID_SESSION_STATE", "archived済み"],
+    ["NOT_FOUND", "表示する権限"],
+  ])("対策APIの%sを握りつぶさず表示する", async (code, message) => {
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        counterplanStatus: code === "NOT_FOUND" ? 404 : 400,
+        counterplanProblem: problem(code, code === "NOT_FOUND" ? 404 : 400),
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp(`/battle/${sessionId}`);
+
+    await screen.findByRole("button", { name: "対策" });
+    await user.click(screen.getByRole("button", { name: "対策" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByRole("alert")).not.toHaveTextContent("画面へ表示してはいけない");
   });
 
   it("ended Sessionでは状態を表示しPokemon入力を無効化する", async () => {

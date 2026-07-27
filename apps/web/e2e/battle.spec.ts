@@ -65,7 +65,9 @@ interface BattleMockState {
   createBodies: unknown[];
   observationBodies: unknown[];
   undoObservationIds: string[];
+  selectionBodies: unknown[];
   candidateRequests: number;
+  counterplanRequests: number;
   rejectNextObservation: boolean;
   rejectNextUndo: boolean;
 }
@@ -75,7 +77,9 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
     createBodies: [],
     observationBodies: [],
     undoObservationIds: [],
+    selectionBodies: [],
     candidateRequests: 0,
+    counterplanRequests: 0,
     rejectNextObservation: false,
     rejectNextUndo: false,
   };
@@ -138,6 +142,34 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
         baseSpa: 50,
         baseSpd: 50,
         baseSpe: 90,
+      },
+    });
+  });
+  await page.route("**/api/v1/master/pokemons/6", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ...charizard,
+        baseHp: 78,
+        baseAtk: 84,
+        baseDef: 78,
+        baseSpa: 109,
+        baseSpd: 85,
+        baseSpe: 100,
+      },
+    });
+  });
+  await page.route("**/api/v1/master/pokemons/10006", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ...megaCharizard,
+        baseHp: 78,
+        baseAtk: 130,
+        baseDef: 111,
+        baseSpa: 130,
+        baseSpd: 85,
+        baseSpe: 100,
       },
     });
   });
@@ -266,6 +298,110 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
               candidate("30000000-0000-4000-8000-000000000003", "対面構築", 3, 75, "low"),
             ];
     await route.fulfill({ status: 200, json: { sessionId, candidates } });
+  });
+  await page.route(`**/api/v1/sessions/${sessionId}/select`, async (route) => {
+    const body = route.request().postDataJSON();
+    state.selectionBodies.push(body);
+    await route.fulfill({
+      status: 200,
+      json: {
+        sessionId,
+        selectedArchetypeId: (body as { archetypeId: string }).archetypeId,
+        status: "active",
+        updatedAt: "2026-07-26T00:00:00.000Z",
+      },
+    });
+  });
+  await page.route(`**/api/v1/sessions/${sessionId}/counterplan`, async (route) => {
+    state.counterplanRequests += 1;
+    const matchupResult = {
+      selfPokemonId: 6,
+      myPokemonId: 6,
+      opponentPokemonId: 10006,
+      offensiveScore: 25,
+      defensiveScore: 20,
+      damageRaceScore: 5,
+      totalScore: 44,
+      classification: "slightly_favorable",
+      bestOffensiveMoveId: 53,
+      mostThreateningMoveId: 53,
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+      offensiveTypeMultiplier: 2,
+      defensiveTypeMultiplier: 1,
+      reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+      score: 44,
+      verdict: "slightly_favorable",
+      breakdown: {
+        offense: 25,
+        defense: 20,
+        speed: 4,
+        damageRace: 5,
+        priority: 2,
+        statusResist: 1,
+        setupCounter: 3,
+      },
+    };
+    const cautionMove = {
+      moveId: 53,
+      opponentPokemonId: 10006,
+      tags: ["setup"],
+      primaryTag: "setup",
+      adoptionRate: 1,
+      opponentUsageRate: 1,
+    };
+    await route.fulfill({
+      status: 200,
+      json: {
+        sessionId,
+        selectedArchetypeId: "30000000-0000-4000-8000-000000000001",
+        perOpponent: [
+          {
+            opponentPokemonId: 10006,
+            recommendations: [
+              {
+                rank: 1,
+                selfPokemonId: 6,
+                opponentPokemonId: 10006,
+                totalScore: 44,
+                classification: "slightly_favorable",
+                reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+                matchupResult,
+              },
+            ],
+            avoidSelfPokemonIds: [],
+            cautionMoves: [cautionMove],
+            threatNotes: [{ opponentPokemonId: 10006, note: "積み展開に注意" }],
+          },
+        ],
+        selection: {
+          selectedPokemonIds: [6],
+          leadPokemonId: 6,
+          assignmentsByOpponent: [
+            {
+              opponentPokemonId: 10006,
+              assignedSelfPokemonId: 6,
+              matchupResult,
+            },
+          ],
+          coveredOpponentPokemonIds: [10006],
+          uncoveredOpponentPokemonIds: [],
+          metrics: {
+            priorityCoveredCount: 1,
+            coveredCount: 1,
+            worstBestScore: 44,
+            bestScoreSum: 44,
+            secondBestScoreSum: 0,
+          },
+        },
+        playstyleNotes: "壁から積みエースを展開する",
+        strategyCodes: ["PREVENT_SETUP"],
+        cautionMoves: [cautionMove],
+        threatNotes: [{ opponentPokemonId: 10006, note: "積み展開に注意" }],
+      },
+    });
   });
   await page.route(`**/api/v1/sessions/${sessionId}`, async (route) => {
     await route.fulfill({
@@ -396,6 +532,36 @@ test("375pxでSession作成・Pokemonと技観測・重複防止・reload復元�
   await expect(page.getByText(/取消済みの履歴 3件/u)).toBeVisible();
   await expect(page.getByText("Undoできる有効な観測はありません。")).toBeVisible();
   expect(state.candidateRequests).toBeGreaterThanOrEqual(3);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
+test("375pxで候補選択から名称付きcounterplanを表示できる", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const state = await mockBattleApis(page);
+  await login(page);
+  await page.goto(`/battle/${sessionId}`);
+
+  await page.getByLabel("相手ポケモン").fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+  await expect(page.getByRole("heading", { name: "リザードン展開" })).toBeVisible();
+  await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
+
+  await expect(page.getByRole("heading", { name: "おすすめ選出" })).toBeVisible();
+  await expect(page.getByText("先発候補")).toBeVisible();
+  await expect(page.getByText("リザードン", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("メガリザードンX", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("やや有利").first()).toBeVisible();
+  await expect(page.getByText("MATCHUP 内訳")).toBeVisible();
+  await expect(page.getByText("かえんほうしゃ", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("壁から積みエースを展開する")).toBeVisible();
+  await expect(page.getByText("・積み技を許さない")).toBeVisible();
+  await expect(page.getByText("積み展開に注意").first()).toBeVisible();
+  expect(state.selectionBodies).toEqual([{ archetypeId: "30000000-0000-4000-8000-000000000001" }]);
+  expect(state.counterplanRequests).toBe(1);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

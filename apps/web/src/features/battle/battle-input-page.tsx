@@ -17,15 +17,19 @@ import {
 import { PartyShell } from "../parties/party-shell";
 import { useDebouncedValue } from "../parties/use-debounced-value";
 import { ApiError } from "../../lib/api-client";
+import { useUiStore, type BattleTab } from "../../stores/ui-store";
 import {
   addMoveObservation,
   addPokemonObservation,
   battleQueryKeys,
   fetchBattleCandidates,
+  fetchBattleCounterplan,
   fetchBattleSession,
+  selectBattleCandidate,
   undoBattleObservation,
 } from "./battle-api";
 import { BattleCandidatesPanel } from "./battle-candidates";
+import { BattleCounterplanPanel } from "./battle-counterplan";
 import { getBattleErrorMessage, getBattleUndoErrorMessage } from "./battle-errors";
 import {
   applyBattleObservationUndo,
@@ -112,6 +116,8 @@ function BattleWorkspace({
   partyName: string | undefined;
 }) {
   const queryClient = useQueryClient();
+  const activeTab = useUiStore((state) => state.activeTab);
+  const setActiveTab = useUiStore((state) => state.setActiveTab);
   const [pokemonQuery, setPokemonQuery] = useState("");
   const [moveQuery, setMoveQuery] = useState("");
   const [observations, setObservations] = useState<StoredBattleObservation[]>(() =>
@@ -123,6 +129,7 @@ function BattleWorkspace({
   const [moveClientError, setMoveClientError] = useState<string | null>(null);
   const [undoClientError, setUndoClientError] = useState<string | null>(null);
   const [undoSuccessMessage, setUndoSuccessMessage] = useState<string | null>(null);
+  const [selectedArchetypeId, setSelectedArchetypeId] = useState<string | null>(null);
   const submissionInFlight = useRef(false);
   const debouncedPokemonQuery = useDebouncedValue(pokemonQuery.trim(), 300);
   const debouncedMoveQuery = useDebouncedValue(moveQuery.trim(), 300);
@@ -159,6 +166,18 @@ function BattleWorkspace({
     enabled: isActive,
     retry: false,
   });
+  const counterplan = useQuery({
+    queryKey: battleQueryKeys.counterplan(session.id),
+    queryFn: () => fetchBattleCounterplan(session.id),
+    enabled: activeTab === "counterplan",
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (counterplan.data) {
+      setSelectedArchetypeId(counterplan.data.selectedArchetypeId);
+    }
+  }, [counterplan.data]);
 
   useEffect(() => {
     if (pokemonObservations.length === 0) {
@@ -179,15 +198,55 @@ function BattleWorkspace({
   }
 
   async function refreshCandidatesAfterObservation(): Promise<void> {
-    await queryClient.cancelQueries({
-      queryKey: battleQueryKeys.candidates(session.id),
-      exact: true,
-    });
-    await queryClient.invalidateQueries({
-      queryKey: battleQueryKeys.candidates(session.id),
-      exact: true,
+    await Promise.all([
+      queryClient.cancelQueries({
+        queryKey: battleQueryKeys.candidates(session.id),
+        exact: true,
+      }),
+      queryClient.cancelQueries({
+        queryKey: battleQueryKeys.counterplan(session.id),
+        exact: true,
+      }),
+    ]);
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: battleQueryKeys.candidates(session.id),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: battleQueryKeys.counterplan(session.id),
+        exact: true,
+      }),
+    ]);
+  }
+
+  function activateSection(tab: BattleTab): void {
+    setActiveTab(tab);
+    const sectionId =
+      tab === "input"
+        ? `battle-input-${session.id}`
+        : tab === "candidates"
+          ? `battle-candidates-${session.id}`
+          : `battle-counterplan-${session.id}`;
+    window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "start",
+      });
     });
   }
+
+  const selectCandidate = useMutation({
+    mutationFn: (archetypeId: string) => selectBattleCandidate(session.id, archetypeId),
+    onSuccess: (selection) => {
+      queryClient.removeQueries({
+        queryKey: battleQueryKeys.counterplan(session.id),
+        exact: true,
+      });
+      setSelectedArchetypeId(selection.selectedArchetypeId);
+      activateSection("counterplan");
+    },
+  });
 
   const pokemonSearch = useQuery({
     queryKey: battleQueryKeys.pokemonSearch(debouncedPokemonQuery),
@@ -430,6 +489,33 @@ function BattleWorkspace({
           </div>
         </header>
 
+        <nav
+          aria-label="対戦画面セクション"
+          className="sticky top-2 z-10 mb-8 grid grid-cols-3 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-lg shadow-slate-900/8 backdrop-blur"
+        >
+          {(
+            [
+              ["input", "入力"],
+              ["candidates", "候補"],
+              ["counterplan", "対策"],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={activeTab === tab}
+              onClick={() => activateSection(tab)}
+              className={`min-h-11 rounded-xl px-3 py-2 text-sm font-black outline-none transition focus-visible:ring-2 focus-visible:ring-blue-700 ${
+                activeTab === tab
+                  ? "bg-blue-950 text-white"
+                  : "text-slate-600 hover:bg-blue-50 hover:text-blue-950"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
         {!isActive && (
           <div
             role="alert"
@@ -440,8 +526,9 @@ function BattleWorkspace({
         )}
 
         <section
+          id={`battle-input-${session.id}`}
           aria-labelledby="undo-heading"
-          className="mb-8 border-y border-slate-200 bg-slate-50/80 px-4 py-5 sm:px-6"
+          className="mb-8 scroll-mt-5 border-y border-slate-200 bg-slate-50/80 px-4 py-5 sm:px-6"
         >
           <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div>
@@ -526,10 +613,28 @@ function BattleWorkspace({
           isLoading={candidates.isLoading}
           isFetching={candidates.isFetching}
           error={candidates.error}
+          selectedArchetypeId={selectedArchetypeId}
+          selectingArchetypeId={selectCandidate.isPending ? selectCandidate.variables : null}
+          selectionError={selectCandidate.error}
+          onSelect={(archetypeId) => selectCandidate.mutate(archetypeId)}
           onRetry={() => {
             void candidates.refetch();
           }}
         />
+
+        <div className="mb-10 sm:mb-12">
+          <BattleCounterplanPanel
+            sessionId={session.id}
+            enabled={activeTab === "counterplan"}
+            response={counterplan.data}
+            isLoading={counterplan.isLoading}
+            isFetching={counterplan.isFetching}
+            error={counterplan.error}
+            onRetry={() => {
+              void counterplan.refetch();
+            }}
+          />
+        </div>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-start">
           <section
