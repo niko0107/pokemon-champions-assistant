@@ -216,6 +216,18 @@ const counterplanResponse: SessionCounterplanResponse = sessionCounterplanRespon
   strategyCodes: [],
   cautionMoves: [],
   threatNotes: [],
+  explanation: {
+    summary: "相手ポケモン1体への対策です。警戒技は0件、未対応の相手は0体です。",
+    selectionExplanation:
+      "選出はポケモンID 1です。先発はポケモンID 1です。全相手に対応可能です。担当はポケモンID 101にはポケモンID 1です。",
+    perOpponent: [
+      {
+        opponentPokemonId: 101,
+        explanation: "ポケモンID 101にはポケモンID 1がおすすめです。この対面はやや有利です。",
+      },
+    ],
+    strategyExplanation: null,
+  },
 });
 
 interface RateLimitCounter {
@@ -1036,6 +1048,11 @@ describe("BATTLE-001〜006 session API", () => {
       .expect(200);
 
     expect(sessionCounterplanResponseSchema.parse(response.body)).toEqual(counterplanResponse);
+    expect(response.body.explanation).toMatchObject({
+      summary: expect.any(String),
+      selectionExplanation: expect.stringContaining("ポケモンID 1"),
+      strategyExplanation: null,
+    });
     expect(getCounterplan).toHaveBeenCalledWith(userAId, sessionId);
     expect(response.body).not.toHaveProperty("userId");
     expect(response.body).not.toHaveProperty("createdAt");

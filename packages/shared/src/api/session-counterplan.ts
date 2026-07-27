@@ -152,6 +152,39 @@ export const counterplanPerOpponentSchema = z
   })
   .strict();
 
+export const counterplanExplanationSchema = z
+  .object({
+    summary: z.string().min(1),
+    selectionExplanation: z.string().min(1),
+    perOpponent: z
+      .array(
+        z
+          .object({
+            opponentPokemonId: positiveSafeIntegerSchema,
+            explanation: z.string().min(1),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(6),
+    strategyExplanation: z.string().min(1).nullable(),
+  })
+  .strict()
+  .superRefine((explanation, context) => {
+    const opponentPokemonIds = explanation.perOpponent.map(
+      ({ opponentPokemonId }) => opponentPokemonId,
+    );
+    if (new Set(opponentPokemonIds).size !== opponentPokemonIds.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "相手ポケモンIDは重複できません",
+        path: ["perOpponent"],
+      });
+    }
+  });
+
+export type CounterplanExplanation = z.infer<typeof counterplanExplanationSchema>;
+
 export const sessionCounterplanResponseSchema = z
   .object({
     sessionId: z.string().uuid(),
@@ -162,6 +195,7 @@ export const sessionCounterplanResponseSchema = z
     strategyCodes: z.array(counterplanStrategyCodeSchema),
     cautionMoves: z.array(counterplanCautionMoveSchema).max(24),
     threatNotes: z.array(counterplanThreatNoteSchema),
+    explanation: counterplanExplanationSchema,
   })
   .strict();
 

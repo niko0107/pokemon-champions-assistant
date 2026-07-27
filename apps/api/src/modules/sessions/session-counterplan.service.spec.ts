@@ -1,6 +1,8 @@
 import { Prisma } from "@pokemon-champions/database";
 import { sessionCounterplanResponseSchema } from "@pokemon-champions/shared";
 import { describe, expect, it, vi } from "vitest";
+import type { ExplanationGenerator } from "../explanations/explanation-generator";
+import { TemplateExplanationGenerator } from "../explanations/template-explanation-generator";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CounterplanObservedMoveRecord } from "./session-counterplan";
 import { SessionCounterplanService } from "./session-counterplan.service";
@@ -158,13 +160,16 @@ function makeSession(teamSize = 1, pickSize = 1) {
   };
 }
 
-function makeService(record: ReturnType<typeof makeSession> | null) {
+function makeService(
+  record: ReturnType<typeof makeSession> | null,
+  explanationGenerator: ExplanationGenerator = new TemplateExplanationGenerator(),
+) {
   const findFirst = vi.fn().mockResolvedValue(record);
   const prisma = {
     battleSession: { findFirst },
   } as unknown as PrismaService;
   return {
-    service: new SessionCounterplanService(prisma),
+    service: new SessionCounterplanService(prisma, explanationGenerator),
     findFirst,
   };
 }
@@ -182,6 +187,11 @@ describe("SessionCounterplanService", () => {
       playstyleNotes: "  壁から展開する  ",
       strategyCodes: ["PREVENT_SETUP", "MANAGE_STATUS"],
       threatNotes: [{ opponentPokemonId: 101, note: "積み展開に注意" }],
+      explanation: {
+        summary: "相手ポケモン1体への対策です。警戒技は1件、未対応の相手は0体です。",
+        strategyExplanation:
+          "積み技を自由に使わせない。状態異常を受ける展開を避ける。登録された立ち回り:   壁から展開する  ",
+      },
     });
     expect(response.perOpponent).toHaveLength(1);
     expect(response.perOpponent[0]?.recommendations).toHaveLength(1);
@@ -205,6 +215,32 @@ describe("SessionCounterplanService", () => {
           where: { kind: "move", isRevoked: false },
         }),
       }),
+    });
+  });
+
+  it("MATCHUP計算後にGeneratorを1回呼び、構造化結果を変更せず説明を追加する", async () => {
+    const template = new TemplateExplanationGenerator();
+    const generateCounterplanExplanation = vi.fn(
+      template.generateCounterplanExplanation.bind(template),
+    );
+    const generator: ExplanationGenerator = { generateCounterplanExplanation };
+    const { service } = makeService(makeSession(), generator);
+
+    const response = await service.get(userId, sessionId);
+    const input = generateCounterplanExplanation.mock.calls[0]?.[0];
+
+    expect(generateCounterplanExplanation).toHaveBeenCalledTimes(1);
+    expect(input).toMatchObject({
+      perOpponent: response.perOpponent,
+      selection: response.selection,
+      playstyleNotes: response.playstyleNotes,
+      strategyCodes: response.strategyCodes,
+      cautionMoves: response.cautionMoves,
+      threatNotes: response.threatNotes,
+    });
+    expect(response.explanation.perOpponent[0]).toMatchObject({
+      opponentPokemonId: 101,
+      explanation: expect.stringContaining("ポケモンID 101"),
     });
   });
 
@@ -379,7 +415,30 @@ describe("SessionCounterplanService", () => {
     const findFirst = vi.fn().mockRejectedValue(new Error("database details"));
     const prisma = { battleSession: { findFirst } } as unknown as PrismaService;
     await expect(
-      new SessionCounterplanService(prisma).get(userId, sessionId),
+      new SessionCounterplanService(prisma, new TemplateExplanationGenerator()).get(
+        userId,
+        sessionId,
+      ),
+    ).rejects.toMatchObject({
+      status: 500,
+      response: {
+        type: "about:blank",
+        title: "Internal Server Error",
+        status: 500,
+        code: "INTERNAL_ERROR",
+      },
+    });
+  });
+
+  it("Generatorの入力不整合を秘密情報なしの500へ変換する", async () => {
+    const generator: ExplanationGenerator = {
+      generateCounterplanExplanation: vi
+        .fn()
+        .mockRejectedValue(new RangeError("unknown reason code and private details")),
+    };
+
+    await expect(
+      makeService(makeSession(), generator).service.get(userId, sessionId),
     ).rejects.toMatchObject({
       status: 500,
       response: {

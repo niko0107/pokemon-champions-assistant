@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { ExplanationsModule } from "../explanations/explanations.module";
 import {
   BATTLE_SESSION_ARCHIVE_CONFIG,
   resolveBattleSessionArchiveConfig,
@@ -15,7 +16,7 @@ import { SessionsController } from "./sessions.controller";
 import { SessionsService } from "./sessions.service";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, ExplanationsModule],
   controllers: [SessionsController],
   providers: [
     {

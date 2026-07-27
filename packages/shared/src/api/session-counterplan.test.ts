@@ -117,6 +117,17 @@ function validResponse() {
     strategyCodes: ["PREVENT_SETUP", "MANAGE_STATUS"],
     cautionMoves: [cautionMove],
     threatNotes: [threatNote],
+    explanation: {
+      summary: "相手ポケモン1体への対策です。",
+      selectionExplanation: "選出はポケモンID 1、ポケモンID 2、ポケモンID 3です。",
+      perOpponent: [
+        {
+          opponentPokemonId: 101,
+          explanation: "ポケモンID 101にはポケモンID 1がおすすめです。",
+        },
+      ],
+      strategyExplanation: "積み技を自由に使わせない。",
+    },
   };
 }
 
@@ -142,6 +153,10 @@ describe("sessionCounterplanResponseSchema", () => {
     expect(parsed.cautionMoves[0]).toMatchObject({ moveId: 21, primaryTag: "setup" });
     expect(parsed.threatNotes).toEqual([{ opponentPokemonId: 101, note: "積み展開に注意" }]);
     expect(parsed.selection.selectedPokemonIds).toEqual([1, 2, 3]);
+    expect(parsed.explanation).toMatchObject({
+      summary: "相手ポケモン1体への対策です。",
+      strategyExplanation: "積み技を自由に使わせない。",
+    });
   });
 
   it("classification・reasonCodes・strategyCodesの全literalと整合する", () => {
@@ -173,6 +188,10 @@ describe("sessionCounterplanResponseSchema", () => {
     const nested = validResponse();
     Object.assign(nested.selection, { createdAt: "2026-07-27T00:00:00.000Z" });
     expect(sessionCounterplanResponseSchema.safeParse(nested).success).toBe(false);
+
+    const explanation = validResponse();
+    Object.assign(explanation.explanation, { provider: "internal" });
+    expect(sessionCounterplanResponseSchema.safeParse(explanation).success).toBe(false);
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
