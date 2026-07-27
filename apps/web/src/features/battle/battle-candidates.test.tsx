@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { BattleCandidate, BattleCandidatesResponse } from "@pokemon-champions/shared";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api-client";
 import { battleQueryKeys } from "./battle-api";
@@ -135,7 +136,11 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </MemoryRouter>
+    );
   };
 }
 
@@ -388,5 +393,19 @@ describe("WEB-003 candidate panel", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("すでに選択済み");
     expect(screen.getByRole("alert")).not.toHaveTextContent("secret");
+  });
+
+  it("候補選択と干渉しない構築詳細リンクをSession文脈付きで表示する", () => {
+    const onSelect = vi.fn();
+    render(panel({ sessionId, candidates: [candidate] }, { onSelect }), {
+      wrapper: createWrapper(),
+    });
+
+    expect(screen.getByRole("link", { name: "構築詳細を見る" })).toHaveAttribute(
+      "href",
+      `/battle/${sessionId}/archetypes/${candidate.archetypeId}`,
+    );
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "この構築で対策を見る" })).toBeEnabled();
   });
 });

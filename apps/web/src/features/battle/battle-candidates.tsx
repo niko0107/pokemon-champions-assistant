@@ -5,6 +5,7 @@ import {
   type BattleCandidatesResponse,
 } from "@pokemon-champions/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchPokemonDetail, partyQueryKeys } from "../parties/party-api";
 import { getBattleCandidatesErrorMessage, getBattleSelectionErrorMessage } from "./battle-errors";
 import type { StoredBattleObservation } from "./battle-session-storage";
@@ -443,22 +444,30 @@ export function BattleCandidatesPanel({
                     <p className="text-xs leading-5 text-slate-500">
                       選択後、保存済みパーティとの対策を表示します。
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(candidate.archetypeId)}
-                      disabled={
-                        !isActive ||
-                        selectingArchetypeId !== null ||
-                        selectedArchetypeId === candidate.archetypeId
-                      }
-                      className="min-h-11 rounded-xl bg-blue-950 px-5 py-2.5 text-sm font-black text-white outline-none transition hover:bg-blue-800 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      {selectingArchetypeId === candidate.archetypeId
-                        ? "選択中…"
-                        : selectedArchetypeId === candidate.archetypeId
-                          ? "選択済み"
-                          : "この構築で対策を見る"}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/battle/${sessionId}/archetypes/${candidate.archetypeId}`}
+                        className="inline-flex min-h-11 items-center rounded-xl border border-blue-900 bg-white px-5 py-2.5 text-sm font-black text-blue-950 outline-none transition hover:bg-blue-50 focus-visible:ring-4 focus-visible:ring-blue-200"
+                      >
+                        構築詳細を見る
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(candidate.archetypeId)}
+                        disabled={
+                          !isActive ||
+                          selectingArchetypeId !== null ||
+                          selectedArchetypeId === candidate.archetypeId
+                        }
+                        className="min-h-11 rounded-xl bg-blue-950 px-5 py-2.5 text-sm font-black text-white outline-none transition hover:bg-blue-800 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        {selectingArchetypeId === candidate.archetypeId
+                          ? "選択中…"
+                          : selectedArchetypeId === candidate.archetypeId
+                            ? "選択済み"
+                            : "この構築で対策を見る"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </li>
