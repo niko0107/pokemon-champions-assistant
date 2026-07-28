@@ -1,6 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
+import Anthropic from "@anthropic-ai/sdk";
 import { Prisma } from "@pokemon-champions/database";
 import {
   API_PREFIX,
@@ -10,6 +11,14 @@ import {
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthModule } from "../src/modules/auth/auth.module";
+import {
+  ANTHROPIC_CONFIG,
+  type AnthropicExplanationConfig,
+} from "../src/modules/explanations/anthropic-explanation.config";
+import {
+  ANTHROPIC_MESSAGES_CLIENT,
+  type AnthropicExplanationMessageResponse,
+} from "../src/modules/explanations/anthropic-messages.client";
 import { ExplanationsModule } from "../src/modules/explanations/explanations.module";
 import { PrismaModule } from "../src/modules/prisma/prisma.module";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
@@ -282,5 +291,169 @@ describe("LLM-001 counterplan explanation API", () => {
     });
     expect(response.body).not.toHaveProperty("stack");
     expect(JSON.stringify(response.body)).not.toContain("unknown");
+  });
+});
+
+describe("LLM-002 Anthropic counterplan explanation API", () => {
+  let app: INestApplication;
+  let jwt: JwtService;
+  let token: string;
+  let record: ReturnType<typeof sessionRecord> | null;
+  const findFirst = vi.fn();
+  const createExplanationMessage = vi.fn();
+  const previousSecret = process.env.JWT_ACCESS_SECRET;
+  const anthropicConfig: AnthropicExplanationConfig = {
+    enabled: true,
+    apiKey: "test-api-key-not-sent-to-network",
+    model: "claude-sonnet-4-5-20250929",
+    timeoutMs: 1_000,
+  };
+
+  beforeAll(async () => {
+    process.env.JWT_ACCESS_SECRET = TEST_ACCESS_SECRET;
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [PrismaModule, AuthModule, ExplanationsModule],
+      controllers: [SessionsController],
+      providers: [
+        SessionCounterplanService,
+        {
+          provide: SessionsService,
+          useValue: {},
+        },
+        {
+          provide: BattleRateLimitGuard,
+          useValue: { canActivate: () => true },
+        },
+        {
+          provide: BattleRateLimitService,
+          useValue: { consumeObservation: vi.fn() },
+        },
+      ],
+    })
+      .overrideProvider(PrismaService)
+      .useValue({ battleSession: { findFirst } })
+      .overrideProvider(ANTHROPIC_CONFIG)
+      .useValue(anthropicConfig)
+      .overrideProvider(ANTHROPIC_MESSAGES_CLIENT)
+      .useValue({ createExplanationMessage })
+      .compile();
+
+    app = moduleRef.createNestApplication();
+    app.setGlobalPrefix(API_PREFIX);
+    await app.init();
+    jwt = moduleRef.get(JwtService);
+    token = await jwt.signAsync(
+      { sub: userId, role: "user" },
+      { algorithm: "HS256", secret: TEST_ACCESS_SECRET, expiresIn: 900 },
+    );
+  });
+
+  beforeEach(() => {
+    record = sessionRecord();
+    findFirst.mockReset();
+    findFirst.mockResolvedValue(record);
+    createExplanationMessage.mockReset();
+  });
+
+  afterAll(async () => {
+    if (app) {
+      await app.close();
+    }
+    if (previousSecret === undefined) {
+      delete process.env.JWT_ACCESS_SECRET;
+    } else {
+      process.env.JWT_ACCESS_SECRET = previousSecret;
+    }
+  });
+
+  function anthropicResponse(
+    content: string,
+    stopReason = "end_turn",
+  ): AnthropicExplanationMessageResponse {
+    return {
+      stopReason,
+      content: [{ type: "text", text: content }],
+    };
+  }
+
+  function validAnthropicExplanation() {
+    return {
+      summary: "構造化された対策結果を短く説明します。",
+      selectionExplanation: "選出と先発は計算済みの結果どおりです。",
+      perOpponent: [
+        {
+          opponentPokemonId: 101,
+          explanation: "ポケモンID 101には計算済み1位候補で対応します。",
+        },
+      ],
+      strategyExplanation: "積み展開を許さない方針です。",
+    };
+  }
+
+  it("Anthropic成功時は検証済みLLM文と既存構造化counterplanを返す", async () => {
+    createExplanationMessage.mockResolvedValue(
+      anthropicResponse(JSON.stringify(validAnthropicExplanation())),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const parsed = sessionCounterplanResponseSchema.parse(response.body);
+    expect(parsed.explanation).toEqual(validAnthropicExplanation());
+    expect(parsed.perOpponent).toHaveLength(1);
+    expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
+    expect(parsed.selection.selectedPokemonIds).toEqual([1]);
+    expect(parsed.strategyCodes).toEqual(["PREVENT_SETUP"]);
+    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
+    expect(findFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["timeout", () => new Anthropic.APIConnectionTimeoutError()],
+    [
+      "429",
+      () =>
+        Anthropic.APIError.generate(
+          429,
+          { type: "error", error: { type: "rate_limit_error", message: "limited" } },
+          "limited",
+          new Headers(),
+        ),
+    ],
+  ])("%s時は既存構造を維持してTemplateへフォールバックする", async (_label, error) => {
+    createExplanationMessage.mockRejectedValue(error());
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const parsed = sessionCounterplanResponseSchema.parse(response.body);
+    expect(parsed.explanation.summary).toBe(
+      "相手ポケモン1体への対策です。警戒技は1件、未対応の相手は0体です。",
+    );
+    expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
+    expect(parsed.selection.selectedPokemonIds).toEqual([1]);
+    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("不正JSON時は壊れた出力を採用せずTemplateへフォールバックする", async () => {
+    createExplanationMessage.mockResolvedValue(anthropicResponse("{broken"));
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const parsed = sessionCounterplanResponseSchema.parse(response.body);
+    expect(parsed.explanation.summary).toBe(
+      "相手ポケモン1体への対策です。警戒技は1件、未対応の相手は0体です。",
+    );
+    expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
+    expect(parsed.selection.selectedPokemonIds).toEqual([1]);
+    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
   });
 });
