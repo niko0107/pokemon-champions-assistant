@@ -11,12 +11,19 @@ import {
   buildCounterplan,
   buildMatchupMatrix,
   buildSelectionRecommendation,
+  type CounterplanResult,
 } from "@pokemon-champions/matchup";
 import {
+  sessionCounterplanExplanationStatusResponseSchema,
   sessionCounterplanResponseSchema,
   type ProblemDetails,
+  type SessionCounterplanExplanationStatusResponse,
   type SessionCounterplanResponse,
 } from "@pokemon-champions/shared";
+import {
+  COUNTERPLAN_EXPLANATION_STATUS,
+  type CounterplanExplanationStatusReader,
+} from "../explanations/counterplan-explanation-status";
 import {
   EXPLANATION_GENERATOR,
   type ExplanationGenerator,
@@ -142,12 +149,20 @@ type CounterplanSessionRecord = Prisma.BattleSessionGetPayload<{
   select: typeof counterplanSessionSelect;
 }>;
 
+interface CounterplanContext {
+  readonly sessionId: string;
+  readonly selectedArchetypeId: string;
+  readonly counterplan: CounterplanResult;
+}
+
 @Injectable()
 export class SessionCounterplanService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(EXPLANATION_GENERATOR)
     private readonly explanationGenerator: ExplanationGenerator,
+    @Inject(COUNTERPLAN_EXPLANATION_STATUS)
+    private readonly explanationStatus: CounterplanExplanationStatusReader,
   ) {}
 
   async get(userId: string, sessionId: string): Promise<SessionCounterplanResponse> {
@@ -160,7 +175,16 @@ export class SessionCounterplanService {
         this.throwNotFound();
       }
 
-      return await this.buildResponse(session, userId);
+      const context = this.buildCounterplanContext(session, userId);
+      const explanation = await this.explanationGenerator.generateCounterplanExplanation(
+        context.counterplan,
+      );
+      return sessionCounterplanResponseSchema.parse({
+        sessionId: context.sessionId,
+        selectedArchetypeId: context.selectedArchetypeId,
+        ...context.counterplan,
+        explanation,
+      });
     } catch (error: unknown) {
       if (error instanceof HttpException) {
         throw error;
@@ -172,10 +196,38 @@ export class SessionCounterplanService {
     }
   }
 
-  private async buildResponse(
+  async getExplanationStatus(
+    userId: string,
+    sessionId: string,
+  ): Promise<SessionCounterplanExplanationStatusResponse> {
+    try {
+      const session = await this.prisma.battleSession.findFirst({
+        where: { id: sessionId, userId },
+        select: counterplanSessionSelect,
+      });
+      if (!session) {
+        this.throwNotFound();
+      }
+
+      const context = this.buildCounterplanContext(session, userId);
+      return sessionCounterplanExplanationStatusResponseSchema.parse(
+        await this.explanationStatus.getCounterplanExplanationStatus(context.counterplan),
+      );
+    } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      if (error instanceof InvalidObservedMoveStateError) {
+        this.throwInvalidSessionState();
+      }
+      this.throwInternalError();
+    }
+  }
+
+  private buildCounterplanContext(
     session: CounterplanSessionRecord,
     expectedUserId: string,
-  ): Promise<SessionCounterplanResponse> {
+  ): CounterplanContext {
     if (session.userId !== expectedUserId) {
       this.throwInternalError();
     }
@@ -242,14 +294,11 @@ export class SessionCounterplanService {
       matrix,
       selection,
     });
-    const explanation = await this.explanationGenerator.generateCounterplanExplanation(counterplan);
-
-    return sessionCounterplanResponseSchema.parse({
+    return {
       sessionId: session.id,
       selectedArchetypeId: selectedArchetype.id,
-      ...counterplan,
-      explanation,
-    });
+      counterplan,
+    };
   }
 
   private validateRule(rule: CounterplanSessionRecord["rule"]): void {

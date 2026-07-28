@@ -1,6 +1,7 @@
 import { Prisma } from "@pokemon-champions/database";
 import { sessionCounterplanResponseSchema } from "@pokemon-champions/shared";
 import { describe, expect, it, vi } from "vitest";
+import type { CounterplanExplanationStatusReader } from "../explanations/counterplan-explanation-status";
 import type { ExplanationGenerator } from "../explanations/explanation-generator";
 import { TemplateExplanationGenerator } from "../explanations/template-explanation-generator";
 import { PrismaService } from "../prisma/prisma.service";
@@ -168,13 +169,35 @@ function makeService(
   const prisma = {
     battleSession: { findFirst },
   } as unknown as PrismaService;
+  const explanationStatus: CounterplanExplanationStatusReader = {
+    getCounterplanExplanationStatus: vi
+      .fn()
+      .mockResolvedValue({ status: "unavailable", explanation: null }),
+  };
   return {
-    service: new SessionCounterplanService(prisma, explanationGenerator),
+    service: new SessionCounterplanService(prisma, explanationGenerator, explanationStatus),
     findFirst,
+    getCounterplanExplanationStatus: explanationStatus.getCounterplanExplanationStatus,
   };
 }
 
 describe("SessionCounterplanService", () => {
+  it("生成済み説明状態は同じ所有権・Session検証後のCounterplanResultだけをReaderへ渡す", async () => {
+    const { service, getCounterplanExplanationStatus } = makeService(makeSession());
+    await expect(service.getExplanationStatus(userId, sessionId)).resolves.toEqual({
+      status: "unavailable",
+      explanation: null,
+    });
+    expect(getCounterplanExplanationStatus).toHaveBeenCalledTimes(1);
+    expect(getCounterplanExplanationStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        perOpponent: expect.any(Array),
+        selection: expect.any(Object),
+        strategyCodes: expect.any(Array),
+      }),
+    );
+  });
+
   it("activeな1×1 SessionからMATCHUP-005→006→007の構造化結果を返す", async () => {
     const { service, findFirst } = makeService(makeSession());
 
@@ -415,10 +438,11 @@ describe("SessionCounterplanService", () => {
     const findFirst = vi.fn().mockRejectedValue(new Error("database details"));
     const prisma = { battleSession: { findFirst } } as unknown as PrismaService;
     await expect(
-      new SessionCounterplanService(prisma, new TemplateExplanationGenerator()).get(
-        userId,
-        sessionId,
-      ),
+      new SessionCounterplanService(prisma, new TemplateExplanationGenerator(), {
+        getCounterplanExplanationStatus: vi
+          .fn()
+          .mockResolvedValue({ status: "unavailable", explanation: null }),
+      }).get(userId, sessionId),
     ).rejects.toMatchObject({
       status: 500,
       response: {

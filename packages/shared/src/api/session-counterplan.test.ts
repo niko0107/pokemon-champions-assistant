@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COUNTERPLAN_STRATEGY_CODES, MATCHUP_REASON_CODES, MATCHUP_VERDICTS } from "../matchup";
 import {
+  sessionCounterplanExplanationStatusResponseSchema,
   sessionCounterplanParamsSchema,
   sessionCounterplanResponseSchema,
 } from "./session-counterplan";
@@ -215,5 +216,51 @@ describe("sessionCounterplanResponseSchema", () => {
     ];
     input.strategyCodes = ["UNKNOWN" as "PREVENT_SETUP"];
     expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(false);
+  });
+});
+
+describe("sessionCounterplanExplanationStatusResponseSchema", () => {
+  it("readyだけstrictな説明を受理する", () => {
+    const explanation = validResponse().explanation;
+    expect(
+      sessionCounterplanExplanationStatusResponseSchema.parse({
+        status: "ready",
+        explanation,
+      }),
+    ).toEqual({ status: "ready", explanation });
+  });
+
+  it.each(["pending", "failed", "unavailable"] as const)(
+    "%sはexplanation=nullだけを受理する",
+    (status) => {
+      expect(
+        sessionCounterplanExplanationStatusResponseSchema.parse({
+          status,
+          explanation: null,
+        }),
+      ).toEqual({ status, explanation: null });
+      expect(
+        sessionCounterplanExplanationStatusResponseSchema.safeParse({
+          status,
+          explanation: validResponse().explanation,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("内部情報と余分なキーを全状態で拒否する", () => {
+    for (const extra of [
+      { cacheKey: "secret" },
+      { provider: "anthropic" },
+      { failureReason: "rate_limit" },
+    ]) {
+      expect(
+        sessionCounterplanExplanationStatusResponseSchema.safeParse({
+          status: "pending",
+          explanation: null,
+          ...extra,
+        }).success,
+      ).toBe(false);
+    }
   });
 });

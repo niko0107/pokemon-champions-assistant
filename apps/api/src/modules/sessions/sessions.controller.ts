@@ -19,6 +19,8 @@ import {
   battleSessionIdParamsSchema,
   battleSessionResponseSchema,
   sessionCounterplanParamsSchema,
+  sessionCounterplanExplanationStatusParamsSchema,
+  sessionCounterplanExplanationStatusResponseSchema,
   sessionCounterplanResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
@@ -36,6 +38,8 @@ import {
   type ObservationCreate,
   type ObservationResponse,
   type SessionCounterplanParams,
+  type SessionCounterplanExplanationStatusParams,
+  type SessionCounterplanExplanationStatusResponse,
   type SessionCounterplanResponse,
   type UndoObservationParams,
   type UndoObservationResponse,
@@ -104,6 +108,17 @@ export class SessionsController {
     params: SessionCounterplanParams,
   ): Promise<SessionCounterplanResponse> {
     return sessionCounterplanResponseSchema.parse(await this.counterplans.get(user.id, params.id));
+  }
+
+  @Get(":id/counterplan/explanation")
+  async getCounterplanExplanationStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(new ZodValidationPipe(sessionCounterplanExplanationStatusParamsSchema))
+    params: SessionCounterplanExplanationStatusParams,
+  ): Promise<SessionCounterplanExplanationStatusResponse> {
+    return sessionCounterplanExplanationStatusResponseSchema.parse(
+      await this.counterplans.getExplanationStatus(user.id, params.id),
+    );
   }
 
   @Post(":id/select")
