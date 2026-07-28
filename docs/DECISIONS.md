@@ -712,3 +712,16 @@
 - **判断:** ログは生成成功時の処理時間と、フォールバック時の`configuration / timeout / authentication / rate_limit / server / network / invalid_output / unknown`分類だけに限定する。APIキー、モデル、prompt、モデル出力、note全文、user/session識別情報、stack traceは出さない
 - **理由:** PRODUCT_SPEC §12の「LLMは文章化だけ」「障害時も主要機能を継続」を維持しながら、外部APIの遅延・不正出力・設定不備を既存counterplanの可用性や構造化計算結果へ波及させないため
 - **影響:** Anthropic未設定・障害時のAPIレスポンスはLLM-001と同じTemplate文であり、クライアントはProviderを意識しない。キャッシュ・非同期化はLLM-003、説明文のWeb表示はWEB-009へ残す
+
+## 2026-07-28 LLMキャッシュ・非同期化(LLM-003)
+
+### D-066: BullMQ同一プロセスWorker・24時間キャッシュ・状態取得API
+
+- **判断:** 非同期Queueは公式BullMQをAPIパッケージだけへ追加し、Queue名を`llm-explanations`とする。既存node-redis Adapterはキャッシュ値のget/set/deleteに維持し、BullMQは同じ`REDIS_URL`から専用producer/worker接続を生成する。MVPではAPIプロセス内でWorkerを起動し、NestJS lifecycleでWorker→Queueの順にgraceful shutdownする。Redis未設定・接続失敗・Queue初期化失敗ではAPI起動を止めない
+- **判断:** キャッシュキーは`pca:llm-explanation:v1:<sha256>`、failure markerは`pca:llm-explanation-failure:v1:<sha256>`、jobIdは`llm-explanation-<sha256>`とする。SHA-256入力はAnthropicへ射影するCounterplan全構造、model、`CACHE_NAMESPACE_VERSION / PROMPT_VERSION / OUTPUT_SCHEMA_VERSION / GENERATOR_VERSION`をkey順canonical JSONへ変換した値とし、user/session識別情報、APIキー、生prompt、DB内部値を含めない
+- **判断:** キャッシュ値は`schemaVersion / generatorVersion / CounterplanExplanation`だけのstrict JSONとし、読込後も文章長・HTML・相手IDを含め再検証する。TTLは未設定時86,400秒、`LLM_EXPLANATION_CACHE_TTL_SECONDS`で60〜604,800秒の正の整数だけを受理し、不正設定では非同期機能全体を無効にしてTemplateを維持する。破損値はmissとしてbest-effort削除し、Redis障害をcounterplan失敗へ変換しない
+- **判断:** cache miss時のcounterplan APIはTemplateを即時返し、failure markerがなくQueue利用可能な場合だけ`attempts=1 / removeOnComplete=true / removeOnFail=true`で登録する。WorkerはFallbackではなくAnthropic実装を1回だけ呼び、strict検証とRedis保存が両方成功した場合だけreadyにする。失敗時は詳細を含まない5分TTLのmarkerを保存し、cooldown中は再登録せず、失効後の次回リクエストで再登録可能にする
+- **判断:** 生成済み説明は認証・所有権・Session状態を既存counterplanと共有する`GET /api/v1/sessions/:id/counterplan/explanation`で取得する。レスポンスはHTTP 200のstrictな`ready / pending / failed / unavailable` discriminated unionとし、readyだけ説明を返す。cacheKey、model、Provider、失敗理由、Redis情報は公開しない。cache missかつ利用可能なら同APIも重複なしでenqueueするがAnthropicを同期実行しない
+- **判断:** ログは`cache_hit / cache_miss / cache_invalid / enqueue_success / enqueue_deduplicated / generation_success / generation_timeout / generation_rate_limit / generation_invalid_output / generation_failed / redis_unavailable / queue_unavailable`だけとし、APIキー、Redis URL/password、prompt、生成文、notes、JWT、user/session識別情報、job payloadを出さない
+- **理由:** PRODUCT_SPEC §12.2の「Templateを即時表示し、LLM文を生成でき次第差し替える」を、Redis・Anthropicを単一障害点にせず、同じ構造化入力の重複課金を避ける決定的な非同期境界として実現するため
+- **影響:** 既存counterplanの構造化計算・認証・状態規則は変わらず、cache hit時だけ`explanation`がAnthropic文になる。Webでのpollingと説明表示はWEB-009、独立Worker deployment、WebSocket/SSE、手動再生成は対象外のまま

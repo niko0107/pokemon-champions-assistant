@@ -6,7 +6,9 @@ import { Prisma } from "@pokemon-champions/database";
 import {
   API_PREFIX,
   problemDetailsSchema,
+  sessionCounterplanExplanationStatusResponseSchema,
   sessionCounterplanResponseSchema,
+  type SessionCounterplanExplanationStatusResponse,
 } from "@pokemon-champions/shared";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,6 +21,7 @@ import {
   ANTHROPIC_MESSAGES_CLIENT,
   type AnthropicExplanationMessageResponse,
 } from "../src/modules/explanations/anthropic-messages.client";
+import { COUNTERPLAN_EXPLANATION_STATUS } from "../src/modules/explanations/counterplan-explanation-status";
 import { ExplanationsModule } from "../src/modules/explanations/explanations.module";
 import { PrismaModule } from "../src/modules/prisma/prisma.module";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
@@ -144,6 +147,11 @@ describe("LLM-001 counterplan explanation API", () => {
   const findFirst = vi.fn();
   const previousSecret = process.env.JWT_ACCESS_SECRET;
   const previousAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  let explanationStatus: SessionCounterplanExplanationStatusResponse = {
+    status: "unavailable",
+    explanation: null,
+  };
+  const getCounterplanExplanationStatus = vi.fn(async () => explanationStatus);
 
   beforeAll(async () => {
     process.env.JWT_ACCESS_SECRET = TEST_ACCESS_SECRET;
@@ -170,6 +178,8 @@ describe("LLM-001 counterplan explanation API", () => {
     })
       .overrideProvider(PrismaService)
       .useValue({ battleSession: { findFirst } })
+      .overrideProvider(COUNTERPLAN_EXPLANATION_STATUS)
+      .useValue({ getCounterplanExplanationStatus })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -192,6 +202,8 @@ describe("LLM-001 counterplan explanation API", () => {
     findFirst.mockImplementation(({ where }: { where: { id: string; userId: string } }) =>
       where.id === sessionId && where.userId === userId ? Promise.resolve(record) : null,
     );
+    explanationStatus = { status: "unavailable", explanation: null };
+    getCounterplanExplanationStatus.mockClear();
   });
 
   afterAll(async () => {
@@ -237,6 +249,69 @@ describe("LLM-001 counterplan explanation API", () => {
     expect(parsed.selection.selectedPokemonIds).toEqual([1]);
     expect(parsed.strategyCodes).toEqual(["PREVENT_SETUP"]);
     expect(findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["ready", "pending", "failed", "unavailable"] as const)(
+    "生成済み説明取得APIがstrictな%s状態を200で返す",
+    async (status) => {
+      explanationStatus =
+        status === "ready"
+          ? {
+              status,
+              explanation: {
+                summary: "生成済み説明です。",
+                selectionExplanation: "生成済み選出説明です。",
+                perOpponent: [{ opponentPokemonId: 101, explanation: "生成済み対面説明です。" }],
+                strategyExplanation: null,
+              },
+            }
+          : { status, explanation: null };
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/sessions/${sessionId}/counterplan/explanation`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(sessionCounterplanExplanationStatusResponseSchema.parse(response.body)).toEqual(
+        explanationStatus,
+      );
+      expect(response.body).not.toHaveProperty("cacheKey");
+      expect(response.body).not.toHaveProperty("provider");
+      expect(response.body).not.toHaveProperty("failureReason");
+    },
+  );
+
+  it("生成済み説明取得APIも未認証401・他人404・archived/未選択400を維持する", async () => {
+    await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan/explanation`)
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan/explanation`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get("/api/v1/sessions/not-a-uuid/counterplan/explanation")
+      .set("Authorization", `Bearer ${token}`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get("/api/v1/sessions/11111111-1111-4111-8111-111111111111/counterplan/explanation")
+      .set("Authorization", `Bearer ${token}`)
+      .expect(404);
+
+    record = sessionRecord("archived");
+    const archived = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan/explanation`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(400);
+    expect(problemDetailsSchema.parse(archived.body).code).toBe("INVALID_SESSION_STATE");
+
+    record = sessionRecord("active", false);
+    const unselected = await request(app.getHttpServer())
+      .get(`/api/v1/sessions/${sessionId}/counterplan/explanation`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(400);
+    expect(problemDetailsSchema.parse(unselected.body).code).toBe("INVALID_ARCHETYPE_SELECTION");
   });
 
   it("endedは成功し、未認証・他人・archived・selected未設定の既存エラーを維持する", async () => {
@@ -294,7 +369,7 @@ describe("LLM-001 counterplan explanation API", () => {
   });
 });
 
-describe("LLM-002 Anthropic counterplan explanation API", () => {
+describe("LLM-003 counterplan immediate response", () => {
   let app: INestApplication;
   let jwt: JwtService;
   let token: string;
@@ -302,6 +377,7 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
   const findFirst = vi.fn();
   const createExplanationMessage = vi.fn();
   const previousSecret = process.env.JWT_ACCESS_SECRET;
+  const previousRedisUrl = process.env.REDIS_URL;
   const anthropicConfig: AnthropicExplanationConfig = {
     enabled: true,
     apiKey: "test-api-key-not-sent-to-network",
@@ -311,6 +387,7 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
 
   beforeAll(async () => {
     process.env.JWT_ACCESS_SECRET = TEST_ACCESS_SECRET;
+    delete process.env.REDIS_URL;
 
     const moduleRef = await Test.createTestingModule({
       imports: [PrismaModule, AuthModule, ExplanationsModule],
@@ -365,6 +442,11 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
     } else {
       process.env.JWT_ACCESS_SECRET = previousSecret;
     }
+    if (previousRedisUrl === undefined) {
+      delete process.env.REDIS_URL;
+    } else {
+      process.env.REDIS_URL = previousRedisUrl;
+    }
   });
 
   function anthropicResponse(
@@ -391,7 +473,7 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
     };
   }
 
-  it("Anthropic成功時は検証済みLLM文と既存構造化counterplanを返す", async () => {
+  it("Anthropic設定済みでもRedis/Queue未設定ならAnthropicを待たずTemplateを返す", async () => {
     createExplanationMessage.mockResolvedValue(
       anthropicResponse(JSON.stringify(validAnthropicExplanation())),
     );
@@ -402,12 +484,14 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
       .expect(200);
 
     const parsed = sessionCounterplanResponseSchema.parse(response.body);
-    expect(parsed.explanation).toEqual(validAnthropicExplanation());
+    expect(parsed.explanation.summary).toBe(
+      "相手ポケモン1体への対策です。警戒技は1件、未対応の相手は0体です。",
+    );
     expect(parsed.perOpponent).toHaveLength(1);
     expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
     expect(parsed.selection.selectedPokemonIds).toEqual([1]);
     expect(parsed.strategyCodes).toEqual(["PREVENT_SETUP"]);
-    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
+    expect(createExplanationMessage).not.toHaveBeenCalled();
     expect(findFirst).toHaveBeenCalledTimes(1);
   });
 
@@ -437,7 +521,7 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
     );
     expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
     expect(parsed.selection.selectedPokemonIds).toEqual([1]);
-    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
+    expect(createExplanationMessage).not.toHaveBeenCalled();
   });
 
   it("不正JSON時は壊れた出力を採用せずTemplateへフォールバックする", async () => {
@@ -454,6 +538,6 @@ describe("LLM-002 Anthropic counterplan explanation API", () => {
     );
     expect(parsed.perOpponent[0]?.opponentPokemonId).toBe(101);
     expect(parsed.selection.selectedPokemonIds).toEqual([1]);
-    expect(createExplanationMessage).toHaveBeenCalledTimes(1);
+    expect(createExplanationMessage).not.toHaveBeenCalled();
   });
 });

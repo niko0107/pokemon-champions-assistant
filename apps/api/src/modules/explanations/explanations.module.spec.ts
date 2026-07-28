@@ -8,21 +8,25 @@ import {
   OfficialAnthropicMessagesClient,
   type AnthropicMessagesClient,
 } from "./anthropic-messages.client";
+import { CachedExplanationOrchestrator } from "./cached-explanation-orchestrator";
 import { EXPLANATION_GENERATOR, type ExplanationGenerator } from "./explanation-generator";
 import { ExplanationsModule } from "./explanations.module";
-import { FallbackExplanationGenerator } from "./fallback-explanation-generator";
 
 describe("ExplanationsModule DI", () => {
   const previous = {
     apiKey: process.env.ANTHROPIC_API_KEY,
     model: process.env.ANTHROPIC_MODEL,
     timeout: process.env.ANTHROPIC_TIMEOUT_MS,
+    redisUrl: process.env.REDIS_URL,
+    cacheTtl: process.env.LLM_EXPLANATION_CACHE_TTL_SECONDS,
   };
 
   beforeEach(() => {
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_MODEL;
     delete process.env.ANTHROPIC_TIMEOUT_MS;
+    delete process.env.REDIS_URL;
+    delete process.env.LLM_EXPLANATION_CACHE_TTL_SECONDS;
   });
 
   afterEach(() => {
@@ -30,6 +34,8 @@ describe("ExplanationsModule DI", () => {
       ["ANTHROPIC_API_KEY", previous.apiKey],
       ["ANTHROPIC_MODEL", previous.model],
       ["ANTHROPIC_TIMEOUT_MS", previous.timeout],
+      ["REDIS_URL", previous.redisUrl],
+      ["LLM_EXPLANATION_CACHE_TTL_SECONDS", previous.cacheTtl],
     ] as const) {
       if (value === undefined) {
         delete process.env[name];
@@ -50,7 +56,7 @@ describe("ExplanationsModule DI", () => {
       }).compile();
 
       expect(moduleRef.get<ExplanationGenerator>(EXPLANATION_GENERATOR)).toBeInstanceOf(
-        FallbackExplanationGenerator,
+        CachedExplanationOrchestrator,
       );
       expect(moduleRef.get<AnthropicExplanationConfig>(ANTHROPIC_CONFIG)).toEqual({
         enabled: false,
@@ -69,7 +75,7 @@ describe("ExplanationsModule DI", () => {
       imports: [ExplanationsModule],
     }).compile();
 
-    expect(moduleRef.get(EXPLANATION_GENERATOR)).toBeInstanceOf(FallbackExplanationGenerator);
+    expect(moduleRef.get(EXPLANATION_GENERATOR)).toBeInstanceOf(CachedExplanationOrchestrator);
     expect(moduleRef.get(ANTHROPIC_MESSAGES_CLIENT)).toBeInstanceOf(
       OfficialAnthropicMessagesClient,
     );

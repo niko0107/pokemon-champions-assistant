@@ -185,6 +185,28 @@ export const counterplanExplanationSchema = z
 
 export type CounterplanExplanation = z.infer<typeof counterplanExplanationSchema>;
 
+export const sessionCounterplanExplanationStatusParamsSchema = sessionCounterplanParamsSchema;
+
+export type SessionCounterplanExplanationStatusParams = z.infer<
+  typeof sessionCounterplanExplanationStatusParamsSchema
+>;
+
+export const sessionCounterplanExplanationStatusResponseSchema = z.discriminatedUnion("status", [
+  z
+    .object({
+      status: z.literal("ready"),
+      explanation: counterplanExplanationSchema,
+    })
+    .strict(),
+  z.object({ status: z.literal("pending"), explanation: z.null() }).strict(),
+  z.object({ status: z.literal("failed"), explanation: z.null() }).strict(),
+  z.object({ status: z.literal("unavailable"), explanation: z.null() }).strict(),
+]);
+
+export type SessionCounterplanExplanationStatusResponse = z.infer<
+  typeof sessionCounterplanExplanationStatusResponseSchema
+>;
+
 export const sessionCounterplanResponseSchema = z
   .object({
     sessionId: z.string().uuid(),
