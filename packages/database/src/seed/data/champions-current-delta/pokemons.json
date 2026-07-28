@@ -1,0 +1,924 @@
+[
+  {
+    "pokeapiId": 45,
+    "pokeapiSpeciesId": 45,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [45],
+    "pokemon": {
+      "dexNo": 45,
+      "nameJa": "ラフレシア",
+      "nameEn": "Vileplume",
+      "form": "normal",
+      "type1": "grass",
+      "type2": "poison",
+      "baseHp": 75,
+      "baseAtk": 80,
+      "baseDef": 85,
+      "baseSpa": 110,
+      "baseSpd": 90,
+      "baseSpe": 50,
+      "abilities": ["ようりょくそ", "ほうし"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 211,
+    "pokeapiSpeciesId": 211,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [211],
+    "pokemon": {
+      "dexNo": 211,
+      "nameJa": "ハリーセン",
+      "nameEn": "Qwilfish",
+      "form": "normal",
+      "type1": "water",
+      "type2": "poison",
+      "baseHp": 65,
+      "baseAtk": 95,
+      "baseDef": 85,
+      "baseSpa": 55,
+      "baseSpd": 55,
+      "baseSpe": 85,
+      "abilities": ["どくのトゲ", "すいすい", "いかく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 254,
+    "pokeapiSpeciesId": 254,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [254],
+    "pokemon": {
+      "dexNo": 254,
+      "nameJa": "ジュカイン",
+      "nameEn": "Sceptile",
+      "form": "normal",
+      "type1": "grass",
+      "type2": null,
+      "baseHp": 70,
+      "baseAtk": 85,
+      "baseDef": 65,
+      "baseSpa": 105,
+      "baseSpd": 85,
+      "baseSpe": 120,
+      "abilities": ["しんりょく", "かるわざ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 257,
+    "pokeapiSpeciesId": 257,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [257],
+    "pokemon": {
+      "dexNo": 257,
+      "nameJa": "バシャーモ",
+      "nameEn": "Blaziken",
+      "form": "normal",
+      "type1": "fire",
+      "type2": "fighting",
+      "baseHp": 80,
+      "baseAtk": 120,
+      "baseDef": 70,
+      "baseSpa": 110,
+      "baseSpd": 70,
+      "baseSpe": 80,
+      "abilities": ["もうか", "かそく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 260,
+    "pokeapiSpeciesId": 260,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [260],
+    "pokemon": {
+      "dexNo": 260,
+      "nameJa": "ラグラージ",
+      "nameEn": "Swampert",
+      "form": "normal",
+      "type1": "water",
+      "type2": "ground",
+      "baseHp": 100,
+      "baseAtk": 110,
+      "baseDef": 90,
+      "baseSpa": 85,
+      "baseSpd": 90,
+      "baseSpe": 60,
+      "abilities": ["げきりゅう", "しめりけ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 303,
+    "pokeapiSpeciesId": 303,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [303],
+    "pokemon": {
+      "dexNo": 303,
+      "nameJa": "クチート",
+      "nameEn": "Mawile",
+      "form": "normal",
+      "type1": "steel",
+      "type2": "fairy",
+      "baseHp": 50,
+      "baseAtk": 85,
+      "baseDef": 85,
+      "baseSpa": 55,
+      "baseSpd": 55,
+      "baseSpe": 50,
+      "abilities": ["かいりきバサミ", "いかく", "ちからずく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 376,
+    "pokeapiSpeciesId": 376,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [376],
+    "pokemon": {
+      "dexNo": 376,
+      "nameJa": "メタグロス",
+      "nameEn": "Metagross",
+      "form": "normal",
+      "type1": "steel",
+      "type2": "psychic",
+      "baseHp": 80,
+      "baseAtk": 135,
+      "baseDef": 130,
+      "baseSpa": 95,
+      "baseSpd": 90,
+      "baseSpe": 70,
+      "abilities": ["クリアボディ", "ライトメタル"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 398,
+    "pokeapiSpeciesId": 398,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [398],
+    "pokemon": {
+      "dexNo": 398,
+      "nameJa": "ムクホーク",
+      "nameEn": "Staraptor",
+      "form": "normal",
+      "type1": "normal",
+      "type2": "flying",
+      "baseHp": 85,
+      "baseAtk": 120,
+      "baseDef": 70,
+      "baseSpa": 50,
+      "baseSpd": 60,
+      "baseSpe": 100,
+      "abilities": ["いかく", "すてみ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 518,
+    "pokeapiSpeciesId": 518,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [518],
+    "pokemon": {
+      "dexNo": 518,
+      "nameJa": "ムシャーナ",
+      "nameEn": "Musharna",
+      "form": "normal",
+      "type1": "psychic",
+      "type2": null,
+      "baseHp": 116,
+      "baseAtk": 55,
+      "baseDef": 85,
+      "baseSpa": 107,
+      "baseSpd": 95,
+      "baseSpe": 29,
+      "abilities": ["よちむ", "シンクロ", "テレパシー"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 545,
+    "pokeapiSpeciesId": 545,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [545],
+    "pokemon": {
+      "dexNo": 545,
+      "nameJa": "ペンドラー",
+      "nameEn": "Scolipede",
+      "form": "normal",
+      "type1": "bug",
+      "type2": "poison",
+      "baseHp": 60,
+      "baseAtk": 100,
+      "baseDef": 89,
+      "baseSpa": 55,
+      "baseSpd": 69,
+      "baseSpe": 112,
+      "abilities": ["どくのトゲ", "むしのしらせ", "かそく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 560,
+    "pokeapiSpeciesId": 560,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [560],
+    "pokemon": {
+      "dexNo": 560,
+      "nameJa": "ズルズキン",
+      "nameEn": "Scrafty",
+      "form": "normal",
+      "type1": "dark",
+      "type2": "fighting",
+      "baseHp": 65,
+      "baseAtk": 90,
+      "baseDef": 115,
+      "baseSpa": 45,
+      "baseSpd": 115,
+      "baseSpe": 58,
+      "abilities": ["だっぴ", "じしんかじょう", "いかく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 604,
+    "pokeapiSpeciesId": 604,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [604],
+    "pokemon": {
+      "dexNo": 604,
+      "nameJa": "シビルドン",
+      "nameEn": "Eelektross",
+      "form": "normal",
+      "type1": "electric",
+      "type2": null,
+      "baseHp": 85,
+      "baseAtk": 115,
+      "baseDef": 80,
+      "baseSpa": 105,
+      "baseSpd": 80,
+      "baseSpe": 50,
+      "abilities": ["ふゆう"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 668,
+    "pokeapiSpeciesId": 668,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [668, 10551],
+    "pokemon": {
+      "dexNo": 668,
+      "nameJa": "カエンジシ",
+      "nameEn": "Male Pyroar",
+      "form": "male",
+      "type1": "fire",
+      "type2": "normal",
+      "baseHp": 86,
+      "baseAtk": 68,
+      "baseDef": 72,
+      "baseSpa": 109,
+      "baseSpd": 66,
+      "baseSpe": 106,
+      "abilities": ["とうそうしん", "きんちょうかん", "じしんかじょう"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 687,
+    "pokeapiSpeciesId": 687,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [687],
+    "pokemon": {
+      "dexNo": 687,
+      "nameJa": "カラマネロ",
+      "nameEn": "Malamar",
+      "form": "normal",
+      "type1": "dark",
+      "type2": "psychic",
+      "baseHp": 86,
+      "baseAtk": 92,
+      "baseDef": 88,
+      "baseSpa": 68,
+      "baseSpd": 75,
+      "baseSpe": 73,
+      "abilities": ["あまのじゃく", "きゅうばん", "すりぬけ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 689,
+    "pokeapiSpeciesId": 689,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [689],
+    "pokemon": {
+      "dexNo": 689,
+      "nameJa": "ガメノデス",
+      "nameEn": "Barbaracle",
+      "form": "normal",
+      "type1": "rock",
+      "type2": "water",
+      "baseHp": 72,
+      "baseAtk": 105,
+      "baseDef": 115,
+      "baseSpa": 54,
+      "baseSpd": 86,
+      "baseSpe": 68,
+      "abilities": ["かたいツメ", "スナイパー", "わるいてぐせ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 691,
+    "pokeapiSpeciesId": 691,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [691],
+    "pokemon": {
+      "dexNo": 691,
+      "nameJa": "ドラミドロ",
+      "nameEn": "Dragalge",
+      "form": "normal",
+      "type1": "poison",
+      "type2": "dragon",
+      "baseHp": 65,
+      "baseAtk": 75,
+      "baseDef": 90,
+      "baseSpa": 97,
+      "baseSpd": 123,
+      "baseSpe": 44,
+      "abilities": ["どくのトゲ", "どくしゅ", "てきおうりょく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 861,
+    "pokeapiSpeciesId": 861,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [861],
+    "pokemon": {
+      "dexNo": 861,
+      "nameJa": "オーロンゲ",
+      "nameEn": "Grimmsnarl",
+      "form": "normal",
+      "type1": "dark",
+      "type2": "fairy",
+      "baseHp": 95,
+      "baseAtk": 120,
+      "baseDef": 65,
+      "baseSpa": 95,
+      "baseSpd": 75,
+      "baseSpe": 60,
+      "abilities": ["いたずらごころ", "おみとおし", "わるいてぐせ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 870,
+    "pokeapiSpeciesId": 870,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [870],
+    "pokemon": {
+      "dexNo": 870,
+      "nameJa": "タイレーツ",
+      "nameEn": "Falinks",
+      "form": "normal",
+      "type1": "fighting",
+      "type2": null,
+      "baseHp": 65,
+      "baseAtk": 100,
+      "baseDef": 100,
+      "baseSpa": 70,
+      "baseSpd": 60,
+      "baseSpe": 75,
+      "abilities": ["カブトアーマー", "まけんき"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 904,
+    "pokeapiSpeciesId": 904,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [904],
+    "pokemon": {
+      "dexNo": 904,
+      "nameJa": "ハリーマン",
+      "nameEn": "Overqwil",
+      "form": "normal",
+      "type1": "dark",
+      "type2": "poison",
+      "baseHp": 85,
+      "baseAtk": 115,
+      "baseDef": 95,
+      "baseSpa": 65,
+      "baseSpd": 65,
+      "baseSpe": 85,
+      "abilities": ["どくのトゲ", "すいすい", "いかく"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 972,
+    "pokeapiSpeciesId": 972,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [972],
+    "pokemon": {
+      "dexNo": 972,
+      "nameJa": "ハカドッグ",
+      "nameEn": "Houndstone",
+      "form": "normal",
+      "type1": "ghost",
+      "type2": null,
+      "baseHp": 72,
+      "baseAtk": 101,
+      "baseDef": 100,
+      "baseSpa": 50,
+      "baseSpd": 97,
+      "baseSpe": 68,
+      "abilities": ["すなかき", "もふもふ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 979,
+    "pokeapiSpeciesId": 979,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [979],
+    "pokemon": {
+      "dexNo": 979,
+      "nameJa": "コノヨザル",
+      "nameEn": "Annihilape",
+      "form": "normal",
+      "type1": "fighting",
+      "type2": "ghost",
+      "baseHp": 110,
+      "baseAtk": 115,
+      "baseDef": 80,
+      "baseSpa": 50,
+      "baseSpd": 90,
+      "baseSpe": 90,
+      "abilities": ["やるき", "せいしんりょく", "まけんき"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 1000,
+    "pokeapiSpeciesId": 1000,
+    "pokeapiIsDefault": true,
+    "sourceFormIds": [1000],
+    "pokemon": {
+      "dexNo": 1000,
+      "nameJa": "サーフゴー",
+      "nameEn": "Gholdengo",
+      "form": "normal",
+      "type1": "steel",
+      "type2": "ghost",
+      "baseHp": 87,
+      "baseAtk": 60,
+      "baseDef": 95,
+      "baseSpa": 133,
+      "baseSpd": 91,
+      "baseSpe": 84,
+      "abilities": ["おうごんのからだ"],
+      "isMega": false,
+      "basePokemon": null
+    }
+  },
+  {
+    "pokeapiId": 10050,
+    "pokeapiSpeciesId": 257,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10150],
+    "pokemon": {
+      "dexNo": 257,
+      "nameJa": "メガバシャーモ",
+      "nameEn": "Mega Blaziken",
+      "form": "mega",
+      "type1": "fire",
+      "type2": "fighting",
+      "baseHp": 80,
+      "baseAtk": 160,
+      "baseDef": 80,
+      "baseSpa": 130,
+      "baseSpd": 80,
+      "baseSpe": 100,
+      "abilities": ["かそく"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 257,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10052,
+    "pokeapiSpeciesId": 303,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10152],
+    "pokemon": {
+      "dexNo": 303,
+      "nameJa": "メガクチート",
+      "nameEn": "Mega Mawile",
+      "form": "mega",
+      "type1": "steel",
+      "type2": "fairy",
+      "baseHp": 50,
+      "baseAtk": 105,
+      "baseDef": 125,
+      "baseSpa": 55,
+      "baseSpd": 95,
+      "baseSpe": 50,
+      "abilities": ["ちからもち"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 303,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10064,
+    "pokeapiSpeciesId": 260,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10166],
+    "pokemon": {
+      "dexNo": 260,
+      "nameJa": "メガラグラージ",
+      "nameEn": "Mega Swampert",
+      "form": "mega",
+      "type1": "water",
+      "type2": "ground",
+      "baseHp": 100,
+      "baseAtk": 150,
+      "baseDef": 110,
+      "baseSpa": 95,
+      "baseSpd": 110,
+      "baseSpe": 70,
+      "abilities": ["すいすい"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 260,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10065,
+    "pokeapiSpeciesId": 254,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10167],
+    "pokemon": {
+      "dexNo": 254,
+      "nameJa": "メガジュカイン",
+      "nameEn": "Mega Sceptile",
+      "form": "mega",
+      "type1": "grass",
+      "type2": "dragon",
+      "baseHp": 70,
+      "baseAtk": 110,
+      "baseDef": 75,
+      "baseSpa": 145,
+      "baseSpd": 85,
+      "baseSpe": 145,
+      "abilities": ["ひらいしん"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 254,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10076,
+    "pokeapiSpeciesId": 376,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10178],
+    "pokemon": {
+      "dexNo": 376,
+      "nameJa": "メガメタグロス",
+      "nameEn": "Mega Metagross",
+      "form": "mega",
+      "type1": "steel",
+      "type2": "psychic",
+      "baseHp": 80,
+      "baseAtk": 145,
+      "baseDef": 150,
+      "baseSpa": 105,
+      "baseSpd": 110,
+      "baseSpe": 110,
+      "abilities": ["かたいツメ"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 376,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10288,
+    "pokeapiSpeciesId": 545,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10513],
+    "pokemon": {
+      "dexNo": 545,
+      "nameJa": "メガペンドラー",
+      "nameEn": "Mega Scolipede",
+      "form": "mega",
+      "type1": "bug",
+      "type2": "poison",
+      "baseHp": 60,
+      "baseAtk": 140,
+      "baseDef": 149,
+      "baseSpa": 75,
+      "baseSpd": 99,
+      "baseSpe": 62,
+      "abilities": ["シェルアーマー"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 545,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10289,
+    "pokeapiSpeciesId": 560,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10514],
+    "pokemon": {
+      "dexNo": 560,
+      "nameJa": "メガズルズキン",
+      "nameEn": "Mega Scrafty",
+      "form": "mega",
+      "type1": "dark",
+      "type2": "fighting",
+      "baseHp": 65,
+      "baseAtk": 130,
+      "baseDef": 135,
+      "baseSpa": 55,
+      "baseSpd": 135,
+      "baseSpe": 68,
+      "abilities": ["いかく"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 560,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10290,
+    "pokeapiSpeciesId": 604,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10515],
+    "pokemon": {
+      "dexNo": 604,
+      "nameJa": "メガシビルドン",
+      "nameEn": "Mega Eelektross",
+      "form": "mega",
+      "type1": "electric",
+      "type2": null,
+      "baseHp": 85,
+      "baseAtk": 145,
+      "baseDef": 80,
+      "baseSpa": 135,
+      "baseSpd": 90,
+      "baseSpe": 80,
+      "abilities": ["うなぎのぼり"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 604,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10295,
+    "pokeapiSpeciesId": 668,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10520],
+    "pokemon": {
+      "dexNo": 668,
+      "nameJa": "メガカエンジシ",
+      "nameEn": "Mega Pyroar",
+      "form": "mega",
+      "type1": "fire",
+      "type2": "normal",
+      "baseHp": 86,
+      "baseAtk": 88,
+      "baseDef": 92,
+      "baseSpa": 129,
+      "baseSpd": 86,
+      "baseSpe": 126,
+      "abilities": ["ほのおのたてがみ"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 668,
+        "form": "male"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10297,
+    "pokeapiSpeciesId": 687,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10522],
+    "pokemon": {
+      "dexNo": 687,
+      "nameJa": "メガカラマネロ",
+      "nameEn": "Mega Malamar",
+      "form": "mega",
+      "type1": "dark",
+      "type2": "psychic",
+      "baseHp": 86,
+      "baseAtk": 102,
+      "baseDef": 88,
+      "baseSpa": 98,
+      "baseSpd": 120,
+      "baseSpe": 88,
+      "abilities": ["あまのじゃく"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 687,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10298,
+    "pokeapiSpeciesId": 689,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10523],
+    "pokemon": {
+      "dexNo": 689,
+      "nameJa": "メガガメノデス",
+      "nameEn": "Mega Barbaracle",
+      "form": "mega",
+      "type1": "rock",
+      "type2": "fighting",
+      "baseHp": 72,
+      "baseAtk": 140,
+      "baseDef": 130,
+      "baseSpa": 64,
+      "baseSpd": 106,
+      "baseSpe": 88,
+      "abilities": ["かたいツメ"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 689,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10299,
+    "pokeapiSpeciesId": 691,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10524],
+    "pokemon": {
+      "dexNo": 691,
+      "nameJa": "メガドラミドロ",
+      "nameEn": "Mega Dragalge",
+      "form": "mega",
+      "type1": "poison",
+      "type2": "dragon",
+      "baseHp": 65,
+      "baseAtk": 85,
+      "baseDef": 105,
+      "baseSpa": 132,
+      "baseSpd": 163,
+      "baseSpe": 44,
+      "abilities": ["さいせいりょく"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 691,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10303,
+    "pokeapiSpeciesId": 870,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10528],
+    "pokemon": {
+      "dexNo": 870,
+      "nameJa": "メガタイレーツ",
+      "nameEn": "Mega Falinks",
+      "form": "mega",
+      "type1": "fighting",
+      "type2": null,
+      "baseHp": 65,
+      "baseAtk": 135,
+      "baseDef": 135,
+      "baseSpa": 70,
+      "baseSpd": 65,
+      "baseSpe": 100,
+      "abilities": ["まけんき"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 870,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10304,
+    "pokeapiSpeciesId": 26,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10529],
+    "pokemon": {
+      "dexNo": 26,
+      "nameJa": "メガライチュウX",
+      "nameEn": "Mega Raichu X",
+      "form": "mega-x",
+      "type1": "electric",
+      "type2": null,
+      "baseHp": 60,
+      "baseAtk": 135,
+      "baseDef": 95,
+      "baseSpa": 90,
+      "baseSpd": 95,
+      "baseSpe": 110,
+      "abilities": ["エレキメイカー"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 26,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10305,
+    "pokeapiSpeciesId": 26,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10530],
+    "pokemon": {
+      "dexNo": 26,
+      "nameJa": "メガライチュウY",
+      "nameEn": "Mega Raichu Y",
+      "form": "mega-y",
+      "type1": "electric",
+      "type2": null,
+      "baseHp": 60,
+      "baseAtk": 100,
+      "baseDef": 55,
+      "baseSpa": 160,
+      "baseSpd": 80,
+      "baseSpe": 130,
+      "abilities": ["ノーガード"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 26,
+        "form": "normal"
+      }
+    }
+  },
+  {
+    "pokeapiId": 10308,
+    "pokeapiSpeciesId": 398,
+    "pokeapiIsDefault": false,
+    "sourceFormIds": [10533],
+    "pokemon": {
+      "dexNo": 398,
+      "nameJa": "メガムクホーク",
+      "nameEn": "Mega Staraptor",
+      "form": "mega",
+      "type1": "fighting",
+      "type2": "flying",
+      "baseHp": 85,
+      "baseAtk": 140,
+      "baseDef": 100,
+      "baseSpa": 60,
+      "baseSpd": 90,
+      "baseSpe": 110,
+      "abilities": ["あまのじゃく"],
+      "isMega": true,
+      "basePokemon": {
+        "dexNo": 398,
+        "form": "normal"
+      }
+    }
+  }
+]

@@ -760,3 +760,16 @@
 - **判断:** Morpeko Hangry Modeの5関係差、Vivillon / Florges / Furfrou / Polteageist / Alcremie / SinistchaのPokéAPI上のform統合、Mega Meowstic男女分離を上流表現のまま保持する。v1.1以降の更新、version group単位で合法範囲を確定できないItem、その他Champions固有要素は推測せずMASTER-009Bへ残す。MASTER-009は009A/009Bに分割し、009B完了まで全体を完了扱いにしない
 - **理由:** 公式PokeAPI masterへChampions v1.0 learnsetが追加済みであり、固定commitとレビュー可能なローカル変換データによって、前回監査の習得技不足を推測なしで解消できるため
 - **影響:** MASTER-009Aはv1.0基盤だけを完成させ、既存開発Rule / Seasonと3件のItemは変更しない。更新時は固定sourceを新commitへ明示的に更新し、manifest hash・件数・既知例外・3回連続seed・公開APIとParty/Battle統合を再検収する。次タスクはMASTER-009B、ARCHETYPE-004はその後とする
+
+## 2026-07-29 Champions現行版差分・ItemカタログMVP(MASTER-009B)
+
+### D-070: Regulation Set M-B固定差分と出典付きItemカタログ
+
+- **判断:** 現行クライアントをPokémon Champions Ver. 1.1.4、追加マスタ内容をVer. 1.1.0 / Regulation Set M-Bとして扱う。Nintendo公式更新履歴、Pokémon HOME公式Regulation Set M-B・対象Pokemon一覧で版境界を確認し、PokéAPI PR #1559 / #1560 / #1611を含むcommit `227b573712414a86ba299d322fa398fbb2893edc`と、最初の生成済みapi-data commit `bf40800cc9d1ffd04a3fc14347d2ad24d470526b`へ入力を固定する
+- **判断:** MASTER-009Aとの差分はPokemon・フォーム38件(通常22 / Mega 16)、Move 6件、PokemonMove 2,416件、削除0件とする。追加フォームが参照するAbilityは上流上29種類だが、既存v1.0の自然キーと照合した未登録差分は9件であり、最終件数をPokemon 319、Move 496、Ability 200、PokemonMove 19,810とする。Eelevate / Fire Maneの上流未収録日本語名だけは公式ポケモンずかんを出典として補完する
+- **判断:** Item masterはChampionsで合法な全Itemの完全一覧ではなく、出典付きで確認できたItemのカタログとする。MASTER-009Bでは既存3件を変更せず、PokéAPI全Itemや過去作品から合法性を推測しない。完全な公式一覧が将来公開された場合に版と出典を固定して追加更新し、一般公開サイトでも全Item網羅を表示しない
+- **判断:** ARCHETYPE-004では全30構築に出典URLを必須とし、Pokemon・Move・Abilityを既存masterから選ぶ。Itemは出典で明示されたものだけを追加し、持ち物が不明な構築は採用しない。実際に持ち物なしと確認できる場合だけnullを許容し、actualStats、Rule / Season、技、本文・画像を推測・転載しない
+- **判断:** 通常seedは固定CSVから生成した差分JSONとv1.0 JSONだけを読み、外部通信しない。Ability・Item・Move・Pokemon・PokemonMoveを単一transactionで自然キーupsertし、319対象Pokemonの習得関係だけを現行スナップショットへ同期する。元データ・ファイルSHA-256・取得日・版・PR・BSD-3-Clause notice・既知制限をmanifestと同梱文書へ保持する
+- **判断:** Move tagは構造化された正のpriorityから得られる`priority`だけを付け、setup / hazard / screen / status / pivot、Item / Ability tagを名称や説明文から推測しない。Pyroarの上流form統合、Megaの別Pokemon表現、既存v1.0関係の非破壊を品質検収へ固定する
+- **理由:** 公開確認できる現行Pokemon・Move・Ability・Champions Train習得関係は正確に更新できる一方、完全な公式Item合法性集合は公開情報から再現できない。網羅性を虚偽表示せず、出典単位のItem追加へ責務を分けることで、正確性を維持したままARCHETYPE-004へ進むため
+- **影響:** MASTER-009A / 009Bの完了でMASTER-009のMVPを完了可能とする。Item全合法集合、構築ごとの持ち物・actualStats、Regulation Set M-Bに対応する正式Rule / Seasonは既知制限としてARCHETYPE-004以降の出典確認へ残す

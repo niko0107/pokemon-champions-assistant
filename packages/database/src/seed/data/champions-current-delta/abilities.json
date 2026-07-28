@@ -1,0 +1,56 @@
+[
+  {
+    "pokeapiId": 4,
+    "nameJa": "カブトアーマー",
+    "nameEn": "Battle Armor",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 21,
+    "nameJa": "きゅうばん",
+    "nameEn": "Suction Cups",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 27,
+    "nameJa": "ほうし",
+    "nameEn": "Effect Spore",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 108,
+    "nameJa": "よちむ",
+    "nameEn": "Forewarn",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 218,
+    "nameJa": "もふもふ",
+    "nameEn": "Fluffy",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 226,
+    "nameJa": "エレキメイカー",
+    "nameEn": "Electric Surge",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 283,
+    "nameJa": "おうごんのからだ",
+    "nameEn": "Good as Gold",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 312,
+    "nameJa": "うなぎのぼり",
+    "nameEn": "Eelevate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 313,
+    "nameJa": "ほのおのたてがみ",
+    "nameEn": "Fire Mane",
+    "effectTags": []
+  }
+]

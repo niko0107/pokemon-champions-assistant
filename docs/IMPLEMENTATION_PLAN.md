@@ -210,10 +210,10 @@
 - **前提タスク:** AUTH-004, MASTER-005
 - **対象外:** 管理画面 UI(WEB-011)
 
-### ⬜ MASTER-009 マスタデータ本格投入(全体)
+### ✅ MASTER-009 マスタデータ本格投入(全体)
 
-- **目的:** MASTER-009A / 009Bを完了し、対象ルールの公開マスタとChampions現行版固有要素を揃える
-- **完了条件:** MASTER-009A / 009Bがともに完了している
+- **目的:** MASTER-009A / 009Bを完了し、Champions現行版で公開確認できるPokemon・Move・Ability・PokemonMoveと、出典付きItemカタログを揃える
+- **完了条件:** MASTER-009A / 009Bがともに完了し、Itemの全合法集合を推測せず既知制限として明示している
 
 ### ✅ MASTER-009A PokéAPI Champions v1.0公開マスタ投入
 
@@ -225,13 +225,13 @@
 - **前提タスク:** MASTER-005, MASTER-008
 - **対象外:** Champions v1.1以降、Item合法範囲の本格投入、DB/API/Web変更
 
-### ⬜ MASTER-009B Champions現行版差分・Item・固有要素補完
+### ✅ MASTER-009B Champions現行版差分・Item・固有要素補完
 
-- **目的:** v1.0スナップショット以降のChampions差分、使用可能Item、未確認の固有要素を公式根拠に基づいて補完する
-- **作業範囲:** 現行版差分監査、Item合法範囲、Champions固有データの手動補完と再検収
+- **目的:** v1.0スナップショットへPokémon Champions Ver. 1.1.4時点(Regulation Set M-B)の公開確認可能な差分を反映する
+- **作業範囲:** Pokemon・フォーム38件、Move 6件、Abilityの自然キー差分、Champions Train習得関係2,416件の固定スナップショットと、ItemカタログMVP方針・既知制限の記録
 - **変更予定パッケージ:** packages/database(データ中心)、docs
-- **完了条件:** 対象Season/Ruleの現行公開マスタ範囲と未確認項目が確定し、MASTER-009全体の完了可否を判断できる
-- **必要なテスト:** 差分件数、出典、既存v1.0スナップショット非破壊、seed冪等性
+- **完了条件:** Pokemon 319件、Move 496件、Ability 200件、PokemonMove 19,810件、Item 3件を冪等投入でき、全合法Item集合を保証しないことと未確認項目が明示されている
+- **必要なテスト:** 固定commit・差分件数・日本語名・Mega元・既存v1.0スナップショット非破壊・Item不変・3回連続seed・公開API・Party/Battle統合
 - **前提タスク:** MASTER-009A
 - **対象外:** ARCHETYPE-004、API/Web/DBスキーマ変更
 
@@ -370,11 +370,11 @@
 ### ⬜ ARCHETYPE-004 構築データ初期登録(30件)
 
 - **目的:** MVP 用のテンプレ構築データを登録する(運用タスク、§15 フェーズ1)
-- **作業範囲:** 攻略サイト調査→構造化データ登録(本文・画像は転載しない。出典 URL のみ)
+- **作業範囲:** 攻略サイト調査→構造化データ登録(本文・画像は転載しない。出典 URL のみ)。Pokemon・Move・Abilityは既存masterから選び、Itemは出典で明示されたものだけを追加する
 - **変更予定パッケージ:** なし(データのみ)
-- **完了条件:** published 30件、全件に出典 URL がある
+- **完了条件:** published 30件、全件に出典URLがあり、持ち物・actualStats・対象Rule/Seasonを推測していない。持ち物不明の構築は採用せず、持ち物なしが確認できる場合だけnullとする
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002, MASTER-009B(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
@@ -838,4 +838,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **MASTER-009B Champions現行版差分・Item・固有要素補完**。
+次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。

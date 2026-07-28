@@ -9,7 +9,7 @@ import {
   type SampleMasterData,
 } from "./schema";
 
-const sourcePokemonSchema = z
+export const championsSourcePokemonSchema = z
   .object({
     pokeapiId: z.number().int().positive(),
     pokeapiSpeciesId: z.number().int().positive(),
@@ -19,19 +19,19 @@ const sourcePokemonSchema = z
   })
   .strict();
 
-const sourceMoveSchema = moveMasterSchema
+export const championsSourceMoveSchema = moveMasterSchema
   .extend({
     pokeapiId: z.number().int().positive(),
   })
   .strict();
 
-const sourceAbilitySchema = abilityMasterSchema
+export const championsSourceAbilitySchema = abilityMasterSchema
   .extend({
     pokeapiId: z.number().int().positive(),
   })
   .strict();
 
-const sourcePokemonMovesSchema = z.array(
+export const championsSourcePokemonMovesSchema = z.array(
   z
     .object({
       pokemonId: z.number().int().positive(),
@@ -101,49 +101,70 @@ export const championsV1SourceManifest = sourceManifestSchema.parse(
   loadJson("source-manifest.json"),
 );
 export const championsV1SourcePokemons = z
-  .array(sourcePokemonSchema)
+  .array(championsSourcePokemonSchema)
   .parse(loadJson("pokemons.json"));
-export const championsV1SourceMoves = z.array(sourceMoveSchema).parse(loadJson("moves.json"));
+export const championsV1SourceMoves = z
+  .array(championsSourceMoveSchema)
+  .parse(loadJson("moves.json"));
 export const championsV1SourceAbilities = z
-  .array(sourceAbilitySchema)
+  .array(championsSourceAbilitySchema)
   .parse(loadJson("abilities.json"));
-export const championsV1SourcePokemonMoves = sourcePokemonMovesSchema.parse(
+export const championsV1SourcePokemonMoves = championsSourcePokemonMovesSchema.parse(
   loadJson("pokemon-moves.json"),
 );
 
-const pokemonReferenceByPokeapiId = new Map(
-  championsV1SourcePokemons.map((entry) => [
-    entry.pokeapiId,
-    pokemonReferenceSchema.parse({
-      dexNo: entry.pokemon.dexNo,
-      form: entry.pokemon.form,
-    }),
-  ]),
-);
-const moveNameByPokeapiId = new Map(
-  championsV1SourceMoves.map((move) => [move.pokeapiId, move.nameEn]),
-);
+export type ChampionsSourcePokemon = z.infer<typeof championsSourcePokemonSchema>;
+export type ChampionsSourceMove = z.infer<typeof championsSourceMoveSchema>;
+export type ChampionsSourceAbility = z.infer<typeof championsSourceAbilitySchema>;
+export type ChampionsSourcePokemonMoves = z.infer<typeof championsSourcePokemonMovesSchema>;
 
-const pokemonMoves = championsV1SourcePokemonMoves.flatMap((entry) => {
-  const pokemon = pokemonReferenceByPokeapiId.get(entry.pokemonId);
-  if (!pokemon) {
-    throw new Error(`PokemonMoveのPokeAPI Pokemon ID ${entry.pokemonId}を解決できません`);
-  }
-  return entry.moveIds.map((moveId) => {
-    const moveNameEn = moveNameByPokeapiId.get(moveId);
-    if (!moveNameEn) {
-      throw new Error(`PokemonMoveのPokeAPI Move ID ${moveId}を解決できません`);
+interface ChampionsSourceData {
+  pokemons: readonly ChampionsSourcePokemon[];
+  moves: readonly ChampionsSourceMove[];
+  abilities: readonly ChampionsSourceAbility[];
+  pokemonMoves: readonly ChampionsSourcePokemonMoves[number][];
+}
+
+export function buildChampionsMasterData(source: ChampionsSourceData): SampleMasterData {
+  const pokemonReferenceByPokeapiId = new Map(
+    source.pokemons.map((entry) => [
+      entry.pokeapiId,
+      pokemonReferenceSchema.parse({
+        dexNo: entry.pokemon.dexNo,
+        form: entry.pokemon.form,
+      }),
+    ]),
+  );
+  const moveNameByPokeapiId = new Map(source.moves.map((move) => [move.pokeapiId, move.nameEn]));
+
+  const pokemonMoves = source.pokemonMoves.flatMap((entry) => {
+    const pokemon = pokemonReferenceByPokeapiId.get(entry.pokemonId);
+    if (!pokemon) {
+      throw new Error(`PokemonMoveのPokeAPI Pokemon ID ${entry.pokemonId}を解決できません`);
     }
-    return { pokemon, moveNameEn };
+    return entry.moveIds.map((moveId) => {
+      const moveNameEn = moveNameByPokeapiId.get(moveId);
+      if (!moveNameEn) {
+        throw new Error(`PokemonMoveのPokeAPI Move ID ${moveId}を解決できません`);
+      }
+      return { pokemon, moveNameEn };
+    });
   });
-});
 
-export const championsV1MasterData: SampleMasterData = validateSampleMasterData({
-  pokemons: championsV1SourcePokemons.map((entry) => entry.pokemon),
-  moves: championsV1SourceMoves.map(({ pokeapiId: _pokeapiId, ...move }) => move),
-  items: sampleMasterData.items,
-  abilities: championsV1SourceAbilities.map(({ pokeapiId: _pokeapiId, ...ability }) => ability),
-  pokemonMoves,
-  seasons: sampleMasterData.seasons,
-  rules: sampleMasterData.rules,
+  return validateSampleMasterData({
+    pokemons: source.pokemons.map((entry) => entry.pokemon),
+    moves: source.moves.map(({ pokeapiId: _pokeapiId, ...move }) => move),
+    items: sampleMasterData.items,
+    abilities: source.abilities.map(({ pokeapiId: _pokeapiId, ...ability }) => ability),
+    pokemonMoves,
+    seasons: sampleMasterData.seasons,
+    rules: sampleMasterData.rules,
+  });
+}
+
+export const championsV1MasterData: SampleMasterData = buildChampionsMasterData({
+  pokemons: championsV1SourcePokemons,
+  moves: championsV1SourceMoves,
+  abilities: championsV1SourceAbilities,
+  pokemonMoves: championsV1SourcePokemonMoves,
 });

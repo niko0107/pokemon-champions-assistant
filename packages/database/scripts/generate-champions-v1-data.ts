@@ -8,6 +8,20 @@ import { z } from "zod";
 const JAPANESE_LANGUAGE_ID = 1;
 const ENGLISH_LANGUAGE_ID = 9;
 
+const expectedCountsSchema = z
+  .object({
+    pokemon: z.number().int().positive(),
+    pokemonSpecies: z.number().int().positive(),
+    pokemonFormRows: z.number().int().positive(),
+    nonDefaultPokemon: z.number().int().nonnegative(),
+    megaPokemon: z.number().int().positive(),
+    moves: z.number().int().positive(),
+    abilities: z.number().int().positive(),
+    pokemonMoves: z.number().int().positive(),
+    upstreamDisabledRelationsExcluded: z.number().int().nonnegative(),
+  })
+  .strict();
+
 const manifestSchema = z
   .object({
     filters: z
@@ -18,19 +32,19 @@ const manifestSchema = z
         moveMethodIdentifier: z.string().min(1),
       })
       .strict(),
-    expected: z
-      .object({
-        pokemon: z.number().int().positive(),
-        pokemonSpecies: z.number().int().positive(),
-        pokemonFormRows: z.number().int().positive(),
-        nonDefaultPokemon: z.number().int().nonnegative(),
-        megaPokemon: z.number().int().positive(),
-        moves: z.number().int().positive(),
-        abilities: z.number().int().positive(),
-        pokemonMoves: z.number().int().positive(),
-        upstreamDisabledRelationsExcluded: z.number().int().nonnegative(),
-      })
-      .strict(),
+    expected: expectedCountsSchema,
+    expectedFinal: expectedCountsSchema.optional(),
+    localizedAbilityNameOverrides: z
+      .array(
+        z
+          .object({
+            pokeapiId: z.number().int().positive(),
+            nameJa: z.string().trim().min(1),
+            source: z.string().url(),
+          })
+          .strict(),
+      )
+      .optional(),
     files: z
       .array(
         z
@@ -43,6 +57,29 @@ const manifestSchema = z
       .min(1),
   })
   .passthrough();
+
+const baselinePokemonSchema = z.array(
+  z
+    .object({
+      pokeapiId: z.number().int().positive(),
+    })
+    .passthrough(),
+);
+const baselineNamedResourceSchema = z.array(
+  z
+    .object({
+      nameEn: z.string().min(1),
+    })
+    .passthrough(),
+);
+const baselinePokemonMovesSchema = z.array(
+  z
+    .object({
+      pokemonId: z.number().int().positive(),
+      moveIds: z.array(z.number().int().positive()).min(1),
+    })
+    .strict(),
+);
 
 type CsvRow = Record<string, string>;
 
@@ -174,6 +211,10 @@ function writeJson(filePath: string, value: unknown): void {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+function loadJson(filePath: string): unknown {
+  return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
 function primaryForm(forms: readonly CsvRow[], pokemonId: number): CsvRow {
   const sorted = [...forms].sort(
     (left, right) => integer(left, "id", "pokemon_forms") - integer(right, "id", "pokemon_forms"),
@@ -259,7 +300,10 @@ function main(): void {
     );
   }
   const csvRoot = resolve(csvRootArgument);
-  const outputRoot = fileURLToPath(new URL("../src/seed/data/champions-v1/", import.meta.url));
+  const outputRoot = process.argv[3]
+    ? resolve(process.argv[3])
+    : fileURLToPath(new URL("../src/seed/data/champions-v1/", import.meta.url));
+  const baselineRoot = process.argv[4] ? resolve(process.argv[4]) : null;
   const manifestPath = resolve(outputRoot, "source-manifest.json");
   const manifest = manifestSchema.parse(JSON.parse(readFileSync(manifestPath, "utf8")));
 
@@ -370,6 +414,13 @@ function main(): void {
     "name",
     "ability_names",
   );
+  for (const override of manifest.localizedAbilityNameOverrides ?? []) {
+    const key = `${override.pokeapiId}:${JAPANESE_LANGUAGE_ID}`;
+    if (abilityNames.has(key)) {
+      throw new Error(`Ability ID ${override.pokeapiId}の日本語名は上流CSVに既に存在します`);
+    }
+    abilityNames.set(key, override.nameJa);
+  }
 
   const targetAbilityIds = new Set<number>();
   const pokemonOutput = [...targetPokemonIds]
@@ -577,7 +628,7 @@ function main(): void {
         .map((entry) => entry.moveId),
     }));
 
-  const actual = {
+  const finalActual = {
     pokemon: pokemonOutput.length,
     pokemonSpecies: new Set(pokemonOutput.map((entry) => entry.pokeapiSpeciesId)).size,
     pokemonFormRows: pokemonOutput.reduce((total, entry) => total + entry.sourceFormIds.length, 0),
@@ -587,20 +638,92 @@ function main(): void {
     abilities: abilityOutput.length,
     pokemonMoves: pokemonMoves.length,
   };
+
+  let outputPokemons = pokemonOutput;
+  let outputMoves = moveOutput;
+  let outputAbilities = abilityOutput;
+  let outputPokemonMoves = pokemonMoveOutput;
+
+  if (baselineRoot !== null) {
+    const baselinePokemons = baselinePokemonSchema.parse(
+      loadJson(resolve(baselineRoot, "pokemons.json")),
+    );
+    const baselineMoves = baselineNamedResourceSchema.parse(
+      loadJson(resolve(baselineRoot, "moves.json")),
+    );
+    const baselineAbilities = baselineNamedResourceSchema.parse(
+      loadJson(resolve(baselineRoot, "abilities.json")),
+    );
+    const baselinePokemonMoves = baselinePokemonMovesSchema.parse(
+      loadJson(resolve(baselineRoot, "pokemon-moves.json")),
+    );
+    const baselinePokemonIds = new Set(baselinePokemons.map((entry) => entry.pokeapiId));
+    const baselineMoveNames = new Set(baselineMoves.map((entry) => entry.nameEn));
+    const baselineAbilityNames = new Set(baselineAbilities.map((entry) => entry.nameEn));
+    const baselineRelationKeys = new Set(
+      baselinePokemonMoves.flatMap((entry) =>
+        entry.moveIds.map((moveId) => `${entry.pokemonId}:${moveId}`),
+      ),
+    );
+    const finalRelationKeys = new Set(
+      pokemonMoveOutput.flatMap((entry) =>
+        entry.moveIds.map((moveId) => `${entry.pokemonId}:${moveId}`),
+      ),
+    );
+    const removedBaselineRelations = [...baselineRelationKeys].filter(
+      (relationKey) => !finalRelationKeys.has(relationKey),
+    );
+    if (removedBaselineRelations.length > 0) {
+      throw new Error(
+        `基準snapshotから削除されたPokemonMoveがあります: ${removedBaselineRelations.length}件`,
+      );
+    }
+
+    outputPokemons = pokemonOutput.filter((entry) => !baselinePokemonIds.has(entry.pokeapiId));
+    outputMoves = moveOutput.filter((entry) => !baselineMoveNames.has(entry.nameEn));
+    outputAbilities = abilityOutput.filter((entry) => !baselineAbilityNames.has(entry.nameEn));
+    outputPokemonMoves = pokemonMoveOutput
+      .map((entry) => ({
+        pokemonId: entry.pokemonId,
+        moveIds: entry.moveIds.filter(
+          (moveId) => !baselineRelationKeys.has(`${entry.pokemonId}:${moveId}`),
+        ),
+      }))
+      .filter((entry) => entry.moveIds.length > 0);
+  }
+
+  const actual = {
+    pokemon: outputPokemons.length,
+    pokemonSpecies: new Set(outputPokemons.map((entry) => entry.pokeapiSpeciesId)).size,
+    pokemonFormRows: outputPokemons.reduce((total, entry) => total + entry.sourceFormIds.length, 0),
+    nonDefaultPokemon: outputPokemons.filter((entry) => !entry.pokeapiIsDefault).length,
+    megaPokemon: outputPokemons.filter((entry) => entry.pokemon.isMega).length,
+    moves: outputMoves.length,
+    abilities: outputAbilities.length,
+    pokemonMoves: outputPokemonMoves.reduce((total, entry) => total + entry.moveIds.length, 0),
+  };
   for (const [key, value] of Object.entries(actual)) {
     const expected = manifest.expected[key as keyof typeof actual];
     if (value !== expected) {
       throw new Error(`${key}件数が固定manifestと一致しません: ${value} !== ${expected}`);
     }
   }
+  if (manifest.expectedFinal) {
+    for (const [key, value] of Object.entries(finalActual)) {
+      const expected = manifest.expectedFinal[key as keyof typeof finalActual];
+      if (value !== expected) {
+        throw new Error(`最終${key}件数が固定manifestと一致しません: ${value} !== ${expected}`);
+      }
+    }
+  }
 
-  writeJson(resolve(outputRoot, "pokemons.json"), pokemonOutput);
-  writeJson(resolve(outputRoot, "moves.json"), moveOutput);
-  writeJson(resolve(outputRoot, "abilities.json"), abilityOutput);
-  writeJson(resolve(outputRoot, "pokemon-moves.json"), pokemonMoveOutput);
+  writeJson(resolve(outputRoot, "pokemons.json"), outputPokemons);
+  writeJson(resolve(outputRoot, "moves.json"), outputMoves);
+  writeJson(resolve(outputRoot, "abilities.json"), outputAbilities);
+  writeJson(resolve(outputRoot, "pokemon-moves.json"), outputPokemonMoves);
 
   console.log(
-    `✅ Champions v1.0 data generated: Pokemon=${actual.pokemon}, Move=${actual.moves}, Ability=${actual.abilities}, PokemonMove=${actual.pokemonMoves}`,
+    `✅ Champions data generated: Pokemon=${actual.pokemon}, Move=${actual.moves}, Ability=${actual.abilities}, PokemonMove=${actual.pokemonMoves}`,
   );
 }
 
