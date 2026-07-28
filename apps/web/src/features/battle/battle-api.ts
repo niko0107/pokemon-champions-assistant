@@ -6,6 +6,8 @@ import {
   battleSessionResponseSchema,
   observationCreateSchema,
   observationResponseSchema,
+  sessionCounterplanExplanationStatusParamsSchema,
+  sessionCounterplanExplanationStatusResponseSchema,
   sessionCounterplanResponseSchema,
   undoObservationResponseSchema,
   type BattleCandidateSelectResponse,
@@ -13,6 +15,7 @@ import {
   type BattleSessionCreate,
   type BattleSessionResponse,
   type ObservationResponse,
+  type SessionCounterplanExplanationStatusResponse,
   type SessionCounterplanResponse,
   type UndoObservationResponse,
 } from "@pokemon-champions/shared";
@@ -22,6 +25,8 @@ export const battleQueryKeys = {
   session: (sessionId: string) => ["battle", "session", sessionId] as const,
   candidates: (sessionId: string) => ["battle", "candidates", sessionId] as const,
   counterplan: (sessionId: string) => ["battle", "counterplan", sessionId] as const,
+  counterplanExplanation: (sessionId: string, counterplanUpdatedAt: number) =>
+    ["battle", "counterplan-explanation", sessionId, counterplanUpdatedAt] as const,
   pokemonSearch: (query: string) => ["battle", "pokemon-search", query] as const,
   moveSearch: (pokemonId: number, query: string) =>
     ["battle", "move-search", pokemonId, query] as const,
@@ -90,6 +95,19 @@ export async function fetchBattleCounterplan(
     throw new ApiError("APIレスポンスの形式が正しくありません。");
   }
   return response;
+}
+
+export async function fetchBattleCounterplanExplanation(
+  sessionId: string,
+): Promise<SessionCounterplanExplanationStatusResponse> {
+  const { id } = sessionCounterplanExplanationStatusParamsSchema.parse({ id: sessionId });
+  return apiClient.request<SessionCounterplanExplanationStatusResponse>(
+    `/sessions/${id}/counterplan/explanation`,
+    {
+      authenticated: true,
+      responseSchema: sessionCounterplanExplanationStatusResponseSchema,
+    },
+  );
 }
 
 export function addPokemonObservation(

@@ -68,6 +68,8 @@ interface BattleMockState {
   selectionBodies: unknown[];
   candidateRequests: number;
   counterplanRequests: number;
+  counterplanExplanationRequests: number;
+  counterplanExplanationStatus: "ready" | "pending" | "failed" | "unavailable";
   rejectNextObservation: boolean;
   rejectNextUndo: boolean;
 }
@@ -80,6 +82,8 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
     selectionBodies: [],
     candidateRequests: 0,
     counterplanRequests: 0,
+    counterplanExplanationRequests: 0,
+    counterplanExplanationStatus: "unavailable",
     rejectNextObservation: false,
     rejectNextUndo: false,
   };
@@ -310,6 +314,32 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
         status: "active",
         updatedAt: "2026-07-26T00:00:00.000Z",
       },
+    });
+  });
+  await page.route(`**/api/v1/sessions/${sessionId}/counterplan/explanation`, async (route) => {
+    state.counterplanExplanationRequests += 1;
+    await route.fulfill({
+      status: 200,
+      json:
+        state.counterplanExplanationStatus === "ready"
+          ? {
+              status: "ready",
+              explanation: {
+                summary: "AIがまとめた全体概要です。",
+                selectionExplanation: "AIがまとめた選出理由です。",
+                perOpponent: [
+                  {
+                    opponentPokemonId: 10006,
+                    explanation: "AIがまとめたメガリザードンXへの説明です。",
+                  },
+                ],
+                strategyExplanation: "AIがまとめた立ち回りです。",
+              },
+            }
+          : {
+              status: state.counterplanExplanationStatus,
+              explanation: null,
+            },
     });
   });
   await page.route(`**/api/v1/sessions/${sessionId}/counterplan`, async (route) => {
@@ -634,6 +664,10 @@ test("375pxで候補選択から名称付きcounterplanを表示できる", asyn
   await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
 
   await expect(page.getByRole("heading", { name: "おすすめ選出" })).toBeVisible();
+  await expect(page.getByText("相手ポケモン1体への対策です。")).toBeVisible();
+  await expect(page.getByText("選出はポケモンID 6です。")).toBeVisible();
+  await expect(page.getByText("ポケモンID 10006にはポケモンID 6がおすすめです。")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "テンプレート説明" })).toBeVisible();
   await expect(page.getByText("先発候補")).toBeVisible();
   await expect(page.getByText("リザードン", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("メガリザードンX", { exact: true }).first()).toBeVisible();
@@ -645,11 +679,89 @@ test("375pxで候補選択から名称付きcounterplanを表示できる", asyn
   await expect(page.getByText("積み展開に注意").first()).toBeVisible();
   expect(state.selectionBodies).toEqual([{ archetypeId: "30000000-0000-4000-8000-000000000001" }]);
   expect(state.counterplanRequests).toBe(1);
+  expect(state.counterplanExplanationRequests).toBe(1);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBe(true);
+});
+
+test("pending中はTemplateを維持し、readyでAI説明へ差し替えてポーリングを停止する", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const state = await mockBattleApis(page);
+  state.counterplanExplanationStatus = "pending";
+  await login(page);
+  await page.goto(`/battle/${sessionId}`);
+
+  await page.getByLabel("相手ポケモン").fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+  await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
+
+  await expect(page.getByText("相手ポケモン1体への対策です。")).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "AIによる説明を生成しています" }),
+  ).toBeVisible();
+  state.counterplanExplanationStatus = "ready";
+
+  await expect(page.getByText("AIがまとめた全体概要です。")).toBeVisible({
+    timeout: 5_000,
+  });
+  await expect(page.getByText("AIがまとめた選出理由です。")).toBeVisible();
+  await expect(page.getByText("AIがまとめた立ち回りです。")).toBeVisible();
+  await expect(page.getByText("AIがまとめたメガリザードンXへの説明です。")).toBeVisible();
+  await expect(page.getByText("先発候補")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "AIによる説明" })).toBeVisible();
+
+  const requestsAtReady = state.counterplanExplanationRequests;
+  await page.waitForTimeout(2_200);
+  expect(state.counterplanExplanationRequests).toBe(requestsAtReady);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
+test("failedでもTemplate説明と対策結果を維持する", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const state = await mockBattleApis(page);
+  state.counterplanExplanationStatus = "failed";
+  await login(page);
+  await page.goto(`/battle/${sessionId}`);
+
+  await page.getByLabel("相手ポケモン").fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+  await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
+
+  await expect(page.getByText("相手ポケモン1体への対策です。")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "生成できなかったため" })).toBeVisible();
+  await expect(page.getByText("先発候補")).toBeVisible();
+  expect(state.counterplanExplanationRequests).toBe(1);
+});
+
+test("状態API通信失敗でもTemplate説明と対策結果を維持する", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const state = await mockBattleApis(page);
+  await page.route(`**/api/v1/sessions/${sessionId}/counterplan/explanation`, async (route) => {
+    state.counterplanExplanationRequests += 1;
+    await route.abort("failed");
+  });
+  await login(page);
+  await page.goto(`/battle/${sessionId}`);
+
+  await page.getByLabel("相手ポケモン").fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+  await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
+
+  await expect(page.getByText("相手ポケモン1体への対策です。")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "テンプレート説明" })).toBeVisible();
+  await expect(page.getByText("先発候補")).toBeVisible();
+  await expect
+    .poll(() => state.counterplanExplanationRequests, { timeout: 4_000 })
+    .toBeGreaterThanOrEqual(2);
 });
 
 test("1440pxで技をキーボード入力でき、429を安全に表示してログアウトできる", async ({ page }) => {

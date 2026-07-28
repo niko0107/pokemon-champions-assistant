@@ -251,6 +251,9 @@ interface FetchMockOptions {
   counterplanStatus?: number;
   counterplanProblem?: unknown;
   counterplanDelayMs?: number;
+  counterplanExplanationResponses?: unknown[];
+  counterplanExplanationStatus?: number;
+  counterplanExplanationProblem?: unknown;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -264,6 +267,7 @@ function createFetchMock(options: FetchMockOptions = {}) {
   let observationSeq = 0;
   let undoRequestCount = 0;
   let candidateRequestCount = 0;
+  let counterplanExplanationRequestCount = 0;
   const observationResponses = new Map<string, Record<string, unknown>>();
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -412,6 +416,24 @@ function createFetchMock(options: FetchMockOptions = {}) {
               status: "active",
               updatedAt: "2026-07-26T00:00:00.000Z",
             }),
+      );
+    }
+    if (url.endsWith(`/sessions/${sessionId}/counterplan/explanation`)) {
+      counterplanExplanationRequestCount += 1;
+      return Promise.resolve(
+        options.counterplanExplanationStatus && options.counterplanExplanationStatus >= 400
+          ? jsonResponse(
+              options.counterplanExplanationProblem,
+              options.counterplanExplanationStatus,
+            )
+          : jsonResponse(
+              options.counterplanExplanationResponses?.[
+                Math.min(
+                  counterplanExplanationRequestCount - 1,
+                  options.counterplanExplanationResponses.length - 1,
+                )
+              ] ?? { status: "unavailable", explanation: null },
+            ),
       );
     }
     if (url.endsWith(`/sessions/${sessionId}/counterplan`)) {

@@ -1,12 +1,16 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import type {
+  CounterplanExplanation,
   CounterplanStrategyCodeValue,
   MatchupReasonCodeValue,
   MatchupVerdictValue,
   SessionCounterplanResponse,
 } from "@pokemon-champions/shared";
+import { sessionCounterplanExplanationStatusParamsSchema } from "@pokemon-champions/shared";
 import { useMemo } from "react";
+import { ApiError } from "../../lib/api-client";
 import { fetchPokemonDetail, fetchPokemonMoves, partyQueryKeys } from "../parties/party-api";
+import { battleQueryKeys, fetchBattleCounterplanExplanation } from "./battle-api";
 import { getBattleCounterplanErrorMessage } from "./battle-errors";
 
 const VERDICT_LABELS: Readonly<Record<MatchupVerdictValue, string>> = {
@@ -73,10 +77,31 @@ interface BattleCounterplanPanelProps {
   sessionId: string;
   enabled: boolean;
   response: SessionCounterplanResponse | undefined;
+  responseUpdatedAt: number;
   isLoading: boolean;
   isFetching: boolean;
   error: unknown;
   onRetry: () => void;
+}
+
+const EXPLANATION_POLL_INTERVAL_MS = 2_000;
+
+function shouldRetryExplanationStatus(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiError && [400, 401, 404].includes(error.status ?? 0)) {
+    return false;
+  }
+  return failureCount < 1;
+}
+
+function hasMatchingOpponentExplanations(
+  explanation: CounterplanExplanation,
+  response: SessionCounterplanResponse,
+): boolean {
+  if (explanation.perOpponent.length !== response.perOpponent.length) {
+    return false;
+  }
+  const expectedIds = new Set(response.perOpponent.map((item) => item.opponentPokemonId));
+  return explanation.perOpponent.every((item) => expectedIds.has(item.opponentPokemonId));
 }
 
 function formatNumber(value: number, maximumFractionDigits = 1): string {
@@ -186,11 +211,44 @@ export function BattleCounterplanPanel({
   sessionId,
   enabled,
   response,
+  responseUpdatedAt,
   isLoading,
   isFetching,
   error,
   onRetry,
 }: BattleCounterplanPanelProps) {
+  const hasValidSessionId = sessionCounterplanExplanationStatusParamsSchema.safeParse({
+    id: sessionId,
+  }).success;
+  const explanationStatus = useQuery({
+    queryKey: battleQueryKeys.counterplanExplanation(sessionId, responseUpdatedAt),
+    queryFn: () => fetchBattleCounterplanExplanation(sessionId),
+    enabled:
+      enabled &&
+      response !== undefined &&
+      error === null &&
+      responseUpdatedAt > 0 &&
+      hasValidSessionId,
+    retry: shouldRetryExplanationStatus,
+    refetchInterval: (query) =>
+      query.state.error === null && query.state.data?.status === "pending"
+        ? EXPLANATION_POLL_INTERVAL_MS
+        : false,
+  });
+  const readyExplanation =
+    explanationStatus.data?.status === "ready" &&
+    response &&
+    hasMatchingOpponentExplanations(explanationStatus.data.explanation, response)
+      ? explanationStatus.data.explanation
+      : null;
+  const explanation = readyExplanation ?? response?.explanation;
+  const explanationByOpponent = useMemo(
+    () =>
+      new Map(
+        explanation?.perOpponent.map((item) => [item.opponentPokemonId, item.explanation]) ?? [],
+      ),
+    [explanation],
+  );
   const pokemonIds = useMemo(() => collectPokemonIds(response), [response]);
   const pokemonQueries = useQueries({
     queries: pokemonIds.map((pokemonId) => ({
@@ -312,6 +370,61 @@ export function BattleCounterplanPanel({
             </p>
           )}
 
+          {explanation && (
+            <section
+              aria-labelledby={`counterplan-explanation-heading-${sessionId}`}
+              className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5 sm:p-7"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black tracking-[0.14em] text-blue-700">EXPLANATION</p>
+                  <h3
+                    id={`counterplan-explanation-heading-${sessionId}`}
+                    className="mt-2 text-xl font-black text-blue-950 sm:text-2xl"
+                  >
+                    対策の説明
+                  </h3>
+                </div>
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="max-w-full rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold leading-5 text-blue-900"
+                >
+                  {readyExplanation
+                    ? "AIによる説明"
+                    : explanationStatus.data?.status === "pending"
+                      ? "AIによる説明を生成しています。現在はテンプレート説明を表示しています。"
+                      : explanationStatus.data?.status === "failed"
+                        ? "AIによる説明を生成できなかったため、テンプレート説明を表示しています。"
+                        : "現在はテンプレート説明を表示しています。"}
+                </p>
+              </div>
+
+              <div aria-live="polite" className="mt-5 grid gap-5 lg:grid-cols-2">
+                <div className="min-w-0">
+                  <h4 className="text-sm font-black text-blue-950">全体概要</h4>
+                  <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    {explanation.summary}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-black text-blue-950">選出理由</h4>
+                  <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    {explanation.selectionExplanation}
+                  </p>
+                </div>
+                {explanation.strategyExplanation !== null && (
+                  <div className="min-w-0 lg:col-span-2">
+                    <h4 className="text-sm font-black text-blue-950">立ち回り</h4>
+                    <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                      {explanation.strategyExplanation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           <section aria-labelledby="selection-heading">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -431,6 +544,17 @@ export function BattleCounterplanPanel({
                       </p>
                     )}
                   </div>
+
+                  {explanationByOpponent.has(opponent.opponentPokemonId) && (
+                    <div className="mt-4 rounded-xl border-l-4 border-blue-700 bg-blue-50 px-4 py-3">
+                      <h5 className="text-xs font-black tracking-[0.12em] text-blue-800">
+                        相手別の説明
+                      </h5>
+                      <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                        {explanationByOpponent.get(opponent.opponentPokemonId)}
+                      </p>
+                    </div>
+                  )}
 
                   <ol className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
                     {opponent.recommendations.map((recommendation) => (

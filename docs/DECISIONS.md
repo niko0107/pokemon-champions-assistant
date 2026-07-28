@@ -725,3 +725,13 @@
 - **判断:** ログは`cache_hit / cache_miss / cache_invalid / enqueue_success / enqueue_deduplicated / generation_success / generation_timeout / generation_rate_limit / generation_invalid_output / generation_failed / redis_unavailable / queue_unavailable`だけとし、APIキー、Redis URL/password、prompt、生成文、notes、JWT、user/session識別情報、job payloadを出さない
 - **理由:** PRODUCT_SPEC §12.2の「Templateを即時表示し、LLM文を生成でき次第差し替える」を、Redis・Anthropicを単一障害点にせず、同じ構造化入力の重複課金を避ける決定的な非同期境界として実現するため
 - **影響:** 既存counterplanの構造化計算・認証・状態規則は変わらず、cache hit時だけ`explanation`がAnthropic文になる。Webでのpollingと説明表示はWEB-009、独立Worker deployment、WebSocket/SSE、手動再生成は対象外のまま
+
+## 2026-07-28 LLM生成文の表示(WEB-009)
+
+### D-067: pending中だけの2秒ポーリングとTemplate表示の維持
+
+- **判断:** 対策タブはcounterplanレスポンスのTemplate説明を即時表示し、生成済み説明APIをTanStack Queryで2秒間隔に取得する。ポーリングは`pending`中だけ継続し、`ready / failed / unavailable`、復旧不能な400/401/404、最大1回の再試行後の通信・サーバーエラー、unmount、Sessionまたはcounterplan更新で停止する
+- **判断:** `ready`では説明文だけをAI生成文へ差し替え、構造化counterplanは変更しない。`failed / unavailable`と状態API障害ではTemplate説明を維持し、Provider名、モデル、内部failure reason、Redis・Queue情報を表示しない
+- **判断:** summary、選出理由、立ち回り、相手別説明はHTML・Markdownとして解釈せずプレーンテキストで表示する。生成状態と差し替えは`role="status"`と`aria-live="polite"`で通知し、相手別説明は既存counterplanの相手IDと完全に対応する場合だけ採用する
+- **理由:** PRODUCT_SPEC §12.2の即時フォールバックと非同期差し替えを、対策情報の可用性・計算結果の不変性・利用者への安全な状態通知を維持して実現するため
+- **影響:** API・shared契約・LLM・Redis・BullMQ・MATCHUPは変更せず、Webはready後や終端状態で不要な追加通信を行わない。WebSocket/SSE、手動再生成、Provider表示は対象外のまま

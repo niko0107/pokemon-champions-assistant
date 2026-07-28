@@ -627,6 +627,7 @@ function BattleWorkspace({
             sessionId={session.id}
             enabled={activeTab === "counterplan"}
             response={counterplan.data}
+            responseUpdatedAt={counterplan.dataUpdatedAt}
             isLoading={counterplan.isLoading}
             isFetching={counterplan.isFetching}
             error={counterplan.error}
