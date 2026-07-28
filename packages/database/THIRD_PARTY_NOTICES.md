@@ -3,10 +3,13 @@
 ## PokéAPI
 
 The Pokémon, Move, Ability, form, localized-name, and Pokémon/Move relationship data used by the
-Pokémon Champions v1.0 seed is derived from the PokéAPI project:
+Pokémon Champions v1.0 seed and the Regulation Set M-B delta is derived from the PokéAPI project:
 
 - Source: <https://github.com/PokeAPI/pokeapi>
 - Champions v1.0 learnsets: <https://github.com/PokeAPI/pokeapi/pull/1532>
+- Regulation Set M-B Pokémon/forms: <https://github.com/PokeAPI/pokeapi/pull/1560>
+- Regulation Set M-B Abilities: <https://github.com/PokeAPI/pokeapi/pull/1559>
+- Regulation Set M-B learnsets: <https://github.com/PokeAPI/pokeapi/pull/1611>
 - License: BSD 3-Clause
 
 Copyright (c) © 2013–2023 Paul Hallett and PokéAPI contributors

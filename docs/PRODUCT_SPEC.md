@@ -41,22 +41,22 @@
 
 ### 1.3 想定ユーザー
 
-| ユーザー層 | 利用シーン |
-|---|---|
+| ユーザー層         | 利用シーン                                                         |
+| ------------------ | ------------------------------------------------------------------ |
 | ランクマッチ中級者 | 選出画面(チームプレビュー)の90秒間に相手構築を予測して選出を決める |
-| 初心者 | 対戦後の振り返り・構築の学習 |
-| 上級者 | メタ把握・遭遇報告によるデータ貢献 |
+| 初心者             | 対戦後の振り返り・構築の学習                                       |
+| 上級者             | メタ把握・遭遇報告によるデータ貢献                                 |
 
 ### 1.4 用語定義
 
-| 用語 | 意味 |
-|---|---|
-| テンプレ構築 | 攻略サイト等で広く知られている定番パーティ構成 |
-| 一致度 | 判明した相手情報とテンプレ構築の合致度合い(0〜100%) |
-| 人気度 | 構築の使用率・注目度を表す複合指標 |
-| 遭遇報告 | ユーザーが実際に対戦で遭遇した構築の報告 |
-| 選出 | 6体のパーティから対戦に出す3体(ルールによる)を選ぶこと |
-| セッション | 1回の対戦に対応する入力・予測の単位 |
+| 用語         | 意味                                                   |
+| ------------ | ------------------------------------------------------ |
+| テンプレ構築 | 攻略サイト等で広く知られている定番パーティ構成         |
+| 一致度       | 判明した相手情報とテンプレ構築の合致度合い(0〜100%)    |
+| 人気度       | 構築の使用率・注目度を表す複合指標                     |
+| 遭遇報告     | ユーザーが実際に対戦で遭遇した構築の報告               |
+| 選出         | 6体のパーティから対戦に出す3体(ルールによる)を選ぶこと |
+| セッション   | 1回の対戦に対応する入力・予測の単位                    |
 
 ### 1.5 スコープ外(v1時点)
 
@@ -130,18 +130,18 @@ LLMで理由文を生成(非同期・キャッシュ)
 
 ## 3. 技術スタック
 
-| レイヤー | 技術 | 選定理由 |
-|---|---|---|
-| フロントエンド | React + TypeScript + Vite | SPA、型安全、開発速度 |
-| UI | Tailwind CSS | スマホ最適化しやすい |
-| 状態管理 | TanStack Query + Zustand | サーバー状態と入力状態の分離 |
-| バックエンド | Node.js (NestJS) + TypeScript | フロントと型共有(zodスキーマ共通化) |
-| DB | PostgreSQL 16 | JSONB活用、全文検索、信頼性 |
-| キャッシュ | Redis | セッション・候補キャッシュ |
-| LLM | Anthropic API (Claude) | 理由文・立ち回り文の生成 |
-| 認証 | メール+パスワード / OAuth (Google) | 参入障壁を下げる |
-| インフラ | 任意のPaaS(Render/Fly.io等)→将来AWS | MVPは低コスト運用 |
-| ゲームマスタデータ | PokéAPI等を初期投入+自前管理 | Champions固有要素(メガ等)は手動補完 |
+| レイヤー           | 技術                                | 選定理由                            |
+| ------------------ | ----------------------------------- | ----------------------------------- |
+| フロントエンド     | React + TypeScript + Vite           | SPA、型安全、開発速度               |
+| UI                 | Tailwind CSS                        | スマホ最適化しやすい                |
+| 状態管理           | TanStack Query + Zustand            | サーバー状態と入力状態の分離        |
+| バックエンド       | Node.js (NestJS) + TypeScript       | フロントと型共有(zodスキーマ共通化) |
+| DB                 | PostgreSQL 16                       | JSONB活用、全文検索、信頼性         |
+| キャッシュ         | Redis                               | セッション・候補キャッシュ          |
+| LLM                | Anthropic API (Claude)              | 理由文・立ち回り文の生成            |
+| 認証               | メール+パスワード / OAuth (Google)  | 参入障壁を下げる                    |
+| インフラ           | 任意のPaaS(Render/Fly.io等)→将来AWS | MVPは低コスト運用                   |
+| ゲームマスタデータ | PokéAPI等を初期投入+自前管理        | Champions固有要素(メガ等)は手動補完 |
 
 > 注: バックエンドは Python (FastAPI) でも可。チームのスキルセットに応じて選択する。本書では TypeScript 前提で記載する。
 
@@ -151,56 +151,56 @@ LLMで理由文を生成(非同期・キャッシュ)
 
 ### 4.1 ユーザー機能
 
-| ID | 機能 | 優先度 | MVP |
-|---|---|---|---|
-| U-01 | アカウント登録・ログイン | 高 | ○ |
-| U-02 | 自分のパーティ登録(6体、技・持ち物・特性・性格・努力値・テラス/メガ) | 高 | ○(1つ) |
-| U-03 | 複数パーティ保存・切替 | 中 | − |
-| U-04 | パーティ編集・削除 | 高 | ○ |
-| U-05 | 対戦記録の保存・閲覧 | 中 | − |
-| U-06 | 構築のお気に入り登録 | 低 | − |
+| ID   | 機能                                                                 | 優先度 | MVP    |
+| ---- | -------------------------------------------------------------------- | ------ | ------ |
+| U-01 | アカウント登録・ログイン                                             | 高     | ○      |
+| U-02 | 自分のパーティ登録(6体、技・持ち物・特性・性格・努力値・テラス/メガ) | 高     | ○(1つ) |
+| U-03 | 複数パーティ保存・切替                                               | 中     | −      |
+| U-04 | パーティ編集・削除                                                   | 高     | ○      |
+| U-05 | 対戦記録の保存・閲覧                                                 | 中     | −      |
+| U-06 | 構築のお気に入り登録                                                 | 低     | −      |
 
 ### 4.2 対戦支援機能
 
-| ID | 機能 | 優先度 | MVP |
-|---|---|---|---|
-| B-01 | 対戦セッション開始 | 高 | ○ |
-| B-02 | 相手ポケモン入力(オートコンプリート) | 高 | ○ |
-| B-03 | 技・持ち物・特性・先発/控え・メガ等の入力 | 高 | ○(ポケモン+技) |
-| B-04 | 構築候補のリアルタイム更新表示(上位3件) | 高 | ○ |
-| B-05 | 一致度→人気度→遭遇数→更新日ソート | 高 | ○(一致度+人気度) |
-| B-06 | 候補構築の選択・詳細表示 | 高 | ○ |
-| B-07 | 自パーティからのおすすめポケモン表示(3体+理由) | 高 | ○ |
-| B-08 | おすすめ選出(先発/控え/エース)表示 | 高 | ○ |
-| B-09 | 警戒技・警戒ムーブ表示 | 高 | ○ |
-| B-10 | 参考元記事リンク表示 | 中 | ○ |
-| B-11 | 入力の取り消し(観測情報のUndo) | 中 | ○ |
+| ID   | 機能                                           | 優先度 | MVP              |
+| ---- | ---------------------------------------------- | ------ | ---------------- |
+| B-01 | 対戦セッション開始                             | 高     | ○                |
+| B-02 | 相手ポケモン入力(オートコンプリート)           | 高     | ○                |
+| B-03 | 技・持ち物・特性・先発/控え・メガ等の入力      | 高     | ○(ポケモン+技)   |
+| B-04 | 構築候補のリアルタイム更新表示(上位3件)        | 高     | ○                |
+| B-05 | 一致度→人気度→遭遇数→更新日ソート              | 高     | ○(一致度+人気度) |
+| B-06 | 候補構築の選択・詳細表示                       | 高     | ○                |
+| B-07 | 自パーティからのおすすめポケモン表示(3体+理由) | 高     | ○                |
+| B-08 | おすすめ選出(先発/控え/エース)表示             | 高     | ○                |
+| B-09 | 警戒技・警戒ムーブ表示                         | 高     | ○                |
+| B-10 | 参考元記事リンク表示                           | 中     | ○                |
+| B-11 | 入力の取り消し(観測情報のUndo)                 | 中     | ○                |
 
 ### 4.3 管理機能
 
-| ID | 機能 | 優先度 | MVP |
-|---|---|---|---|
-| A-01 | テンプレ構築のCRUD(管理画面) | 高 | ○ |
-| A-02 | 人気度の手動調整 | 中 | ○(高/中/低の3段階) |
-| A-03 | シーズン・ルール管理 | 中 | ○ |
-| A-04 | 参考URL管理 | 中 | ○ |
-| A-05 | 構築の非表示(アーカイブ) | 中 | ○ |
-| A-06 | ゲームマスタデータ(ポケモン/技/持ち物)管理 | 高 | ○ |
+| ID   | 機能                                       | 優先度 | MVP                |
+| ---- | ------------------------------------------ | ------ | ------------------ |
+| A-01 | テンプレ構築のCRUD(管理画面)               | 高     | ○                  |
+| A-02 | 人気度の手動調整                           | 中     | ○(高/中/低の3段階) |
+| A-03 | シーズン・ルール管理                       | 中     | ○                  |
+| A-04 | 参考URL管理                                | 中     | ○                  |
+| A-05 | 構築の非表示(アーカイブ)                   | 中     | ○                  |
+| A-06 | ゲームマスタデータ(ポケモン/技/持ち物)管理 | 高     | ○                  |
 
 ---
 
 ## 5. 非機能要件
 
-| 項目 | 要件 |
-|---|---|
-| 応答速度 | 候補再計算API: p95で200ms以内(構築500件規模) |
-| 可用性 | MVP: 99%目標。ランクマ最終日等のスパイクに備えキャッシュ活用 |
-| 同時接続 | MVP: 100同時セッション |
-| 対応環境 | スマホブラウザ最優先(iOS Safari / Android Chrome)、PC対応 |
-| オフライン | 対象外(将来PWAキャッシュ検討) |
-| データ保持 | 対戦セッションは90日で自動アーカイブ |
-| 法務 | 攻略サイトの本文・画像は転載しない。構造化データ+出典URLのみ保持 |
-| 商標 | 任天堂/ポケモン社の非公式ツールである旨を明記 |
+| 項目       | 要件                                                             |
+| ---------- | ---------------------------------------------------------------- |
+| 応答速度   | 候補再計算API: p95で200ms以内(構築500件規模)                     |
+| 可用性     | MVP: 99%目標。ランクマ最終日等のスパイクに備えキャッシュ活用     |
+| 同時接続   | MVP: 100同時セッション                                           |
+| 対応環境   | スマホブラウザ最優先(iOS Safari / Android Chrome)、PC対応        |
+| オフライン | 対象外(将来PWAキャッシュ検討)                                    |
+| データ保持 | 対戦セッションは90日で自動アーカイブ                             |
+| 法務       | 攻略サイトの本文・画像は転載しない。構造化データ+出典URLのみ保持 |
+| 商標       | 任天堂/ポケモン社の非公式ツールである旨を明記                    |
 
 ---
 
@@ -223,92 +223,94 @@ seasons / rules
 
 #### pokemons(ポケモンマスタ)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | serial PK | |
-| dex_no | int | 図鑑番号 |
-| name_ja | text | 日本語名 |
-| name_en | text | 英語名(検索用) |
-| form | text | フォルム(メガ、リージョン等) |
-| type1 / type2 | text | タイプ |
-| base_hp/atk/def/spa/spd/spe | int | 種族値 |
-| abilities | jsonb | 取り得る特性リスト |
-| is_mega | bool | メガシンカ形態か |
-| base_pokemon_id | int FK nullable | メガ等の元ポケモン |
+| カラム                      | 型              | 説明                         |
+| --------------------------- | --------------- | ---------------------------- |
+| id                          | serial PK       |                              |
+| dex_no                      | int             | 図鑑番号                     |
+| name_ja                     | text            | 日本語名                     |
+| name_en                     | text            | 英語名(検索用)               |
+| form                        | text            | フォルム(メガ、リージョン等) |
+| type1 / type2               | text            | タイプ                       |
+| base_hp/atk/def/spa/spd/spe | int             | 種族値                       |
+| abilities                   | jsonb           | 取り得る特性リスト           |
+| is_mega                     | bool            | メガシンカ形態か             |
+| base_pokemon_id             | int FK nullable | メガ等の元ポケモン           |
 
 #### moves(技マスタ)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | serial PK | |
-| name_ja / name_en | text | 技名 |
-| type | text | タイプ |
-| category | text | physical / special / status |
-| power | int nullable | 威力 |
-| accuracy | int nullable | 命中 |
-| priority | int | 優先度(先制技判定に使用) |
-| tags | jsonb | `["setup","hazard","screen","pivot","status"]` 等の分類タグ |
+| カラム            | 型           | 説明                                                        |
+| ----------------- | ------------ | ----------------------------------------------------------- |
+| id                | serial PK    |                                                             |
+| name_ja / name_en | text         | 技名                                                        |
+| type              | text         | タイプ                                                      |
+| category          | text         | physical / special / status                                 |
+| power             | int nullable | 威力                                                        |
+| accuracy          | int nullable | 命中                                                        |
+| priority          | int          | 優先度(先制技判定に使用)                                    |
+| tags              | jsonb        | `["setup","hazard","screen","pivot","status"]` 等の分類タグ |
 
 `tags` は警戒技の判定・立ち回り提案に使用する(例: `hazard`=ステルスロック系、`screen`=壁、`setup`=積み技)。
 
 #### items(持ち物マスタ)/ abilities(特性マスタ)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | serial PK | |
-| name_ja / name_en | text | 名称 |
-| effect_tags | jsonb | `["choice","berry","mega_stone"]` 等 |
+| カラム            | 型        | 説明                                 |
+| ----------------- | --------- | ------------------------------------ |
+| id                | serial PK |                                      |
+| name_ja / name_en | text      | 名称                                 |
+| effect_tags       | jsonb     | `["choice","berry","mega_stone"]` 等 |
+
+MVPの持ち物マスタは、Pokémon Championsで使用可能な全Itemの完全な合法性一覧ではなく、公開出典で個別に確認できたItemのカタログとする。過去作品での使用可否やPokéAPIの全ItemからChampionsでの合法性を推測せず、全件網羅をサイト上で表示しない。完全な公式一覧が公開された場合は、出典とゲーム版を固定して追加更新する。
 
 #### seasons / rules
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | serial PK | |
-| name | text | 「シーズン12」「シングル」等 |
-| starts_at / ends_at | date | 期間(seasonsのみ) |
-| team_size / pick_size | int | 6/3 等(rulesのみ) |
-| battle_level | int | 対戦時の共通レベル。1〜100、NOT NULL(rulesのみ) |
+| カラム                | 型        | 説明                                            |
+| --------------------- | --------- | ----------------------------------------------- |
+| id                    | serial PK |                                                 |
+| name                  | text      | 「シーズン12」「シングル」等                    |
+| starts_at / ends_at   | date      | 期間(seasonsのみ)                               |
+| team_size / pick_size | int       | 6/3 等(rulesのみ)                               |
+| battle_level          | int       | 対戦時の共通レベル。1〜100、NOT NULL(rulesのみ) |
 
 ### 6.3 ユーザー系テーブル
 
 #### users
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| email | text unique | |
-| password_hash | text nullable | OAuthのみの場合null |
-| display_name | text | |
-| role | text | `user` / `admin` |
-| created_at / updated_at | timestamptz | |
+| カラム                  | 型            | 説明                |
+| ----------------------- | ------------- | ------------------- |
+| id                      | uuid PK       |                     |
+| email                   | text unique   |                     |
+| password_hash           | text nullable | OAuthのみの場合null |
+| display_name            | text          |                     |
+| role                    | text          | `user` / `admin`    |
+| created_at / updated_at | timestamptz   |                     |
 
 #### parties(自分のパーティ)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| name | text | パーティ名 |
-| rule_id | int FK | 対応ルール |
-| is_active | bool | 現在使用中フラグ |
-| created_at / updated_at | timestamptz | |
+| カラム                  | 型          | 説明             |
+| ----------------------- | ----------- | ---------------- |
+| id                      | uuid PK     |                  |
+| user_id                 | uuid FK     |                  |
+| name                    | text        | パーティ名       |
+| rule_id                 | int FK      | 対応ルール       |
+| is_active               | bool        | 現在使用中フラグ |
+| created_at / updated_at | timestamptz |                  |
 
 #### party_pokemons
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| party_id | uuid FK | |
-| slot | int | 1〜6 |
-| pokemon_id | int FK | |
-| item_id | int FK nullable | |
-| ability_id | int FK nullable | |
-| nature | text | 性格 |
-| tera_type | text nullable | テラスタイプ |
-| can_mega | bool | メガシンカ枠か |
-| evs | jsonb | `{"hp":252,"atk":0,...}` |
-| ivs | jsonb nullable | 個体値(省略時31) |
-| actual_stats | jsonb nullable | 確定済み実数値。`hp/attack/defense/specialAttack/specialDefense/speed` |
+| カラム       | 型              | 説明                                                                   |
+| ------------ | --------------- | ---------------------------------------------------------------------- |
+| id           | uuid PK         |                                                                        |
+| party_id     | uuid FK         |                                                                        |
+| slot         | int             | 1〜6                                                                   |
+| pokemon_id   | int FK          |                                                                        |
+| item_id      | int FK nullable |                                                                        |
+| ability_id   | int FK nullable |                                                                        |
+| nature       | text            | 性格                                                                   |
+| tera_type    | text nullable   | テラスタイプ                                                           |
+| can_mega     | bool            | メガシンカ枠か                                                         |
+| evs          | jsonb           | `{"hp":252,"atk":0,...}`                                               |
+| ivs          | jsonb nullable  | 個体値(省略時31)                                                       |
+| actual_stats | jsonb nullable  | 確定済み実数値。`hp/attack/defense/specialAttack/specialDefense/speed` |
 
 対戦計算ではPartyPokemonごとのlevelを保存せず、`party_pokemons.actual_stats`と参照Ruleの
 `battle_level`を組み合わせる。新規PartyのAPI契約は従来どおりactualStatsを検証して保存し、
@@ -316,49 +318,49 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 
 #### party_pokemon_moves
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| party_pokemon_id | uuid FK | |
-| move_id | int FK | |
-| slot | int | 1〜4 |
+| カラム           | 型      | 説明 |
+| ---------------- | ------- | ---- |
+| party_pokemon_id | uuid FK |      |
+| move_id          | int FK  |      |
+| slot             | int     | 1〜4 |
 
 ### 6.4 テンプレ構築系テーブル
 
 #### archetypes(テンプレ構築)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| name | text | 構築名(例: メガギャラドス展開構築) |
-| description | text | 構築の特徴・コンセプト |
-| season_id / rule_id | int FK | 対応シーズン・ルール |
-| popularity_tier | text | `high` / `mid` / `low`(MVP用) |
-| popularity_score | numeric nullable | 将来の数値スコア |
-| encounter_count | int default 0 | 遭遇報告数(集計値) |
-| pick_count | int default 0 | アプリ内で候補選択された回数 |
-| default_leads | jsonb | 基本選出(先発/控え/エースのslot指定) |
-| playstyle_notes | text | 立ち回りの基本方針 |
-| status | text | `published` / `archived` |
-| published_at / updated_at | timestamptz | データの新しさ判定に使用 |
+| カラム                    | 型               | 説明                                 |
+| ------------------------- | ---------------- | ------------------------------------ |
+| id                        | uuid PK          |                                      |
+| name                      | text             | 構築名(例: メガギャラドス展開構築)   |
+| description               | text             | 構築の特徴・コンセプト               |
+| season_id / rule_id       | int FK           | 対応シーズン・ルール                 |
+| popularity_tier           | text             | `high` / `mid` / `low`(MVP用)        |
+| popularity_score          | numeric nullable | 将来の数値スコア                     |
+| encounter_count           | int default 0    | 遭遇報告数(集計値)                   |
+| pick_count                | int default 0    | アプリ内で候補選択された回数         |
+| default_leads             | jsonb            | 基本選出(先発/控え/エースのslot指定) |
+| playstyle_notes           | text             | 立ち回りの基本方針                   |
+| status                    | text             | `published` / `archived`             |
+| published_at / updated_at | timestamptz      | データの新しさ判定に使用             |
 
 #### archetype_pokemons
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| archetype_id | uuid FK | |
-| slot | int | 1〜6 |
-| pokemon_id | int FK | |
-| item_id | int FK nullable | 定番の持ち物 |
-| item_alternatives | jsonb | 代替持ち物のID配列 |
-| ability_id | int FK nullable | |
-| nature | text nullable | |
-| tera_type | text nullable | |
-| evs | jsonb nullable | 定番の努力値配分 |
-| actual_stats | jsonb nullable | 確定済み実数値。構造はparty_pokemonsと共通 |
-| role | text | `lead` / `sweeper` / `wall` / `pivot` / `support` 等 |
-| usage_rate | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現 |
-| threat_notes | text | このポケモンの警戒ポイント |
+| カラム            | 型                  | 説明                                                 |
+| ----------------- | ------------------- | ---------------------------------------------------- |
+| id                | uuid PK             |                                                      |
+| archetype_id      | uuid FK             |                                                      |
+| slot              | int                 | 1〜6                                                 |
+| pokemon_id        | int FK              |                                                      |
+| item_id           | int FK nullable     | 定番の持ち物                                         |
+| item_alternatives | jsonb               | 代替持ち物のID配列                                   |
+| ability_id        | int FK nullable     |                                                      |
+| nature            | text nullable       |                                                      |
+| tera_type         | text nullable       |                                                      |
+| evs               | jsonb nullable      | 定番の努力値配分                                     |
+| actual_stats      | jsonb nullable      | 確定済み実数値。構造はparty_pokemonsと共通           |
+| role              | text                | `lead` / `sweeper` / `wall` / `pivot` / `support` 等 |
+| usage_rate        | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現       |
+| threat_notes      | text                | このポケモンの警戒ポイント                           |
 
 Archetypeの対戦計算では`archetype_pokemons.actual_stats`と参照Ruleの`battle_level`を使用する。
 既存データへ根拠のないIV・EV・性格・レベルを仮定しないためDB列はnullableとする一方、
@@ -366,62 +368,62 @@ adminの新規作成・PUT全置換・preview入力では6能力を必須とす�
 
 #### archetype_pokemon_moves
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| archetype_pokemon_id | uuid FK | |
-| move_id | int FK | |
-| adoption_rate | numeric default 1.0 | 採用率(確定枠=1.0、選択枠=0.5等) |
+| カラム               | 型                  | 説明                             |
+| -------------------- | ------------------- | -------------------------------- |
+| archetype_pokemon_id | uuid FK             |                                  |
+| move_id              | int FK              |                                  |
+| adoption_rate        | numeric default 1.0 | 採用率(確定枠=1.0、選択枠=0.5等) |
 
 技を4つ固定ではなく採用率付きで持つことで、「矛盾判定」(採用率合計が実質4枠を超える技構成が観測された場合など)と選択技の柔軟な一致判定を両立する。
 
 #### archetype_sources(参考元)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| archetype_id | uuid FK | |
-| title | text | 記事タイトル |
-| url | text | 出典URL |
-| site_name | text | GameWith 等 |
-| site_rank | int nullable | サイト内順位(人気度計算用) |
+| カラム       | 型           | 説明                       |
+| ------------ | ------------ | -------------------------- |
+| archetype_id | uuid FK      |                            |
+| title        | text         | 記事タイトル               |
+| url          | text         | 出典URL                    |
+| site_name    | text         | GameWith 等                |
+| site_rank    | int nullable | サイト内順位(人気度計算用) |
 
 #### encounter_reports(遭遇報告・将来機能)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| archetype_id | uuid FK | |
-| user_id | uuid FK | |
-| session_id | uuid FK nullable | |
-| rating_band | text nullable | レート帯(将来) |
-| reported_at | timestamptz | |
+| カラム       | 型               | 説明           |
+| ------------ | ---------------- | -------------- |
+| id           | uuid PK          |                |
+| archetype_id | uuid FK          |                |
+| user_id      | uuid FK          |                |
+| session_id   | uuid FK nullable |                |
+| rating_band  | text nullable    | レート帯(将来) |
+| reported_at  | timestamptz      |                |
 
 ### 6.5 対戦セッション系テーブル
 
 #### battle_sessions
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| party_id | uuid FK | 使用した自パーティ |
-| rule_id | int FK | |
-| selected_archetype_id | uuid FK nullable | ユーザーが選択した候補 |
-| result | text nullable | `win` / `lose` / `unknown`(将来) |
-| started_at / ended_at | timestamptz | |
+| カラム                | 型               | 説明                             |
+| --------------------- | ---------------- | -------------------------------- |
+| id                    | uuid PK          |                                  |
+| user_id               | uuid FK          |                                  |
+| party_id              | uuid FK          | 使用した自パーティ               |
+| rule_id               | int FK           |                                  |
+| selected_archetype_id | uuid FK nullable | ユーザーが選択した候補           |
+| result                | text nullable    | `win` / `lose` / `unknown`(将来) |
+| started_at / ended_at | timestamptz      |                                  |
 
 #### observations(観測情報)
 
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid PK | |
-| session_id | uuid FK | |
-| seq | int | 入力順(Undo用) |
-| kind | text | `pokemon` / `move` / `item` / `ability` / `position` / `mega` |
-| pokemon_id | int FK nullable | 対象ポケモン |
-| move_id / item_id / ability_id | int FK nullable | 観測内容 |
-| position | text nullable | `lead` / `back` |
-| is_revoked | bool default false | Undo済みフラグ |
-| observed_at | timestamptz | |
+| カラム                         | 型                 | 説明                                                          |
+| ------------------------------ | ------------------ | ------------------------------------------------------------- |
+| id                             | uuid PK            |                                                               |
+| session_id                     | uuid FK            |                                                               |
+| seq                            | int                | 入力順(Undo用)                                                |
+| kind                           | text               | `pokemon` / `move` / `item` / `ability` / `position` / `mega` |
+| pokemon_id                     | int FK nullable    | 対象ポケモン                                                  |
+| move_id / item_id / ability_id | int FK nullable    | 観測内容                                                      |
+| position                       | text nullable      | `lead` / `back`                                               |
+| is_revoked                     | bool default false | Undo済みフラグ                                                |
+| observed_at                    | timestamptz        |                                                               |
 
 観測は追記型(イベントソーシング風)とし、Undoは論理削除で行う。候補スコアは観測列から常に再計算できるため、状態不整合が起きない。
 
@@ -448,19 +450,19 @@ adminの新規作成・PUT全置換・preview入力では6能力を必須とす�
 
 #### 配点表(初期値・設定でチューニング可能)
 
-| 観測 | 条件 | 点数 |
-|---|---|---|
-| ポケモン一致 | 観測ポケモンが構築に存在 | +10 × usage_rate |
-| 技一致 | 観測技がそのポケモンの技リストに存在 | +15 × adoption_rate |
-| 持ち物一致 | 定番持ち物と一致 | +15(代替持ち物は+8) |
-| 特性一致 | 一致 | +8 |
-| 先発位置一致 | default_leads の先発と一致 | +6 |
-| メガ枠一致 | メガシンカ観測が構築のメガ枠と一致 | +12 |
-| ポケモン不一致 | 観測ポケモンが構築に存在しない | −20 |
-| 技矛盾 | 構築のそのポケモンにない技を観測 | −12 |
-| 持ち物矛盾 | 定番・代替のいずれとも不一致 | −12 |
-| 特性矛盾 | 不一致 | −8 |
-| メガ矛盾 | 構築にないメガシンカを観測 | −25 |
+| 観測           | 条件                                 | 点数                |
+| -------------- | ------------------------------------ | ------------------- |
+| ポケモン一致   | 観測ポケモンが構築に存在             | +10 × usage_rate    |
+| 技一致         | 観測技がそのポケモンの技リストに存在 | +15 × adoption_rate |
+| 持ち物一致     | 定番持ち物と一致                     | +15(代替持ち物は+8) |
+| 特性一致       | 一致                                 | +8                  |
+| 先発位置一致   | default_leads の先発と一致           | +6                  |
+| メガ枠一致     | メガシンカ観測が構築のメガ枠と一致   | +12                 |
+| ポケモン不一致 | 観測ポケモンが構築に存在しない       | −20                 |
+| 技矛盾         | 構築のそのポケモンにない技を観測     | −12                 |
+| 持ち物矛盾     | 定番・代替のいずれとも不一致         | −12                 |
+| 特性矛盾       | 不一致                               | −8                  |
+| メガ矛盾       | 構築にないメガシンカを観測           | −25                 |
 
 #### 正規化
 
@@ -487,26 +489,30 @@ LIMIT 3(設定可能)
 
 ### 7.4 表示要素の算出
 
-| 表示 | 算出方法 |
-|---|---|
-| 一致した情報 | 加点対象となった観測のリスト |
-| 残りの可能性が高いポケモン | 構築内で未観測のポケモンを usage_rate 降順 |
-| 警戒すべき技 | 未観測ポケモン+観測済みポケモンの未観測技のうち、`tags` に `setup`/`hazard`/`screen`/`priority` を含む技、および threat_notes 記載技 |
+| 表示                       | 算出方法                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 一致した情報               | 加点対象となった観測のリスト                                                                                                         |
+| 残りの可能性が高いポケモン | 構築内で未観測のポケモンを usage_rate 降順                                                                                           |
+| 警戒すべき技               | 未観測ポケモン+観測済みポケモンの未観測技のうち、`tags` に `setup`/`hazard`/`screen`/`priority` を含む技、および threat_notes 記載技 |
 
 ### 7.5 擬似コード
 
 ```typescript
 function scoreArchetype(archetype: Archetype, obs: Observation[]): ScoredCandidate {
-  let raw = 0, max = 0;
+  let raw = 0,
+    max = 0;
   const matched: MatchDetail[] = [];
-  let missCount = 0, megaConflict = false;
+  let missCount = 0,
+    megaConflict = false;
 
-  for (const o of obs.filter(o => !o.isRevoked)) {
+  for (const o of obs.filter((o) => !o.isRevoked)) {
     const w = WEIGHTS[o.kind];
     max += w.hit;
     const hit = matchObservation(archetype, o); // 一致判定
-    if (hit.matched) { raw += hit.points; matched.push(hit); }
-    else {
+    if (hit.matched) {
+      raw += hit.points;
+      matched.push(hit);
+    } else {
       raw -= w.penalty;
       if (o.kind === "pokemon") missCount++;
       if (o.kind === "mega") megaConflict = true;
@@ -516,7 +522,8 @@ function scoreArchetype(archetype: Archetype, obs: Observation[]): ScoredCandida
   return {
     archetypeId: archetype.id,
     matchRate: Math.max(0, Math.min(1, raw / max)) * 100,
-    matched, excluded,
+    matched,
+    excluded,
   };
 }
 ```
@@ -567,15 +574,15 @@ popularity_score =
 
 自ポケモン A vs 相手ポケモン B について:
 
-| 評価軸 | 内容 | 配点(初期値) |
-|---|---|---|
-| 攻撃相性 | Aの技でBの弱点を突けるか(タイプ相性×技威力×攻撃実数値) | 0〜30 |
-| 防御相性 | Bの想定技をAが半減/無効にできるか(特性込み) | 0〜30 |
-| 素早さ関係 | 実数値比較(スカーフ等の持ち物補正込み)。上を取れる=+、抜かれる=− | −10〜+15 |
-| ダメージ概算 | 簡易ダメージ計算による確定数比較(何発で倒せる/倒される) | −15〜+15 |
-| 先制技 | Aが有効な先制技を持つ | +5 |
-| 状態異常耐性 | Bの状態異常技(あくび等)への耐性 | 0〜5 |
-| 積み対応 | Bが積み技持ちの場合、A側に対抗手段(挑発・ほえる・天然等)があるか | −10〜+10 |
+| 評価軸       | 内容                                                             | 配点(初期値) |
+| ------------ | ---------------------------------------------------------------- | ------------ |
+| 攻撃相性     | Aの技でBの弱点を突けるか(タイプ相性×技威力×攻撃実数値)           | 0〜30        |
+| 防御相性     | Bの想定技をAが半減/無効にできるか(特性込み)                      | 0〜30        |
+| 素早さ関係   | 実数値比較(スカーフ等の持ち物補正込み)。上を取れる=+、抜かれる=− | −10〜+15     |
+| ダメージ概算 | 簡易ダメージ計算による確定数比較(何発で倒せる/倒される)          | −15〜+15     |
+| 先制技       | Aが有効な先制技を持つ                                            | +5           |
+| 状態異常耐性 | Bの状態異常技(あくび等)への耐性                                  | 0〜5         |
+| 積み対応     | Bが積み技持ちの場合、A側に対抗手段(挑発・ほえる・天然等)があるか | −10〜+10     |
 
 ```text
 matchup_score(A, B) = Σ(各評価軸) を −100〜+100 に正規化
@@ -628,52 +635,52 @@ damage ≒ (22 × 威力 × 攻撃実数値 / 防御実数値) / 50 + 2
 
 #### 認証
 
-| メソッド | パス | 説明 |
-|---|---|---|
-| POST | /auth/register | アカウント登録 |
-| POST | /auth/login | ログイン |
-| POST | /auth/refresh | トークン更新 |
+| メソッド | パス           | 説明           |
+| -------- | -------------- | -------------- |
+| POST     | /auth/register | アカウント登録 |
+| POST     | /auth/login    | ログイン       |
+| POST     | /auth/refresh  | トークン更新   |
 
 #### マスタ
 
-| メソッド | パス | 説明 |
-|---|---|---|
-| GET | /master/pokemons?q= | ポケモン検索(オートコンプリート用) |
-| GET | /master/moves?q=&pokemon_id= | 技検索(習得可能技で絞り込み) |
-| GET | /master/items?q= | 持ち物検索 |
-| GET | /master/abilities?pokemon_id= | 特性候補 |
+| メソッド | パス                          | 説明                               |
+| -------- | ----------------------------- | ---------------------------------- |
+| GET      | /master/pokemons?q=           | ポケモン検索(オートコンプリート用) |
+| GET      | /master/moves?q=&pokemon_id=  | 技検索(習得可能技で絞り込み)       |
+| GET      | /master/items?q=              | 持ち物検索                         |
+| GET      | /master/abilities?pokemon_id= | 特性候補                           |
 
 #### パーティ
 
-| メソッド | パス | 説明 |
-|---|---|---|
-| GET | /parties | 自分のパーティ一覧 |
-| POST | /parties | パーティ作成 |
-| GET | /parties/{id} | 詳細 |
-| PUT | /parties/{id} | 更新 |
-| DELETE | /parties/{id} | 削除 |
+| メソッド | パス          | 説明               |
+| -------- | ------------- | ------------------ |
+| GET      | /parties      | 自分のパーティ一覧 |
+| POST     | /parties      | パーティ作成       |
+| GET      | /parties/{id} | 詳細               |
+| PUT      | /parties/{id} | 更新               |
+| DELETE   | /parties/{id} | 削除               |
 
 #### 対戦セッション
 
-| メソッド | パス | 説明 |
-|---|---|---|
-| POST | /sessions | セッション開始(party_id, rule_id指定) |
-| GET | /sessions/{id} | セッション状態取得 |
-| POST | /sessions/{id}/observations | 観測情報追加 → 最新候補を返す |
-| DELETE | /sessions/{id}/observations/{obsId} | 観測のUndo → 最新候補を返す |
-| GET | /sessions/{id}/candidates | 現在の候補一覧(上位N件) |
-| POST | /sessions/{id}/select | 候補構築を選択 |
-| GET | /sessions/{id}/counterplan | 対策(おすすめ・選出・警戒)取得 |
-| POST | /sessions/{id}/end | セッション終了(結果は任意入力) |
+| メソッド | パス                                | 説明                                  |
+| -------- | ----------------------------------- | ------------------------------------- |
+| POST     | /sessions                           | セッション開始(party_id, rule_id指定) |
+| GET      | /sessions/{id}                      | セッション状態取得                    |
+| POST     | /sessions/{id}/observations         | 観測情報追加 → 最新候補を返す         |
+| DELETE   | /sessions/{id}/observations/{obsId} | 観測のUndo → 最新候補を返す           |
+| GET      | /sessions/{id}/candidates           | 現在の候補一覧(上位N件)               |
+| POST     | /sessions/{id}/select               | 候補構築を選択                        |
+| GET      | /sessions/{id}/counterplan          | 対策(おすすめ・選出・警戒)取得        |
+| POST     | /sessions/{id}/end                  | セッション終了(結果は任意入力)        |
 
 #### 管理(role=adminのみ)
 
-| メソッド | パス | 説明 |
-|---|---|---|
-| GET/POST | /admin/archetypes | 構築一覧・作成 |
-| PUT/DELETE | /admin/archetypes/{id} | 更新・アーカイブ |
-| PUT | /admin/archetypes/{id}/popularity | 人気度調整 |
-| GET/POST | /admin/seasons, /admin/rules | シーズン・ルール管理 |
+| メソッド   | パス                              | 説明                 |
+| ---------- | --------------------------------- | -------------------- |
+| GET/POST   | /admin/archetypes                 | 構築一覧・作成       |
+| PUT/DELETE | /admin/archetypes/{id}            | 更新・アーカイブ     |
+| PUT        | /admin/archetypes/{id}/popularity | 人気度調整           |
+| GET/POST   | /admin/seasons, /admin/rules      | シーズン・ルール管理 |
 
 ### 10.3 主要レスポンス例
 
@@ -741,15 +748,15 @@ damage ≒ (22 × 威力 × 攻撃実数値 / 防御実数値) / 50 + 2
 
 ### 11.1 画面一覧
 
-| ID | 画面 | 概要 |
-|---|---|---|
-| S-01 | ログイン/登録 | |
-| S-02 | ホーム | 「対戦開始」ボタン+パーティ選択 |
-| S-03 | パーティ登録/編集 | 6体分の入力フォーム |
-| S-04 | 対戦画面(メイン) | 観測入力+候補表示+対策表示 |
-| S-05 | 構築詳細 | テンプレ構築の全情報+出典 |
-| S-06 | 対戦履歴 | (将来) |
-| S-07 | 管理画面 | 構築CRUD等 |
+| ID   | 画面              | 概要                            |
+| ---- | ----------------- | ------------------------------- |
+| S-01 | ログイン/登録     |                                 |
+| S-02 | ホーム            | 「対戦開始」ボタン+パーティ選択 |
+| S-03 | パーティ登録/編集 | 6体分の入力フォーム             |
+| S-04 | 対戦画面(メイン)  | 観測入力+候補表示+対策表示      |
+| S-05 | 構築詳細          | テンプレ構築の全情報+出典       |
+| S-06 | 対戦履歴          | (将来)                          |
+| S-07 | 管理画面          | 構築CRUD等                      |
 
 ### 11.2 対戦画面(S-04)の構成 — 最重要画面
 
@@ -830,12 +837,14 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 1. 管理者が攻略サイト・上位構築を調査
 2. 管理画面から構造化データとして登録(本文・画像は転載しない)
    - 構築名 / 採用ポケモン / 技(採用率) / 持ち物 / 特性 / 基本選出 / 特徴 / 出典URL / シーズン / ルール
+   - 持ち物は出典で明示的に確認できるものだけをItemマスタへ追加して選択する。持ち物が不明な構築は登録対象外とし、実際に持ち物なしと確認できる場合だけnullを許容する
 3. プレビューで一致判定テスト(観測をシミュレート入力して候補に出るか確認)
 4. `published` に変更して公開
 
 ### 13.2 データ品質ルール
 
 - 出典URL必須(最低1件)
+- Pokemon・Move・Abilityは現行マスタから選択し、持ち物とactualStatsを推測補完しない
 - シーズン終了時に旧構築を一括で `archived`(検索対象外)へ
 - 同名構築の重複チェック(ポケモン6体の一致度90%以上で警告)
 
@@ -843,14 +852,14 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 
 ## 14. セキュリティ設計
 
-| 項目 | 対策 |
-|---|---|
-| 認証 | JWT(短命アクセストークン+リフレッシュトークン)、パスワードは bcrypt |
-| 認可 | 管理APIは role=admin チェック。パーティ/セッションは所有者チェック |
-| 入力検証 | 全APIで zod スキーマ検証。マスタIDの存在チェック |
-| レート制限 | 観測入力API: 60req/分/ユーザー(連打・スクレイピング対策) |
-| 個人情報 | 保持するのはメールアドレスのみ。ゲームIDは扱わない |
-| LLM入力 | ユーザー自由入力をLLMプロンプトに含めない(構造化データのみ)→プロンプトインジェクション防止 |
+| 項目       | 対策                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| 認証       | JWT(短命アクセストークン+リフレッシュトークン)、パスワードは bcrypt                        |
+| 認可       | 管理APIは role=admin チェック。パーティ/セッションは所有者チェック                         |
+| 入力検証   | 全APIで zod スキーマ検証。マスタIDの存在チェック                                           |
+| レート制限 | 観測入力API: 60req/分/ユーザー(連打・スクレイピング対策)                                   |
+| 個人情報   | 保持するのはメールアドレスのみ。ゲームIDは扱わない                                         |
+| LLM入力    | ユーザー自由入力をLLMプロンプトに含めない(構造化データのみ)→プロンプトインジェクション防止 |
 
 ---
 
@@ -858,11 +867,11 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 
 ### フェーズ1: MVP(目標 6〜8週)
 
-| 週 | 内容 |
-|---|---|
-| 1-2 | DB構築、マスタデータ投入(ポケモン/技/持ち物)、認証 |
-| 3-4 | パーティ登録、テンプレ構築管理画面、構築データ30件登録 |
-| 5-6 | 一致度エンジン、対戦画面(入力→候補表示) |
+| 週  | 内容                                                    |
+| --- | ------------------------------------------------------- |
+| 1-2 | DB構築、マスタデータ投入(ポケモン/技/持ち物)、認証      |
+| 3-4 | パーティ登録、テンプレ構築管理画面、構築データ30件登録  |
+| 5-6 | 一致度エンジン、対戦画面(入力→候補表示)                 |
 | 7-8 | 相性判定エンジン、対策表示、LLM理由文、テスト・リリース |
 
 **MVP完了条件:** 実際のランク対戦で「入力→候補→対策」が90秒以内に一巡でき、候補精度が体感で有用なこと(自己テスト+知人テスター5名)
@@ -884,15 +893,15 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 
 ## 16. リスクと対策
 
-| リスク | 影響 | 対策 |
-|---|---|---|
-| 攻略サイトの著作権問題 | サービス停止 | 本文/画像を転載せず、事実情報(採用ポケモン等)+出典リンクのみ。利用規約に明記 |
-| 任天堂/ポケモン社のガイドライン | サービス停止 | 非公式である旨の明記、ゲーム内データの改変・自動化を行わない。外部ツール規約を継続確認 |
-| シーズン更新でデータ陳腐化 | 精度低下・離脱 | シーズン管理機能+更新運用フローを最初から設計。鮮度係数で古い構築を自動降格 |
-| 構築データ登録の運用負荷 | 更新停滞 | 管理画面の入力効率化(構築テキストのパース補助)、将来的にユーザー投稿へ移行 |
-| 一致度の精度不足 | 信頼低下 | 配点を設定値化しチューニング可能に。呼称を「一致度」に留め過剰な期待を防ぐ |
-| 対戦中に使う時間がない | 利用されない | 90秒UXを最優先。入力2タップ、自動更新、選出提案の即時表示 |
-| LLMコスト・障害 | コスト増/表示不能 | キャッシュ+テンプレ文フォールバック。LLMなしでも成立する設計 |
+| リスク                          | 影響              | 対策                                                                                   |
+| ------------------------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| 攻略サイトの著作権問題          | サービス停止      | 本文/画像を転載せず、事実情報(採用ポケモン等)+出典リンクのみ。利用規約に明記           |
+| 任天堂/ポケモン社のガイドライン | サービス停止      | 非公式である旨の明記、ゲーム内データの改変・自動化を行わない。外部ツール規約を継続確認 |
+| シーズン更新でデータ陳腐化      | 精度低下・離脱    | シーズン管理機能+更新運用フローを最初から設計。鮮度係数で古い構築を自動降格            |
+| 構築データ登録の運用負荷        | 更新停滞          | 管理画面の入力効率化(構築テキストのパース補助)、将来的にユーザー投稿へ移行             |
+| 一致度の精度不足                | 信頼低下          | 配点を設定値化しチューニング可能に。呼称を「一致度」に留め過剰な期待を防ぐ             |
+| 対戦中に使う時間がない          | 利用されない      | 90秒UXを最優先。入力2タップ、自動更新、選出提案の即時表示                              |
+| LLMコスト・障害                 | コスト増/表示不能 | キャッシュ+テンプレ文フォールバック。LLMなしでも成立する設計                           |
 
 ---
 
@@ -902,13 +911,13 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 
 **候補「メガギャラドス展開構築」**(カバルドン/ドラパルト/メガギャラドス/サーフゴー/アシレーヌ/カイリュー)
 
-| 観測 | 判定 | 点数 |
-|---|---|---|
-| カバルドン | 一致(usage 1.0) | +10 |
-| 先発カバルドン | default_leadsと一致 | +6 |
-| ステルスロック | カバルドンの確定技 | +15 |
-| ドラパルト | 一致(usage 1.0) | +10 |
-| リフレクター | ドラパルトの確定技 | +15 |
+| 観測           | 判定                | 点数 |
+| -------------- | ------------------- | ---- |
+| カバルドン     | 一致(usage 1.0)     | +10  |
+| 先発カバルドン | default_leadsと一致 | +6   |
+| ステルスロック | カバルドンの確定技  | +15  |
+| ドラパルト     | 一致(usage 1.0)     | +10  |
+| リフレクター   | ドラパルトの確定技  | +15  |
 
 raw = 56 / max = 56 → **一致度 100%**
 
@@ -916,17 +925,17 @@ raw = 56 / max = 56 → **一致度 100%**
 
 ## 付録B: 設定値一覧(チューニング対象)
 
-| キー | 初期値 | 説明 |
-|---|---|---|
-| score.pokemon_hit | 10 | ポケモン一致加点 |
-| score.move_hit | 15 | 技一致加点 |
-| score.item_hit | 15 | 持ち物一致加点 |
-| score.pokemon_miss | 20 | ポケモン不一致減点 |
-| score.exclude_miss_count | 3 | 除外となる不一致体数 |
-| candidates.display_count | 3 | 候補表示件数 |
-| recommend.display_count | 3 | おすすめポケモン表示数 |
-| session.archive_days | 90 | セッション保持日数 |
+| キー                     | 初期値 | 説明                   |
+| ------------------------ | ------ | ---------------------- |
+| score.pokemon_hit        | 10     | ポケモン一致加点       |
+| score.move_hit           | 15     | 技一致加点             |
+| score.item_hit           | 15     | 持ち物一致加点         |
+| score.pokemon_miss       | 20     | ポケモン不一致減点     |
+| score.exclude_miss_count | 3      | 除外となる不一致体数   |
+| candidates.display_count | 3      | 候補表示件数           |
+| recommend.display_count  | 3      | おすすめポケモン表示数 |
+| session.archive_days     | 90     | セッション保持日数     |
 
 ---
 
-*本設計書は構想書 v1(2026-07-22時点)に基づく。実装中の知見により配点・スキーマは変更され得る。変更はすべて本書に追記して管理する。*
+_本設計書は構想書 v1(2026-07-22時点)に基づく。実装中の知見により配点・スキーマは変更され得る。変更はすべて本書に追記して管理する。_

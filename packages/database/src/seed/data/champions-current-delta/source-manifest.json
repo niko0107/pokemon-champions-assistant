@@ -1,0 +1,151 @@
+{
+  "dataset": "Pokémon Champions Regulation Set M-B current-version delta",
+  "gameVersion": "Pokémon Champions Ver. 1.1.4",
+  "contentVersion": "Pokémon Champions Ver. 1.1.0 / Regulation Set M-B",
+  "retrievedAt": "2026-07-29",
+  "license": "BSD-3-Clause",
+  "source": {
+    "repository": "https://github.com/PokeAPI/pokeapi",
+    "snapshotCommit": "227b573712414a86ba299d322fa398fbb2893edc",
+    "pokemonPullRequest": "https://github.com/PokeAPI/pokeapi/pull/1560",
+    "pokemonCommit": "522d8577237c4db0846c3694306d4f36508f19e3",
+    "abilityPullRequest": "https://github.com/PokeAPI/pokeapi/pull/1559",
+    "abilityCommit": "c01d35ac356c5d9ba00dfff5dcc9d8aca72b2b2b",
+    "learnsetPullRequest": "https://github.com/PokeAPI/pokeapi/pull/1611",
+    "learnsetCommit": "227b573712414a86ba299d322fa398fbb2893edc",
+    "apiDataRepository": "https://github.com/PokeAPI/api-data",
+    "apiDataCommit": "bf40800cc9d1ffd04a3fc14347d2ad24d470526b",
+    "officialUpdateHistory": "https://www.nintendo.com/fr-fr/Assistance/Achats-et-abonnements/Jeux/Comment-mettre-a-jour-Pokemon-Champions-3079895.html",
+    "officialRegulation": "https://champions-news.pokemon-home.com/en/page/776.html",
+    "officialRoster": "https://champions-news.pokemon-home.com/en/page/777.html"
+  },
+  "filters": {
+    "versionGroupId": 32,
+    "versionGroupIdentifier": "champions",
+    "moveMethodId": 12,
+    "moveMethodIdentifier": "train"
+  },
+  "baseline": {
+    "dataset": "Pokémon Champions v1.0 public master data",
+    "pokemon": 281,
+    "moves": 490,
+    "abilities": 191,
+    "pokemonMoves": 17394,
+    "items": 3
+  },
+  "expected": {
+    "pokemon": 38,
+    "pokemonSpecies": 23,
+    "pokemonFormRows": 39,
+    "nonDefaultPokemon": 16,
+    "megaPokemon": 16,
+    "moves": 6,
+    "abilities": 9,
+    "pokemonMoves": 2416,
+    "upstreamDisabledRelationsExcluded": 0
+  },
+  "expectedFinal": {
+    "pokemon": 319,
+    "pokemonSpecies": 208,
+    "pokemonFormRows": 416,
+    "nonDefaultPokemon": 112,
+    "megaPokemon": 76,
+    "moves": 496,
+    "abilities": 200,
+    "pokemonMoves": 19810,
+    "upstreamDisabledRelationsExcluded": 261
+  },
+  "items": {
+    "delta": 0,
+    "final": 3,
+    "catalogComplete": false,
+    "policy": "Only source-confirmed catalog entries are stored; complete Champions legality is not claimed."
+  },
+  "localizedAbilityNameOverrides": [
+    {
+      "pokeapiId": 312,
+      "nameJa": "うなぎのぼり",
+      "source": "https://zukan.pokemon.co.jp/detail/0604-1"
+    },
+    {
+      "pokeapiId": 313,
+      "nameJa": "ほのおのたてがみ",
+      "source": "https://zukan.pokemon.co.jp/detail/0668-2"
+    }
+  ],
+  "targetPokemonIds": [
+    45, 211, 254, 257, 260, 303, 376, 398, 518, 545, 560, 604, 668, 687, 689, 691, 861, 870, 904,
+    972, 979, 1000, 10050, 10052, 10064, 10065, 10076, 10288, 10289, 10290, 10295, 10297, 10298,
+    10299, 10303, 10304, 10305, 10308
+  ],
+  "files": [
+    {
+      "path": "pokemon.csv",
+      "sha256": "16c81c33188b0eac403aa2f759fcbe9e42c611f722d263f5b5a6a5bff9f8ce6b"
+    },
+    {
+      "path": "pokemon_species_names.csv",
+      "sha256": "5d7b06270a31bdc51424be6032fc04a3a3c0ae7ac40af4aea69c1a2954ca1e7e"
+    },
+    {
+      "path": "pokemon_forms.csv",
+      "sha256": "404f77a5033ed01df2b2cfb229f465bd086b7bbaa6b813834c228e4fbc578694"
+    },
+    {
+      "path": "pokemon_form_names.csv",
+      "sha256": "f496066d02fab12c18d10cce0af2f748d09cb7e296ecc784cc8682f8c4da8625"
+    },
+    {
+      "path": "pokemon_stats.csv",
+      "sha256": "fa2c44263a3706468682fefc3e0b3c4f5487fe9febed7d4ebcd6939c34b16aa8"
+    },
+    {
+      "path": "pokemon_types.csv",
+      "sha256": "f1fc4bfd657a034ea3bf6972423b10276424aa068577b304a78a08996425ba05"
+    },
+    {
+      "path": "pokemon_abilities.csv",
+      "sha256": "9ab26eee6f508be0ea1287c5b92d8378b018b1b88facd5c5ad0c7fd92c60b5c5"
+    },
+    {
+      "path": "abilities.csv",
+      "sha256": "4ef866a51da6230bcaad44104cce5c890aeeb9e0d2b5661923e8e1dbd414a12c"
+    },
+    {
+      "path": "ability_names.csv",
+      "sha256": "1ccb888f39b535c0e6530e70da8a1d71d39bb6231d49e3a16c46a09f8983b735"
+    },
+    {
+      "path": "moves.csv",
+      "sha256": "d4e8292524f38c0883dafc9778264cf4a08ccbf35337422ec1677890070c9885"
+    },
+    {
+      "path": "move_names.csv",
+      "sha256": "a5702dd4aafaf0456440fcca5c86b1c806e71ecc2dc59cc542f3919c52b60570"
+    },
+    {
+      "path": "move_damage_classes.csv",
+      "sha256": "b7101ceca4dff152537a2fb5c439ca4030b05f86442c643812c0b7b6ccf16f1b"
+    },
+    {
+      "path": "pokemon_moves.csv",
+      "sha256": "22a807cef26891eeac0d0c900bd363e66baf421f7ee795bc7bc3e718f23b939e"
+    },
+    {
+      "path": "pokemon_move_methods.csv",
+      "sha256": "78b75acfcf6dca4c82da9d4851357cbbd65e61b08154eddfc2ace0efd00e408e"
+    },
+    {
+      "path": "version_groups.csv",
+      "sha256": "28da8d89d8eb4966941f81a9e62b3990510ed4d76dd774158246551a8e7707a7"
+    },
+    {
+      "path": "types.csv",
+      "sha256": "37f039c8d722f47d51ba1c5c5ecf9b7007235b1a9a1af2827645c777b70307c8"
+    },
+    {
+      "path": "stats.csv",
+      "sha256": "ee8c541b45b64f40f0eb2545c767294b5801ce8a1410e19d8c33a54e6f1c3b9c"
+    }
+  ]
+}
