@@ -735,3 +735,15 @@
 - **判断:** summary、選出理由、立ち回り、相手別説明はHTML・Markdownとして解釈せずプレーンテキストで表示する。生成状態と差し替えは`role="status"`と`aria-live="polite"`で通知し、相手別説明は既存counterplanの相手IDと完全に対応する場合だけ採用する
 - **理由:** PRODUCT_SPEC §12.2の即時フォールバックと非同期差し替えを、対策情報の可用性・計算結果の不変性・利用者への安全な状態通知を維持して実現するため
 - **影響:** API・shared契約・LLM・Redis・BullMQ・MATCHUPは変更せず、Webはready後や終端状態で不要な追加通信を行わない。WebSocket/SSE、手動再生成、Provider表示は対象外のまま
+
+## 2026-07-29 マスタ管理API(MASTER-008)
+
+### D-068: admin master CRUD・PokemonMove全置換・マスタ投入順
+
+- **判断:** PRODUCT_SPECに管理用masterの正式URLがないため、既存admin prefixと公開masterの複数形に揃え、Pokemon / Move / Item / Abilityを`/api/v1/admin/master/{pokemons|moves|items|abilities}`のGET一覧・GET詳細・POST・PUT・DELETEで管理する。全ルートは既存`JwtAuthGuard`と`RolesGuard`のadmin認可を使用し、公開master APIの認証・レスポンスは変更しない
+- **判断:** 現行PokemonMoveは`pokemonId / moveId`だけの複合主キーで追加属性を持たないため、Pokemon書き込みへ重複してnested化せず、`GET /api/v1/admin/master/pokemons/:id/moves`と`PUT /api/v1/admin/master/pokemons/:id/moves`へ統一する。PUTは全Move参照と重複を先に検証してから1トランザクションで全置換し、Party / Archetype / Observationで使用中の組み合わせは409として除去しない
+- **判断:** Pokemon入力は18タイプ、種族値1〜255、重複しないAbility名、メガ元参照・自己参照・循環を検証する。Pokemon.abilitiesは日本語名JSON配列を正とする既存契約を維持し、Ability日本語名の変更時は参照Pokemonの配列も同じトランザクションで更新する。使用中AbilityのPokemonからの除去とAbility削除、既存FKがRESTRICTするマスタ削除は`409 MASTER_CONFLICT`に統一する
+- **判断:** 管理APIは既存列だけをstrict shared契約へ射影し、Moveに現行モデルが持たないpp / target等を追加しない。一覧はPokemonを`dexNo → form → id`、その他を`nameJa → id`、PokemonMoveを`moveId`昇順にして決定的に返す。bulk import、検索・ページネーション、soft/force delete、schema変更は追加しない
+- **判断:** 事前監査時の実DBはPokemon 4件、Move 8件、Item 3件、Ability 8件、PokemonMove 10件、Rule 1件、Season 1件、Archetype 0件で、teamSize=6のpublished Archetypeを成立させられない。MASTER-005は投入パイプライン完成をもって完了のまま維持するが、計画上の「20体規模」と実サンプル4件の差はMASTER-009で解消する。実行順は`MASTER-008 → MASTER-009 → ARCHETYPE-004`とする
+- **理由:** MASTER-009の本格データとChampions固有補完を、既存FK・JSON参照・公開APIを壊さず管理できる最小の書き込み境界を先に確立し、マスタ不足のまま構築データを推測登録しないため
+- **影響:** MASTER-009とARCHETYPE-004は未完了のままで、次タスクはMASTER-009となる。Pokemon / Move削除に伴うPokemonMoveのCASCADEはD-019の既存方針を維持するが、Party / Archetype / ObservationのRESTRICT参照と論理的なPokemonMove・Ability対応は管理Serviceで事前検証する

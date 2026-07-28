@@ -178,6 +178,7 @@
 - **必要なテスト:** 整形ロジックの単体テスト
 - **前提タスク:** MASTER-001〜004
 - **対象外:** 全ポケモンの本格投入(MASTER-009)
+- **現行データ:** 冪等投入パイプラインは完成済みだが、開発サンプルはPokemon 4件であり、目的欄の「20体規模」には未到達。本格件数はMASTER-009で投入する
 
 ### ✅ MASTER-006 ポケモン検索 API
 
@@ -199,10 +200,10 @@
 - **前提タスク:** MASTER-006
 - **対象外:** 管理用マスタ CRUD
 
-### ⬜ MASTER-008 マスタ管理 API(admin)
+### ✅ MASTER-008 マスタ管理 API(admin)
 
 - **目的:** ゲームマスタデータの管理機能(A-06)を実装する
-- **作業範囲:** /admin 配下のマスタ CRUD(Champions 固有のメガ等を手動補完する用途)
+- **作業範囲:** `/admin/master`配下のPokemon / Move / Item / Ability CRUDと、Pokemon単位の習得可能Move一覧・PUT全置換
 - **変更予定パッケージ:** packages/shared, apps/api
 - **完了条件:** admin のみがマスタを追加・修正できる
 - **必要なテスト:** API テスト(認可含む)
@@ -358,7 +359,7 @@
 - **変更予定パッケージ:** なし(データのみ)
 - **完了条件:** published 30件、全件に出典 URL がある
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, MASTER-009(または WEB-011 の管理画面)
 - **対象外:** コード変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
@@ -819,7 +820,7 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
-  → ARCHETYPE-004(データ30件)→ BATTLE-005〜007 → WEB-010〜011
+  → MASTER-008 → MASTER-009 → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **ARCHETYPE-004 テンプレ構築データ投入(30件以上)**。
+次に着手すべきタスク: **MASTER-009 マスタデータ本格投入**。

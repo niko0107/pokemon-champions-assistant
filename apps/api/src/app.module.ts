@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AdminMasterModule } from "./modules/admin-master/admin-master.module";
 import { AdminArchetypesModule } from "./modules/admin-archetypes/admin-archetypes.module";
 import { ArchetypesModule } from "./modules/archetypes/archetypes.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -16,6 +17,7 @@ import { SessionsModule } from "./modules/sessions/sessions.module";
     HealthModule,
     MasterModule,
     AuthModule,
+    AdminMasterModule,
     AdminArchetypesModule,
     ArchetypesModule,
     PartiesModule,
