@@ -747,3 +747,16 @@
 - **判断:** 事前監査時の実DBはPokemon 4件、Move 8件、Item 3件、Ability 8件、PokemonMove 10件、Rule 1件、Season 1件、Archetype 0件で、teamSize=6のpublished Archetypeを成立させられない。MASTER-005は投入パイプライン完成をもって完了のまま維持するが、計画上の「20体規模」と実サンプル4件の差はMASTER-009で解消する。実行順は`MASTER-008 → MASTER-009 → ARCHETYPE-004`とする
 - **理由:** MASTER-009の本格データとChampions固有補完を、既存FK・JSON参照・公開APIを壊さず管理できる最小の書き込み境界を先に確立し、マスタ不足のまま構築データを推測登録しないため
 - **影響:** MASTER-009とARCHETYPE-004は未完了のままで、次タスクはMASTER-009となる。Pokemon / Move削除に伴うPokemonMoveのCASCADEはD-019の既存方針を維持するが、Party / Archetype / ObservationのRESTRICT参照と論理的なPokemonMove・Ability対応は管理Serviceで事前検証する
+
+## 2026-07-29 PokéAPI Champions v1.0公開マスタ投入(MASTER-009A)
+
+### D-069: PR #1532固定スナップショット・ローカルseed・MASTER-009Bへの差分分離
+
+- **判断:** Champions v1.0の習得関係はPokéAPI PR #1532のmerge commit `286d7a071bc50ec4a57e3f3f506a13220ce6f903`を正とし、同PRから生成された`PokeAPI/api-data` commit `155ea230292d72beff9325cca47ea281d511033a`で代表レスポンスを照合する。PR #1532時点で不足していたMega Meowstic♀の種族値・タイプ・特性だけは公式follow-up PR #1584のcommit `2829e8496ca3bb078b0b80ce1a1bdeda0792efa7`を使用する。このfollow-upはChampions習得関係を変更していない
+- **判断:** version group `32` (`champions`)かつmove method `12` (`train`)の関係だけを抽出し、Pokemon 281件(186 species、元form行377件、Mega 60件)、参照Move 490件、参照Ability 191件、PokemonMove 17,394件をv1.0スナップショットとする。PRで無効化済みとして除外された261関係は復元せず、全世代learnsetとのunionを作らない
+- **判断:** 固定CSVのファイル別SHA-256、取得日、commit、PR、version group、move methodをsource manifestへ保持し、変換済みの分割JSONだけを通常seedの入力にする。通常seedは外部通信せず、対象PokemonのPokemonMoveだけをスナップショットへ全置換し、対象外Pokemonの関係には触れない。Ability・Move・Pokemon・PokemonMoveの順序と参照を検証し、単一transactionでupsertする
+- **判断:** 日本語名と英語名はPokéAPIの言語ID `1` / `9`を使用し、機械翻訳しない。Move tagは数値priorityが正の場合の`priority`だけを機械的に付け、それ以外のsetup / hazard / screen / status / pivotやAbility tagは説明文・名称から推測しない。PokeAPIのpowerまたはaccuracyが0の固定値なし表現は、現行DB契約の`null`へ射影する
+- **判断:** PokéAPIのBSD-3-Clause copyright notice・条件・免責を`packages/database/THIRD_PARTY_NOTICES.md`へ保持し、PokéAPIや貢献者による推奨・承認を表示しない。Pokémon名称等は権利者の商標であり、本サービスは非公式で、PokéAPI利用だけで元ゲームデータの権利問題が解消されるとは扱わない
+- **判断:** Morpeko Hangry Modeの5関係差、Vivillon / Florges / Furfrou / Polteageist / Alcremie / SinistchaのPokéAPI上のform統合、Mega Meowstic男女分離を上流表現のまま保持する。v1.1以降の更新、version group単位で合法範囲を確定できないItem、その他Champions固有要素は推測せずMASTER-009Bへ残す。MASTER-009は009A/009Bに分割し、009B完了まで全体を完了扱いにしない
+- **理由:** 公式PokeAPI masterへChampions v1.0 learnsetが追加済みであり、固定commitとレビュー可能なローカル変換データによって、前回監査の習得技不足を推測なしで解消できるため
+- **影響:** MASTER-009Aはv1.0基盤だけを完成させ、既存開発Rule / Seasonと3件のItemは変更しない。更新時は固定sourceを新commitへ明示的に更新し、manifest hash・件数・既知例外・3回連続seed・公開APIとParty/Battle統合を再検収する。次タスクはMASTER-009B、ARCHETYPE-004はその後とする

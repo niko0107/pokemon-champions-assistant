@@ -210,15 +210,30 @@
 - **前提タスク:** AUTH-004, MASTER-005
 - **対象外:** 管理画面 UI(WEB-011)
 
-### ⬜ MASTER-009 マスタデータ本格投入
+### ⬜ MASTER-009 マスタデータ本格投入(全体)
 
-- **目的:** 対象ルールの全ポケモン・技・持ち物を投入し、Champions 固有要素を補完する(運用タスク)
-- **作業範囲:** seed 実行+手動補完+検収チェックリスト
-- **変更予定パッケージ:** packages/database(データのみ)
-- **完了条件:** 対象シーズンのランクマ使用ポケモンが検索でヒットする
-- **必要なテスト:** データ検証スクリプト(件数・必須項目)
+- **目的:** MASTER-009A / 009Bを完了し、対象ルールの公開マスタとChampions現行版固有要素を揃える
+- **完了条件:** MASTER-009A / 009Bがともに完了している
+
+### ✅ MASTER-009A PokéAPI Champions v1.0公開マスタ投入
+
+- **目的:** PokéAPI PR #1532のChampions v1.0公開データを固定スナップショットとして投入する
+- **作業範囲:** 対象Pokemon・フォーム、参照Move・Ability、Champions v1.0のTrain習得関係、既存Item、出典・検収データ
+- **変更予定パッケージ:** packages/database、docs
+- **完了条件:** Pokemon 281件、Move 490件、Ability 191件、PokemonMove 17,394件を冪等投入でき、公開検索・Party作成・Battle入力で利用できる
+- **必要なテスト:** 固定出典・件数・フォーム例外・参照整合性・3回連続seed・公開API・Party/Battle統合
 - **前提タスク:** MASTER-005, MASTER-008
-- **対象外:** コード変更
+- **対象外:** Champions v1.1以降、Item合法範囲の本格投入、DB/API/Web変更
+
+### ⬜ MASTER-009B Champions現行版差分・Item・固有要素補完
+
+- **目的:** v1.0スナップショット以降のChampions差分、使用可能Item、未確認の固有要素を公式根拠に基づいて補完する
+- **作業範囲:** 現行版差分監査、Item合法範囲、Champions固有データの手動補完と再検収
+- **変更予定パッケージ:** packages/database(データ中心)、docs
+- **完了条件:** 対象Season/Ruleの現行公開マスタ範囲と未確認項目が確定し、MASTER-009全体の完了可否を判断できる
+- **必要なテスト:** 差分件数、出典、既存v1.0スナップショット非破壊、seed冪等性
+- **前提タスク:** MASTER-009A
+- **対象外:** ARCHETYPE-004、API/Web/DBスキーマ変更
 
 ### ✅ MASTER-010 公開Rule一覧API
 
@@ -359,7 +374,7 @@
 - **変更予定パッケージ:** なし(データのみ)
 - **完了条件:** published 30件、全件に出典 URL がある
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002, MASTER-009(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
@@ -820,7 +835,7 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
-  → MASTER-008 → MASTER-009 → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
+  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **MASTER-009 マスタデータ本格投入**。
+次に着手すべきタスク: **MASTER-009B Champions現行版差分・Item・固有要素補完**。
