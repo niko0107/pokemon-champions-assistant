@@ -1,0 +1,1148 @@
+[
+  {
+    "pokeapiId": 1,
+    "nameJa": "あくしゅう",
+    "nameEn": "Stench",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 2,
+    "nameJa": "あめふらし",
+    "nameEn": "Drizzle",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 3,
+    "nameJa": "かそく",
+    "nameEn": "Speed Boost",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 5,
+    "nameJa": "がんじょう",
+    "nameEn": "Sturdy",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 6,
+    "nameJa": "しめりけ",
+    "nameEn": "Damp",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 7,
+    "nameJa": "じゅうなん",
+    "nameEn": "Limber",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 8,
+    "nameJa": "すながくれ",
+    "nameEn": "Sand Veil",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 9,
+    "nameJa": "せいでんき",
+    "nameEn": "Static",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 10,
+    "nameJa": "ちくでん",
+    "nameEn": "Volt Absorb",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 11,
+    "nameJa": "ちょすい",
+    "nameEn": "Water Absorb",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 12,
+    "nameJa": "どんかん",
+    "nameEn": "Oblivious",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 13,
+    "nameJa": "ノーてんき",
+    "nameEn": "Cloud Nine",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 14,
+    "nameJa": "ふくがん",
+    "nameEn": "Compound Eyes",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 15,
+    "nameJa": "ふみん",
+    "nameEn": "Insomnia",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 17,
+    "nameJa": "めんえき",
+    "nameEn": "Immunity",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 18,
+    "nameJa": "もらいび",
+    "nameEn": "Flash Fire",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 19,
+    "nameJa": "りんぷん",
+    "nameEn": "Shield Dust",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 20,
+    "nameJa": "マイペース",
+    "nameEn": "Own Tempo",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 22,
+    "nameJa": "いかく",
+    "nameEn": "Intimidate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 23,
+    "nameJa": "かげふみ",
+    "nameEn": "Shadow Tag",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 24,
+    "nameJa": "さめはだ",
+    "nameEn": "Rough Skin",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 26,
+    "nameJa": "ふゆう",
+    "nameEn": "Levitate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 28,
+    "nameJa": "シンクロ",
+    "nameEn": "Synchronize",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 29,
+    "nameJa": "クリアボディ",
+    "nameEn": "Clear Body",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 30,
+    "nameJa": "しぜんかいふく",
+    "nameEn": "Natural Cure",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 31,
+    "nameJa": "ひらいしん",
+    "nameEn": "Lightning Rod",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 33,
+    "nameJa": "すいすい",
+    "nameEn": "Swift Swim",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 34,
+    "nameJa": "ようりょくそ",
+    "nameEn": "Chlorophyll",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 35,
+    "nameJa": "はっこう",
+    "nameEn": "Illuminate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 36,
+    "nameJa": "トレース",
+    "nameEn": "Trace",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 37,
+    "nameJa": "ちからもち",
+    "nameEn": "Huge Power",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 38,
+    "nameJa": "どくのトゲ",
+    "nameEn": "Poison Point",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 39,
+    "nameJa": "せいしんりょく",
+    "nameEn": "Inner Focus",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 40,
+    "nameJa": "マグマのよろい",
+    "nameEn": "Magma Armor",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 43,
+    "nameJa": "ぼうおん",
+    "nameEn": "Soundproof",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 44,
+    "nameJa": "あめうけざら",
+    "nameEn": "Rain Dish",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 45,
+    "nameJa": "すなおこし",
+    "nameEn": "Sand Stream",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 46,
+    "nameJa": "プレッシャー",
+    "nameEn": "Pressure",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 47,
+    "nameJa": "あついしぼう",
+    "nameEn": "Thick Fat",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 48,
+    "nameJa": "はやおき",
+    "nameEn": "Early Bird",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 49,
+    "nameJa": "ほのおのからだ",
+    "nameEn": "Flame Body",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 51,
+    "nameJa": "するどいめ",
+    "nameEn": "Keen Eye",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 52,
+    "nameJa": "かいりきバサミ",
+    "nameEn": "Hyper Cutter",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 53,
+    "nameJa": "ものひろい",
+    "nameEn": "Pickup",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 55,
+    "nameJa": "はりきり",
+    "nameEn": "Hustle",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 56,
+    "nameJa": "メロメロボディ",
+    "nameEn": "Cute Charm",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 57,
+    "nameJa": "プラス",
+    "nameEn": "Plus",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 58,
+    "nameJa": "マイナス",
+    "nameEn": "Minus",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 59,
+    "nameJa": "てんきや",
+    "nameEn": "Forecast",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 60,
+    "nameJa": "ねんちゃく",
+    "nameEn": "Sticky Hold",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 61,
+    "nameJa": "だっぴ",
+    "nameEn": "Shed Skin",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 62,
+    "nameJa": "こんじょう",
+    "nameEn": "Guts",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 63,
+    "nameJa": "ふしぎなうろこ",
+    "nameEn": "Marvel Scale",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 65,
+    "nameJa": "しんりょく",
+    "nameEn": "Overgrow",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 66,
+    "nameJa": "もうか",
+    "nameEn": "Blaze",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 67,
+    "nameJa": "げきりゅう",
+    "nameEn": "Torrent",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 68,
+    "nameJa": "むしのしらせ",
+    "nameEn": "Swarm",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 69,
+    "nameJa": "いしあたま",
+    "nameEn": "Rock Head",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 70,
+    "nameJa": "ひでり",
+    "nameEn": "Drought",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 72,
+    "nameJa": "やるき",
+    "nameEn": "Vital Spirit",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 73,
+    "nameJa": "しろいけむり",
+    "nameEn": "White Smoke",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 74,
+    "nameJa": "ヨガパワー",
+    "nameEn": "Pure Power",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 75,
+    "nameJa": "シェルアーマー",
+    "nameEn": "Shell Armor",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 77,
+    "nameJa": "ちどりあし",
+    "nameEn": "Tangled Feet",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 78,
+    "nameJa": "でんきエンジン",
+    "nameEn": "Motor Drive",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 79,
+    "nameJa": "とうそうしん",
+    "nameEn": "Rivalry",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 80,
+    "nameJa": "ふくつのこころ",
+    "nameEn": "Steadfast",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 81,
+    "nameJa": "ゆきがくれ",
+    "nameEn": "Snow Cloak",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 82,
+    "nameJa": "くいしんぼう",
+    "nameEn": "Gluttony",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 83,
+    "nameJa": "いかりのつぼ",
+    "nameEn": "Anger Point",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 84,
+    "nameJa": "かるわざ",
+    "nameEn": "Unburden",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 85,
+    "nameJa": "たいねつ",
+    "nameEn": "Heatproof",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 87,
+    "nameJa": "かんそうはだ",
+    "nameEn": "Dry Skin",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 89,
+    "nameJa": "てつのこぶし",
+    "nameEn": "Iron Fist",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 90,
+    "nameJa": "ポイズンヒール",
+    "nameEn": "Poison Heal",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 91,
+    "nameJa": "てきおうりょく",
+    "nameEn": "Adaptability",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 92,
+    "nameJa": "スキルリンク",
+    "nameEn": "Skill Link",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 93,
+    "nameJa": "うるおいボディ",
+    "nameEn": "Hydration",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 94,
+    "nameJa": "サンパワー",
+    "nameEn": "Solar Power",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 95,
+    "nameJa": "はやあし",
+    "nameEn": "Quick Feet",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 97,
+    "nameJa": "スナイパー",
+    "nameEn": "Sniper",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 98,
+    "nameJa": "マジックガード",
+    "nameEn": "Magic Guard",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 99,
+    "nameJa": "ノーガード",
+    "nameEn": "No Guard",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 100,
+    "nameJa": "あとだし",
+    "nameEn": "Stall",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 101,
+    "nameJa": "テクニシャン",
+    "nameEn": "Technician",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 102,
+    "nameJa": "リーフガード",
+    "nameEn": "Leaf Guard",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 103,
+    "nameJa": "ぶきよう",
+    "nameEn": "Klutz",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 104,
+    "nameJa": "かたやぶり",
+    "nameEn": "Mold Breaker",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 105,
+    "nameJa": "きょううん",
+    "nameEn": "Super Luck",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 106,
+    "nameJa": "ゆうばく",
+    "nameEn": "Aftermath",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 107,
+    "nameJa": "きけんよち",
+    "nameEn": "Anticipation",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 109,
+    "nameJa": "てんねん",
+    "nameEn": "Unaware",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 111,
+    "nameJa": "フィルター",
+    "nameEn": "Filter",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 113,
+    "nameJa": "きもったま",
+    "nameEn": "Scrappy",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 115,
+    "nameJa": "アイスボディ",
+    "nameEn": "Ice Body",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 116,
+    "nameJa": "ハードロック",
+    "nameEn": "Solid Rock",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 117,
+    "nameJa": "ゆきふらし",
+    "nameEn": "Snow Warning",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 119,
+    "nameJa": "おみとおし",
+    "nameEn": "Frisk",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 120,
+    "nameJa": "すてみ",
+    "nameEn": "Reckless",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 124,
+    "nameJa": "わるいてぐせ",
+    "nameEn": "Pickpocket",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 125,
+    "nameJa": "ちからずく",
+    "nameEn": "Sheer Force",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 126,
+    "nameJa": "あまのじゃく",
+    "nameEn": "Contrary",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 127,
+    "nameJa": "きんちょうかん",
+    "nameEn": "Unnerve",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 128,
+    "nameJa": "まけんき",
+    "nameEn": "Defiant",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 130,
+    "nameJa": "のろわれボディ",
+    "nameEn": "Cursed Body",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 131,
+    "nameJa": "いやしのこころ",
+    "nameEn": "Healer",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 132,
+    "nameJa": "フレンドガード",
+    "nameEn": "Friend Guard",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 133,
+    "nameJa": "くだけるよろい",
+    "nameEn": "Weak Armor",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 134,
+    "nameJa": "ヘヴィメタル",
+    "nameEn": "Heavy Metal",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 135,
+    "nameJa": "ライトメタル",
+    "nameEn": "Light Metal",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 136,
+    "nameJa": "マルチスケイル",
+    "nameEn": "Multiscale",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 139,
+    "nameJa": "しゅうかく",
+    "nameEn": "Harvest",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 140,
+    "nameJa": "テレパシー",
+    "nameEn": "Telepathy",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 141,
+    "nameJa": "ムラっけ",
+    "nameEn": "Moody",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 142,
+    "nameJa": "ぼうじん",
+    "nameEn": "Overcoat",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 143,
+    "nameJa": "どくしゅ",
+    "nameEn": "Poison Touch",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 144,
+    "nameJa": "さいせいりょく",
+    "nameEn": "Regenerator",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 145,
+    "nameJa": "はとむね",
+    "nameEn": "Big Pecks",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 146,
+    "nameJa": "すなかき",
+    "nameEn": "Sand Rush",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 148,
+    "nameJa": "アナライズ",
+    "nameEn": "Analytic",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 149,
+    "nameJa": "イリュージョン",
+    "nameEn": "Illusion",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 150,
+    "nameJa": "かわりもの",
+    "nameEn": "Imposter",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 151,
+    "nameJa": "すりぬけ",
+    "nameEn": "Infiltrator",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 152,
+    "nameJa": "ミイラ",
+    "nameEn": "Mummy",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 153,
+    "nameJa": "じしんかじょう",
+    "nameEn": "Moxie",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 154,
+    "nameJa": "せいぎのこころ",
+    "nameEn": "Justified",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 156,
+    "nameJa": "マジックミラー",
+    "nameEn": "Magic Bounce",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 157,
+    "nameJa": "そうしょく",
+    "nameEn": "Sap Sipper",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 158,
+    "nameJa": "いたずらごころ",
+    "nameEn": "Prankster",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 159,
+    "nameJa": "すなのちから",
+    "nameEn": "Sand Force",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 165,
+    "nameJa": "アロマベール",
+    "nameEn": "Aroma Veil",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 166,
+    "nameJa": "フラワーベール",
+    "nameEn": "Flower Veil",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 167,
+    "nameJa": "ほおぶくろ",
+    "nameEn": "Cheek Pouch",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 168,
+    "nameJa": "へんげんじざい",
+    "nameEn": "Protean",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 169,
+    "nameJa": "ファーコート",
+    "nameEn": "Fur Coat",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 170,
+    "nameJa": "マジシャン",
+    "nameEn": "Magician",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 171,
+    "nameJa": "ぼうだん",
+    "nameEn": "Bulletproof",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 172,
+    "nameJa": "かちき",
+    "nameEn": "Competitive",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 173,
+    "nameJa": "がんじょうあご",
+    "nameEn": "Strong Jaw",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 174,
+    "nameJa": "フリーズスキン",
+    "nameEn": "Refrigerate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 175,
+    "nameJa": "スイートベール",
+    "nameEn": "Sweet Veil",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 176,
+    "nameJa": "バトルスイッチ",
+    "nameEn": "Stance Change",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 177,
+    "nameJa": "はやてのつばさ",
+    "nameEn": "Gale Wings",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 178,
+    "nameJa": "メガランチャー",
+    "nameEn": "Mega Launcher",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 180,
+    "nameJa": "きょうせい",
+    "nameEn": "Symbiosis",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 181,
+    "nameJa": "かたいツメ",
+    "nameEn": "Tough Claws",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 182,
+    "nameJa": "フェアリースキン",
+    "nameEn": "Pixilate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 183,
+    "nameJa": "ぬめぬめ",
+    "nameEn": "Gooey",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 184,
+    "nameJa": "スカイスキン",
+    "nameEn": "Aerilate",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 185,
+    "nameJa": "おやこあい",
+    "nameEn": "Parental Bond",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 187,
+    "nameJa": "フェアリーオーラ",
+    "nameEn": "Fairy Aura",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 192,
+    "nameJa": "じきゅうりょく",
+    "nameEn": "Stamina",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 196,
+    "nameJa": "ひとでなし",
+    "nameEn": "Merciless",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 199,
+    "nameJa": "すいほう",
+    "nameEn": "Water Bubble",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 201,
+    "nameJa": "ぎゃくじょう",
+    "nameEn": "Berserk",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 202,
+    "nameJa": "ゆきかき",
+    "nameEn": "Slush Rush",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 203,
+    "nameJa": "えんかく",
+    "nameEn": "Long Reach",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 204,
+    "nameJa": "うるおいボイス",
+    "nameEn": "Liquid Voice",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 207,
+    "nameJa": "サーフテール",
+    "nameEn": "Surge Surfer",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 209,
+    "nameJa": "ばけのかわ",
+    "nameEn": "Disguise",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 212,
+    "nameJa": "ふしょく",
+    "nameEn": "Corrosion",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 214,
+    "nameJa": "じょおうのいげん",
+    "nameEn": "Queenly Majesty",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 215,
+    "nameJa": "とびだすなかみ",
+    "nameEn": "Innards Out",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 222,
+    "nameJa": "レシーバー",
+    "nameEn": "Receiver",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 240,
+    "nameJa": "ミラーアーマー",
+    "nameEn": "Mirror Armor",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 242,
+    "nameJa": "すじがねいり",
+    "nameEn": "Stalwart",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 245,
+    "nameJa": "すなはき",
+    "nameEn": "Sand Spit",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 247,
+    "nameJa": "じゅくせい",
+    "nameEn": "Ripen",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 250,
+    "nameJa": "ぎたい",
+    "nameEn": "Mimicry",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 251,
+    "nameJa": "バリアフリー",
+    "nameEn": "Screen Cleaner",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 254,
+    "nameJa": "さまようたましい",
+    "nameEn": "Wandering Spirit",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 258,
+    "nameJa": "はらぺこスイッチ",
+    "nameEn": "Hunger Switch",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 259,
+    "nameJa": "クイックドロウ",
+    "nameEn": "Quick Draw",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 260,
+    "nameJa": "ふかしのこぶし",
+    "nameEn": "Unseen Fist",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 261,
+    "nameJa": "きみょうなくすり",
+    "nameEn": "Curious Medicine",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 272,
+    "nameJa": "きよめのしお",
+    "nameEn": "Purifying Salt",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 278,
+    "nameJa": "マイティチェンジ",
+    "nameEn": "Zero to Hero",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 280,
+    "nameJa": "でんきにかえる",
+    "nameEn": "Electromorphosis",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 290,
+    "nameJa": "びんじょう",
+    "nameEn": "Opportunist",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 291,
+    "nameJa": "はんすう",
+    "nameEn": "Cud Chew",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 292,
+    "nameJa": "きれあじ",
+    "nameEn": "Sharpness",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 293,
+    "nameJa": "そうだいしょう",
+    "nameEn": "Supreme Overlord",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 295,
+    "nameJa": "どくげしょう",
+    "nameEn": "Toxic Debris",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 296,
+    "nameJa": "テイルアーマー",
+    "nameEn": "Armor Tail",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 297,
+    "nameJa": "どしょく",
+    "nameEn": "Earth Eater",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 300,
+    "nameJa": "かんろなミツ",
+    "nameEn": "Supersweet Syrup",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 301,
+    "nameJa": "おもてなし",
+    "nameEn": "Hospitality",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 308,
+    "nameJa": "かんつうドリル",
+    "nameEn": "Piercing Drill",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 309,
+    "nameJa": "ドラゴンスキン",
+    "nameEn": "Dragonize",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 310,
+    "nameJa": "メガソーラー",
+    "nameEn": "Mega Sol",
+    "effectTags": []
+  },
+  {
+    "pokeapiId": 311,
+    "nameJa": "とびだすハバネロ",
+    "nameEn": "Spicy Spray",
+    "effectTags": []
+  }
+]

@@ -1,11 +1,11 @@
 import { createPrismaClient } from "../src/index";
 import {
   seedEntityNames,
-  seedSampleMasters,
+  seedMasterSnapshot,
   type SeedChangeCounts,
   type SeedEntityName,
 } from "../src/seed/pipeline";
-import { sampleMasterData } from "../src/seed/sample-data";
+import { championsV1MasterData } from "../src/seed/champions-v1-data";
 
 const entityLabels: Record<SeedEntityName, string> = {
   pokemons: "Pokemon",
@@ -18,16 +18,16 @@ const entityLabels: Record<SeedEntityName, string> = {
 };
 
 function formatCounts(counts: SeedChangeCounts): string {
-  return `追加=${counts.created}, 更新=${counts.updated}, 変更なし=${counts.unchanged}`;
+  return `追加=${counts.created}, 更新=${counts.updated}, 変更なし=${counts.unchanged}, 削除=${counts.deleted}`;
 }
 
 async function main(): Promise<void> {
   const prisma = createPrismaClient();
 
   try {
-    const summary = await seedSampleMasters(prisma, sampleMasterData);
+    const summary = await seedMasterSnapshot(prisma, championsV1MasterData);
 
-    console.log("✅ MASTER-005 sample master data seeded");
+    console.log("✅ MASTER-009A Pokémon Champions v1.0 master data seeded");
     for (const entity of seedEntityNames) {
       console.log(`  ${entityLabels[entity]}: ${formatCounts(summary[entity])}`);
     }
@@ -38,7 +38,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error("❌ MASTER-005 sample master data seed failed");
+  console.error("❌ MASTER-009A Pokémon Champions v1.0 master data seed failed");
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

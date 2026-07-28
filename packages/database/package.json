@@ -13,7 +13,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "prisma generate && tsup",
     "lint": "eslint src scripts",
@@ -24,7 +26,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:check": "tsx scripts/check-connection.ts",
-    "db:seed": "pnpm --filter @pokemon-champions/shared build && tsx scripts/seed-sample.ts"
+    "db:seed": "pnpm --filter @pokemon-champions/shared build && tsx scripts/seed-sample.ts",
+    "validate:champions-v1": "tsx scripts/validate-champions-v1-data.ts"
   },
   "dependencies": {
     "@pokemon-champions/shared": "workspace:*",

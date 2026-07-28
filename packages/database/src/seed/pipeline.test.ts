@@ -1,6 +1,6 @@
 import type { Prisma } from "../index";
 import { describe, expect, it, vi } from "vitest";
-import { seedSampleMasters, type SeedTransactionRunner } from "./pipeline";
+import { planPokemonMoveSync, seedSampleMasters, type SeedTransactionRunner } from "./pipeline";
 import { sampleMasterData } from "./sample-data";
 
 describe("seedSampleMasters", () => {
@@ -61,5 +61,42 @@ describe("seedSampleMasters", () => {
     await expect(seedSampleMasters(runner, sampleMasterData)).rejects.toThrow(
       "トランザクションはロールバックされました: 一意制約違反",
     );
+  });
+});
+
+describe("planPokemonMoveSync", () => {
+  it("正式snapshotでは不足関係を追加し、入力から消えた対象関係を削除する", () => {
+    const existing = [
+      { pokemonId: 1, moveId: 10 },
+      { pokemonId: 1, moveId: 20 },
+    ];
+    const desired = [
+      { pokemonId: 1, moveId: 20 },
+      { pokemonId: 1, moveId: 30 },
+    ];
+
+    expect(planPokemonMoveSync(existing, desired, true)).toEqual({
+      missing: [{ pokemonId: 1, moveId: 30 }],
+      unchanged: [{ pokemonId: 1, moveId: 20 }],
+      stale: [{ pokemonId: 1, moveId: 10 }],
+    });
+    expect(existing).toEqual([
+      { pokemonId: 1, moveId: 10 },
+      { pokemonId: 1, moveId: 20 },
+    ]);
+    expect(desired).toEqual([
+      { pokemonId: 1, moveId: 20 },
+      { pokemonId: 1, moveId: 30 },
+    ]);
+  });
+
+  it("サンプルの追加モードでは既存の入力外関係を削除しない", () => {
+    expect(
+      planPokemonMoveSync([{ pokemonId: 1, moveId: 10 }], [{ pokemonId: 1, moveId: 20 }], false),
+    ).toEqual({
+      missing: [{ pokemonId: 1, moveId: 20 }],
+      unchanged: [],
+      stale: [],
+    });
   });
 });

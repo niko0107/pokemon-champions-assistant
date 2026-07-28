@@ -23,16 +23,52 @@ export interface SeedChangeCounts {
   created: number;
   updated: number;
   unchanged: number;
+  deleted: number;
 }
 
 export type SeedSummary = Record<SeedEntityName | "total", SeedChangeCounts>;
 
 export interface SeedTransactionRunner {
-  $transaction<T>(operation: (transaction: Prisma.TransactionClient) => Promise<T>): Promise<T>;
+  $transaction<T>(
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+    options?: { maxWait?: number; timeout?: number },
+  ): Promise<T>;
+}
+
+export interface PokemonMoveRelation {
+  pokemonId: number;
+  moveId: number;
+}
+
+export interface PokemonMoveSyncPlan {
+  missing: PokemonMoveRelation[];
+  unchanged: PokemonMoveRelation[];
+  stale: PokemonMoveRelation[];
+}
+
+function pokemonMoveRelationKey(relation: PokemonMoveRelation): string {
+  return `${relation.pokemonId}:${relation.moveId}`;
+}
+
+export function planPokemonMoveSync(
+  existing: readonly PokemonMoveRelation[],
+  desired: readonly PokemonMoveRelation[],
+  replaceForSeededPokemons: boolean,
+): PokemonMoveSyncPlan {
+  const existingKeys = new Set(existing.map(pokemonMoveRelationKey));
+  const desiredKeys = new Set(desired.map(pokemonMoveRelationKey));
+
+  return {
+    missing: desired.filter((relation) => !existingKeys.has(pokemonMoveRelationKey(relation))),
+    unchanged: desired.filter((relation) => existingKeys.has(pokemonMoveRelationKey(relation))),
+    stale: replaceForSeededPokemons
+      ? existing.filter((relation) => !desiredKeys.has(pokemonMoveRelationKey(relation)))
+      : [],
+  };
 }
 
 function emptyCounts(): SeedChangeCounts {
-  return { created: 0, updated: 0, unchanged: 0 };
+  return { created: 0, updated: 0, unchanged: 0, deleted: 0 };
 }
 
 function createEmptySummary(): SeedSummary {
@@ -255,8 +291,9 @@ async function seedPokemonMoves(
   pokemonIds: ReadonlyMap<string, number>,
   moveIds: ReadonlyMap<string, number>,
   summary: SeedSummary,
+  replaceForSeededPokemons: boolean,
 ): Promise<void> {
-  for (const pokemonMove of data.pokemonMoves) {
+  const desired = data.pokemonMoves.map((pokemonMove) => {
     const pokemonId = pokemonIds.get(getPokemonSeedKey(pokemonMove.pokemon));
     const moveId = moveIds.get(pokemonMove.moveNameEn);
 
@@ -266,16 +303,53 @@ async function seedPokemonMoves(
       );
     }
 
-    const ids = pokemonMoveSchema.parse({ pokemonId, moveId });
-    const existing = await transaction.pokemonMove.findUnique({
-      where: { pokemonId_moveId: ids },
-    });
+    return pokemonMoveSchema.parse({ pokemonId, moveId });
+  });
+  const targetPokemonIds = [...new Set(pokemonIds.values())];
+  const existing = await transaction.pokemonMove.findMany({
+    where: { pokemonId: { in: targetPokemonIds } },
+    select: { pokemonId: true, moveId: true },
+  });
+  const plan = planPokemonMoveSync(existing, desired, replaceForSeededPokemons);
 
-    if (existing) {
-      increment(summary, "pokemonMoves", "unchanged");
-    } else {
-      await transaction.pokemonMove.create({ data: ids });
+  for (const _relation of plan.unchanged) {
+    increment(summary, "pokemonMoves", "unchanged");
+  }
+
+  const createBatchSize = 1_000;
+  for (let offset = 0; offset < plan.missing.length; offset += createBatchSize) {
+    const batch = plan.missing.slice(offset, offset + createBatchSize);
+    const result = await transaction.pokemonMove.createMany({
+      data: batch,
+      skipDuplicates: true,
+    });
+    if (result.count !== batch.length) {
+      throw new Error("PokemonMoveの一括追加件数が期待値と一致しません");
+    }
+    for (const _relation of batch) {
       increment(summary, "pokemonMoves", "created");
+    }
+  }
+
+  const staleByPokemonId = new Map<number, number[]>();
+  for (const relation of plan.stale) {
+    const staleMoveIds = staleByPokemonId.get(relation.pokemonId) ?? [];
+    staleMoveIds.push(relation.moveId);
+    staleByPokemonId.set(relation.pokemonId, staleMoveIds);
+  }
+
+  for (const [pokemonId, staleMoveIds] of staleByPokemonId) {
+    const result = await transaction.pokemonMove.deleteMany({
+      where: {
+        pokemonId,
+        moveId: { in: staleMoveIds },
+      },
+    });
+    if (result.count !== staleMoveIds.length) {
+      throw new Error(`Pokemon ID ${pokemonId}の旧PokemonMove削除件数が期待値と一致しません`);
+    }
+    for (const _moveId of staleMoveIds) {
+      increment(summary, "pokemonMoves", "deleted");
     }
   }
 }
@@ -344,6 +418,7 @@ async function seedRules(
 async function writeMasterData(
   transaction: Prisma.TransactionClient,
   data: SampleMasterData,
+  replacePokemonMovesForSeededPokemons: boolean,
 ): Promise<SeedSummary> {
   const summary = createEmptySummary();
 
@@ -351,7 +426,14 @@ async function writeMasterData(
   await seedItems(transaction, data, summary);
   const moveIds = await seedMoves(transaction, data, summary);
   const pokemonIds = await seedPokemons(transaction, data, summary);
-  await seedPokemonMoves(transaction, data, pokemonIds, moveIds, summary);
+  await seedPokemonMoves(
+    transaction,
+    data,
+    pokemonIds,
+    moveIds,
+    summary,
+    replacePokemonMovesForSeededPokemons,
+  );
   await seedSeasons(transaction, data, summary);
   await seedRules(transaction, data, summary);
 
@@ -365,10 +447,35 @@ export async function seedSampleMasters(
   database: SeedTransactionRunner,
   input: unknown,
 ): Promise<SeedSummary> {
+  return seedMasters(database, input, false);
+}
+
+/**
+ * 対象PokemonのPokemonMoveを入力スナップショットと完全一致させて冪等投入する。
+ * 入力外のPokemonとその習得関係には触れない。
+ */
+export async function seedMasterSnapshot(
+  database: SeedTransactionRunner,
+  input: unknown,
+): Promise<SeedSummary> {
+  return seedMasters(database, input, true);
+}
+
+async function seedMasters(
+  database: SeedTransactionRunner,
+  input: unknown,
+  replacePokemonMovesForSeededPokemons: boolean,
+): Promise<SeedSummary> {
   const data = validateSampleMasterData(input);
 
   try {
-    return await database.$transaction((transaction) => writeMasterData(transaction, data));
+    return await database.$transaction(
+      (transaction) => writeMasterData(transaction, data, replacePokemonMovesForSeededPokemons),
+      {
+        maxWait: 10_000,
+        timeout: 180_000,
+      },
+    );
   } catch (error) {
     throw new Error(
       `マスタ投入に失敗しました。トランザクションはロールバックされました: ${errorMessage(error)}`,

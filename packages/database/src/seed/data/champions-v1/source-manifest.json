@@ -1,0 +1,134 @@
+{
+  "dataset": "Pokémon Champions v1.0 public master data",
+  "gameVersion": "Pokémon Champions v1.0",
+  "retrievedAt": "2026-07-29",
+  "license": "BSD-3-Clause",
+  "source": {
+    "repository": "https://github.com/PokeAPI/pokeapi",
+    "learnsetPullRequest": "https://github.com/PokeAPI/pokeapi/pull/1532",
+    "learnsetCommit": "286d7a071bc50ec4a57e3f3f506a13220ce6f903",
+    "completenessFixPullRequest": "https://github.com/PokeAPI/pokeapi/pull/1584",
+    "completenessFixCommit": "2829e8496ca3bb078b0b80ce1a1bdeda0792efa7",
+    "apiDataRepository": "https://github.com/PokeAPI/api-data",
+    "apiDataCommit": "155ea230292d72beff9325cca47ea281d511033a"
+  },
+  "filters": {
+    "versionGroupId": 32,
+    "versionGroupIdentifier": "champions",
+    "moveMethodId": 12,
+    "moveMethodIdentifier": "train"
+  },
+  "expected": {
+    "pokemon": 281,
+    "pokemonSpecies": 186,
+    "pokemonFormRows": 377,
+    "nonDefaultPokemon": 96,
+    "megaPokemon": 60,
+    "moves": 490,
+    "abilities": 191,
+    "pokemonMoves": 17394,
+    "upstreamDisabledRelationsExcluded": 261
+  },
+  "files": [
+    {
+      "path": "pokemon.csv",
+      "sha256": "16c81c33188b0eac403aa2f759fcbe9e42c611f722d263f5b5a6a5bff9f8ce6b"
+    },
+    {
+      "path": "pokemon_species.csv",
+      "sha256": "9878f19c0637095cdd9a4134b4aac8fb2b64776d3bdc599aa68f15c3a011b87c"
+    },
+    {
+      "path": "pokemon_species_names.csv",
+      "sha256": "5d7b06270a31bdc51424be6032fc04a3a3c0ae7ac40af4aea69c1a2954ca1e7e"
+    },
+    {
+      "path": "pokemon_forms.csv",
+      "sha256": "404f77a5033ed01df2b2cfb229f465bd086b7bbaa6b813834c228e4fbc578694"
+    },
+    {
+      "path": "pokemon_form_names.csv",
+      "sha256": "f496066d02fab12c18d10cce0af2f748d09cb7e296ecc784cc8682f8c4da8625"
+    },
+    {
+      "path": "pokemon_stats.csv",
+      "sha256": "fa2c44263a3706468682fefc3e0b3c4f5487fe9febed7d4ebcd6939c34b16aa8"
+    },
+    {
+      "path": "pokemon_types.csv",
+      "sha256": "f1fc4bfd657a034ea3bf6972423b10276424aa068577b304a78a08996425ba05"
+    },
+    {
+      "path": "pokemon_abilities.csv",
+      "sha256": "9ab26eee6f508be0ea1287c5b92d8378b018b1b88facd5c5ad0c7fd92c60b5c5"
+    },
+    {
+      "path": "abilities.csv",
+      "sha256": "4ef866a51da6230bcaad44104cce5c890aeeb9e0d2b5661923e8e1dbd414a12c"
+    },
+    {
+      "path": "ability_names.csv",
+      "sha256": "1ccb888f39b535c0e6530e70da8a1d71d39bb6231d49e3a16c46a09f8983b735"
+    },
+    {
+      "path": "moves.csv",
+      "sha256": "d4e8292524f38c0883dafc9778264cf4a08ccbf35337422ec1677890070c9885"
+    },
+    {
+      "path": "move_names.csv",
+      "sha256": "cc9d86da43fba32ffbc68404c6fc5dbcfb34639089bb69b94ba8f37625009392"
+    },
+    {
+      "path": "move_meta.csv",
+      "sha256": "c02f480f22a5269c4567f39fa9de6309d60e0b51e232096fdac4d60dd686285c"
+    },
+    {
+      "path": "move_damage_classes.csv",
+      "sha256": "b7101ceca4dff152537a2fb5c439ca4030b05f86442c643812c0b7b6ccf16f1b"
+    },
+    {
+      "path": "pokemon_moves.csv",
+      "sha256": "a5c41e764dfdfc43d9fd07e975fb877baf55b23e5f70d135936fd1e3b48ae654"
+    },
+    {
+      "path": "pokemon_move_methods.csv",
+      "sha256": "78b75acfcf6dca4c82da9d4851357cbbd65e61b08154eddfc2ace0efd00e408e"
+    },
+    {
+      "path": "pokemon_move_method_prose.csv",
+      "sha256": "e739241b87694e3160fa5490a64d7ae3438049251138b38826fb6008a719c9ba"
+    },
+    {
+      "path": "version_groups.csv",
+      "sha256": "28da8d89d8eb4966941f81a9e62b3990510ed4d76dd774158246551a8e7707a7"
+    },
+    {
+      "path": "versions.csv",
+      "sha256": "70083465865a6a69a9aad2be3fc3915078c6ff740f14a090b1367d8ec9cfc3cd"
+    },
+    {
+      "path": "items.csv",
+      "sha256": "0f49d25d99fed42ec3d673123289872a26289c38d78af458f3b4784d188dd326"
+    },
+    {
+      "path": "item_names.csv",
+      "sha256": "8ef55b120348502fcec7b592e8c24328ab5e22d31434e5fb5c3252f58346ebda"
+    },
+    {
+      "path": "item_categories.csv",
+      "sha256": "8bfcaaf1dfe45d33a8cc374a602f2424e1c37ad68bab222f090cd95c691660d7"
+    },
+    {
+      "path": "languages.csv",
+      "sha256": "fbb60019a6a461783d5671a995d5f590db61792a273e90faa0ed630d102a19b8"
+    },
+    {
+      "path": "types.csv",
+      "sha256": "37f039c8d722f47d51ba1c5c5ecf9b7007235b1a9a1af2827645c777b70307c8"
+    },
+    {
+      "path": "stats.csv",
+      "sha256": "ee8c541b45b64f40f0eb2545c767294b5801ce8a1410e19d8c33a54e6f1c3b9c"
+    }
+  ]
+}
