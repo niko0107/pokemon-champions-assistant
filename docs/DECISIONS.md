@@ -699,3 +699,16 @@
 - **判断:** reason codeはMATCHUPが確定した順序を維持して重複だけを除き、strategy codeはsharedの正式順序で重複排除する。未知のclassification・reason code・strategy code、rank 1欠落は補完や黙示的無視をせず内部不整合として検知し、Session API境界で詳細を含まない`500 INTERNAL_ERROR`へ変換する
 - **理由:** PRODUCT_SPEC §12の「LLMは判定せず、障害時も対戦支援を止めない」を、外部依存なしの即時テンプレと将来差し替え可能な境界で実現し、計算結果・ユーザー情報・DBへ文章生成責務を混入させないため
 - **影響:** sharedのcounterplanレスポンスには必須`explanation`が加わるが、WEB-007は既存構造化フィールドだけを引き続き表示し、説明文の表示はWEB-009まで行わない。Anthropic API・prompt・失敗時のTemplateへの切替実装はLLM-002、Redisキャッシュ・非同期化はLLM-003へ残す
+
+## 2026-07-28 Anthropic API実装(LLM-002)
+
+### D-065: 明示設定時だけ利用するAnthropic生成と全面的なTemplateフォールバック
+
+- **判断:** `ANTHROPIC_API_KEY`と`ANTHROPIC_MODEL`がともに空白でない場合だけAnthropic Providerを有効にする。モデルはコードへ固定せず環境変数で明示し、キー未設定・空・空白、モデル不足、timeout不正ではAnthropic clientを呼ばずTemplateへ切り替える。`ANTHROPIC_TIMEOUT_MS`は未指定時5,000ms、明示値は1〜15,000の正の安全な整数だけを受理し、不正値を黙って補正しない
+- **判断:** API専用依存として公式TypeScript SDKのnative Messages APIを使い、non-streaming・toolなし・`temperature=0`・`max_tokens=2048`とする。counterplan APIの待ち時間を限定するため、SDKとリクエスト双方へtimeoutを設定し、SDKの既定リトライは使用せず`maxRetries=0`として1回のAPI試行後にTemplateへ切り替える
+- **判断:** ClaudeへはCounterplanResultから明示的に射影した相手別評価、選出、strategy code、caution move、保存済みthreat/playstyle noteだけをJSONで渡す。Session所有者、認証情報、DB内部値、Observation自由入力は渡さず、計算・おすすめ・選出・先発の変更、外部知識や未登録情報の追加をsystem promptで禁止する
+- **判断:** 出力はLLM-001の`CounterplanExplanation`と同じ構造を公式SDKのstructured outputへ指定し、受信後もstrict Zodで再検証する。summaryは400文字、selection/perOpponent/strategyは各1,200文字を上限とし、空白、HTML、余分・不足キー、相手IDの重複・不足・未知・順序不一致、異常stop reason、text以外のblock、不正JSONを部分採用しない
+- **判断:** timeout、接続、401/403、429、5xx、SDK例外、空content、非text、不正JSON、schema不一致を含むAnthropic側の全失敗はTemplateへフォールバックし、MATCHUP・Session取得の既存エラーは隠さない。Provider名、モデル、fallback有無、失敗理由はAPIレスポンスへ追加しない
+- **判断:** ログは生成成功時の処理時間と、フォールバック時の`configuration / timeout / authentication / rate_limit / server / network / invalid_output / unknown`分類だけに限定する。APIキー、モデル、prompt、モデル出力、note全文、user/session識別情報、stack traceは出さない
+- **理由:** PRODUCT_SPEC §12の「LLMは文章化だけ」「障害時も主要機能を継続」を維持しながら、外部APIの遅延・不正出力・設定不備を既存counterplanの可用性や構造化計算結果へ波及させないため
+- **影響:** Anthropic未設定・障害時のAPIレスポンスはLLM-001と同じTemplate文であり、クライアントはProviderを意識しない。キャッシュ・非同期化はLLM-003、説明文のWeb表示はWEB-009へ残す
