@@ -15,6 +15,14 @@ function pokemon(slot: number) {
     nature: slot === 1 ? "ようき" : null,
     teraType: slot === 1 ? "fire" : null,
     evs: slot === 1 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+    statPoints: null as {
+      hp: number;
+      attack: number;
+      defense: number;
+      specialAttack: number;
+      specialDefense: number;
+      speed: number;
+    } | null,
     ivs: null,
     actualStats: {
       hp: 150,
@@ -165,13 +173,22 @@ describe("ArchetypesService", () => {
     expect(result).not.toHaveProperty("pickCount");
   });
 
-  it("nullableの持ち物・能力・EV・actualStatsを補完せず返す", async () => {
+  it("nullable値と能力ポイントをEV・actualStatsへ補完せず返す", async () => {
     const value = record();
+    const statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
     value.pokemons[0] = {
       ...value.pokemons[0]!,
       item: null,
       ability: null,
       evs: null,
+      statPoints,
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",
@@ -185,6 +202,7 @@ describe("ArchetypesService", () => {
       item: null,
       ability: null,
       evs: null,
+      statPoints,
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",
@@ -220,6 +238,7 @@ describe("ArchetypesService", () => {
   it.each([
     ["不正なdefaultLeads", { defaultLeads: [99] }],
     ["不正なactualStats", { mutateStats: true }],
+    ["不正なstatPoints", { mutateStatPoints: true }],
     ["不正な出典URL", { sources: [{ title: "危険", url: "javascript:alert(1)", siteName: "X" }] }],
   ])("%sを内部情報なしの500にする", async (_label, change) => {
     const value = record();
@@ -230,6 +249,19 @@ describe("ArchetypesService", () => {
       value.pokemons[0] = {
         ...value.pokemons[0]!,
         actualStats: { ...value.pokemons[0]!.actualStats!, hp: 0 },
+      };
+    }
+    if ("mutateStatPoints" in change) {
+      value.pokemons[0] = {
+        ...value.pokemons[0]!,
+        statPoints: {
+          hp: 32,
+          attack: 32,
+          defense: 3,
+          specialAttack: 0,
+          specialDefense: 0,
+          speed: 0,
+        },
       };
     }
     if ("sources" in change) {

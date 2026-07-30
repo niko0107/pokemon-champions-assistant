@@ -80,7 +80,7 @@ function TypeBadge({ type }: { type: string }) {
 
 function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className="grid gap-5 lg:grid-cols-4">
       <section aria-labelledby={`evs-${pokemon.slot}`}>
         <h4
           id={`evs-${pokemon.slot}`}
@@ -95,6 +95,29 @@ function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
                 <dt className="text-slate-500">{label}</dt>
                 <dd className="font-black tabular-nums text-slate-800">
                   {pokemon.evs?.[key as keyof typeof pokemon.evs]}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-2 text-sm text-slate-500">データ未登録</p>
+        )}
+      </section>
+
+      <section aria-labelledby={`stat-points-${pokemon.slot}`}>
+        <h4
+          id={`stat-points-${pokemon.slot}`}
+          className="text-xs font-black tracking-[0.12em] text-slate-400"
+        >
+          能力ポイント
+        </h4>
+        {pokemon.statPoints ? (
+          <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+            {Object.entries(ACTUAL_STAT_LABELS).map(([key, label]) => (
+              <div key={key} className="flex justify-between gap-2 border-b border-slate-100 pb-1">
+                <dt className="text-slate-500">{label}</dt>
+                <dd className="font-black tabular-nums text-slate-800">
+                  {pokemon.statPoints?.[key as keyof typeof pokemon.statPoints]}
                 </dd>
               </div>
             ))}

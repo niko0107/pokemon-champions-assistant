@@ -6,6 +6,7 @@ import {
   archetypeItemAlternativeIdsSchema,
   archetypePokemonRoleSchema,
   archetypePopularityTierSchema,
+  archetypeStatPointsSchema,
   archetypeStatusSchema,
 } from "./archetype";
 
@@ -79,5 +80,87 @@ describe("ARCHETYPE-001 shared schemas", () => {
       }).success,
     ).toBe(false);
     expect(archetypeEvsSchema.safeParse({ hp: 252 }).success).toBe(false);
+  });
+
+  it("能力ポイントは全0と合計66以下を受理し、入力を変更しない", () => {
+    const allZero = {
+      hp: 0,
+      attack: 0,
+      defense: 0,
+      specialAttack: 0,
+      specialDefense: 0,
+      speed: 0,
+    };
+    const total66 = {
+      hp: 32,
+      attack: 32,
+      defense: 2,
+      specialAttack: 0,
+      specialDefense: 0,
+      speed: 0,
+    };
+    const before = structuredClone(total66);
+
+    expect(archetypeStatPointsSchema.parse(allZero)).toEqual(allZero);
+    expect(archetypeStatPointsSchema.parse(total66)).toEqual(total66);
+    expect(total66).toEqual(before);
+  });
+
+  it.each(["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"] as const)(
+    "能力ポイントの%sは32を受理する",
+    (stat) => {
+      const statPoints = {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+        [stat]: 32,
+      };
+
+      expect(archetypeStatPointsSchema.parse(statPoints)[stat]).toBe(32);
+    },
+  );
+
+  it.each([
+    ["33", { hp: 33, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 }],
+    ["負数", { hp: -1, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 }],
+    ["小数", { hp: 0.5, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 }],
+    [
+      "NaN",
+      { hp: Number.NaN, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
+    ],
+    [
+      "Infinity",
+      {
+        hp: Number.POSITIVE_INFINITY,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+      },
+    ],
+    ["合計67", { hp: 32, attack: 32, defense: 3, specialAttack: 0, specialDefense: 0, speed: 0 }],
+    ["キー不足", { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0 }],
+    [
+      "余分なキー",
+      {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+        extra: 0,
+      },
+    ],
+  ])("不正な能力ポイント（%s）を拒否する", (_label, statPoints) => {
+    expect(archetypeStatPointsSchema.safeParse(statPoints).success).toBe(false);
+  });
+
+  it("能力ポイントのnullable契約はnullを受理する", () => {
+    expect(archetypeStatPointsSchema.nullable().parse(null)).toBeNull();
   });
 });

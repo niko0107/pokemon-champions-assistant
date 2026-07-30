@@ -14,6 +14,7 @@ function pokemon(slot: number): PublicArchetypeDetail["pokemons"][number] {
     nature: slot === 1 ? "ようき" : null,
     teraType: slot === 1 ? "fire" : null,
     evs: slot === 1 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+    statPoints: null,
     ivs: null,
     actualStats: {
       hp: 150 + slot,
@@ -130,6 +131,14 @@ describe("WEB-008 public archetype detail schema", () => {
     detail.pokemons[0] = {
       ...detail.pokemons[0]!,
       evs: null,
+      statPoints: {
+        hp: 32,
+        attack: 0,
+        defense: 10,
+        specialAttack: 0,
+        specialDefense: 24,
+        speed: 0,
+      },
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",
@@ -140,6 +149,8 @@ describe("WEB-008 public archetype detail schema", () => {
     };
 
     expect(publicArchetypeDetailSchema.safeParse(detail).success).toBe(true);
+    expect(detail.pokemons[0]?.evs).toBeNull();
+    expect(detail.pokemons[0]?.statPoints?.hp).toBe(32);
   });
 
   it.each([[[1]], [[1, 2]], [[1, 2, 3, 4]]])(

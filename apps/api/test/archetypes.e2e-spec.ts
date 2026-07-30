@@ -31,6 +31,17 @@ const detail: PublicArchetypeDetail = {
     nature: null,
     teraType: null,
     evs: null,
+    statPoints:
+      index === 0
+        ? {
+            hp: 32,
+            attack: 0,
+            defense: 10,
+            specialAttack: 0,
+            specialDefense: 24,
+            speed: 0,
+          }
+        : null,
     ivs: null,
     actualStats: null,
     statDataStatus: "partial",
@@ -125,6 +136,12 @@ describe("GET /api/v1/archetypes/:id", () => {
     expect(publicArchetypeDetailSchema.parse(response.body)).toEqual(detail);
     expect(get).toHaveBeenCalledWith(archetypeId);
     expect(response.body.pokemons).toHaveLength(6);
+    expect(response.body.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints: { hp: 32, defense: 10, specialDefense: 24 },
+      actualStats: null,
+      statDataStatus: "partial",
+    });
     expect(response.body).not.toHaveProperty("status");
     expect(response.body).not.toHaveProperty("createdAt");
     expect(response.body).not.toHaveProperty("popularityScore");

@@ -204,8 +204,18 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
   });
 
   it("POSTとPUTでpartial・未確認IV・null actualStatsを受理する", async () => {
+    const statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
     const partialPokemon = {
       ...writeInput.pokemons[0]!,
+      evs: null,
+      statPoints,
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial" as const,
@@ -216,6 +226,7 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
     };
     create.mockResolvedValueOnce(partialDetail);
     update.mockResolvedValueOnce(partialDetail);
+    get.mockResolvedValueOnce(partialDetail);
 
     const created = await request(app.getHttpServer())
       .post("/api/v1/admin/archetypes")
@@ -223,6 +234,8 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       .send({ ...writeInput, pokemons: [partialPokemon] })
       .expect(201);
     expect(created.body.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints,
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial",
@@ -234,9 +247,80 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       .send({ ...writeInput, pokemons: [partialPokemon] })
       .expect(200);
     expect(updated.body.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints,
       actualStats: null,
       statDataStatus: "partial",
     });
+
+    const fetched = await request(app.getHttpServer())
+      .get(`/api/v1/admin/archetypes/${archetypeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+    expect(fetched.body.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints,
+      actualStats: null,
+      statDataStatus: "partial",
+    });
+  });
+
+  it.each([
+    [
+      "各能力上限超過",
+      {
+        hp: 33,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+      },
+    ],
+    [
+      "合計上限超過",
+      {
+        hp: 32,
+        attack: 32,
+        defense: 3,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+      },
+    ],
+    [
+      "余分なキー",
+      {
+        hp: 32,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+        ev: 252,
+      },
+    ],
+  ])("不正な能力ポイント（%s）はPOST・PUTとも部分保存前に400にする", async (_label, statPoints) => {
+    const pokemon = {
+      ...writeInput.pokemons[0]!,
+      evs: null,
+      statPoints,
+      actualStats: null,
+      statDataStatus: "partial",
+    };
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, pokemons: [pokemon] })
+      .expect(400);
+    await request(app.getHttpServer())
+      .put(`/api/v1/admin/archetypes/${archetypeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, pokemons: [pokemon] })
+      .expect(400);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("AuthorizationなしはRFC 9457形式の401にする", async () => {

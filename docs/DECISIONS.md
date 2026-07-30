@@ -794,3 +794,16 @@
 - **判断:** 公開詳細APIはIV・実数値状態をstrictに返し、Webは直接確認値・明示材料からの算出値・未確認を区別する。未確認時はダメージ計算へ使わない旨を表示し、counterplanも「タイプ相性のみ」と未算出項目を明示する。出典URLは既存ArchetypeSource契約を維持し、推定値や出典にない仮定を保存しない
 - **理由:** Regulation Set M-Bの再監査38件は実数値または全IVを公開していない一方、30件は6体・技・Item・Ability・性格・EVまで確認可能であり、構築候補として有用な構造情報と厳密なダメージ計算の可否を同一条件にすると、推測か全件除外を招くため
 - **影響:** 再監査では30件を`partial`として構造上登録可能、`exact` 0件、`derived` 0件、残る8件は6体ちょうどでないため登録不能と判定した。ARCHETYPE-004はpartial 30件を対象に再開できるが、各出典・Item・Rule/Season・previewを登録時に再確認する。将来、全計算材料が公開された行だけderivedへ更新できる
+
+## 2026-07-31 Champions能力ポイントの正規化(ARCHETYPE-004C)
+
+### D-073: 能力ポイントと従来EVの分離
+
+- **判断:** ArchetypePokemonへnullable JSONBの`statPoints`を追加し、`hp / attack / defense / specialAttack / specialDefense / speed`の6能力を各0〜32・合計66以下でstrictに保存する。合計は66固定にせず、未配分を含む0〜66を許可する
+- **判断:** Pokémon Championsの能力ポイントは従来EVの`evs`と別の値であり、相互変換、32から252への比例変換、66から510への比例変換を行わない。能力ポイントしか確認できない公開構築は`statPoints=出典値`、`evs=null`、`actualStats=null`、`statDataStatus=partial`として扱い、未確認IVを補完しない
+- **判断:** `statPoints`は現時点の実数値・ダメージ・確定数・素早さ計算に利用しない。partial構築は能力ポイントがあっても`type_only`のままとし、MATCHUP計算式とexact / derivedの既存条件を変更しない
+- **判断:** admin POST / PUT / preview / GETと公開詳細は同じshared契約を使用し、Web構築詳細は努力値と別の「能力ポイント」欄へプレーンテキスト表示する。能力ポイントを努力値欄へ代入しない
+- **判断:** `role`の既存literal unionは変更せず、ARCHETYPE-004では記事本文等の出典で役割を裏付けられる候補だけを登録する。裏付け不能な候補へroleを自動推測しない
+- **理由:** Pokémon Championsの公開構築が示す各最大32・合計66の能力ポイントは、従来シリーズの各最大252・合計510のEVと意味・尺度が異なり、同じ`evs`へ保存するとデータの意味と対戦計算の前提を損なうため
+- **影響:** 既存行は`statPoints=null`のまま移行する。ARCHETYPE-004の正式登録は本タスクに含めず、実装検証後に現行PokeSol候補を決定的順序で再監査し、出典から既存roleまで裏付けられる全候補を次タスクへ引き渡す
+- **運用結果:** 2026-07-31にPokeSolのRegulation M-B / Season M-4検索結果を記事ID昇順で再監査した。対象48件・HTTP 200は48件・6体構築は38件・Pokemon、Move、Item、Ability、Nature、能力ポイントが揃う構築は37件だった。記事本文から6体すべての既存roleを裏付けられ、Seasonの矛盾がなく、同一6体・主要情報の重複もない最終候補は25件、重複除外は0件だった。30件未満のためARCHETYPE-004の正式登録は再開せず、候補補充または追加の出典根拠が必要
