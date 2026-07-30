@@ -13,6 +13,7 @@ import type {
   CounterplanCautionMoveTagValue,
   CounterplanStrategyCodeValue,
   KnockoutClassificationValue,
+  MatchupCalculationModeValue,
   MatchupReasonCodeValue,
   MatchupVerdictValue,
   PokemonRole,
@@ -145,7 +146,8 @@ export interface DamageRangeResult extends KnockoutCountResult {
 export interface CombatantSnapshot {
   pokemonId: number;
   types: TypeName[];
-  stats: StatValues;
+  /** nullは厳密な実数値が未確認で、タイプ相性のみ評価可能な状態。 */
+  stats: StatValues | null;
   abilityId?: number;
   itemId?: number;
   teraType?: TypeName;
@@ -214,6 +216,8 @@ export interface MatchupScore {
   damageRaceScore: number;
   totalScore: number;
   classification: MatchupVerdict;
+  /** fullは実数値を使う。type_onlyはダメージ・確定数・素早さを算出しない。 */
+  calculationMode: MatchupCalculationModeValue;
   bestOffensiveMoveId: number | null;
   mostThreateningMoveId: number | null;
   outgoingDamage: DamageRangeResult | null;

@@ -148,6 +148,7 @@ const counterplanMatchupResult = {
   damageRaceScore: 5,
   totalScore: 44,
   classification: "slightly_favorable",
+  calculationMode: "full",
   bestOffensiveMoveId: 11,
   mostThreateningMoveId: 21,
   outgoingDamage: null,

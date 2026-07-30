@@ -111,6 +111,7 @@ describe("AnthropicExplanationGenerator", () => {
       opponentPokemonId: 101,
       totalScore: 44,
       classification: "favorable",
+      calculationMode: "full",
       offensiveScore: 25,
       defensiveScore: 20,
       damageRaceScore: 5,

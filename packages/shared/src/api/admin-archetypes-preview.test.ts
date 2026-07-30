@@ -81,6 +81,12 @@ describe("ARCHETYPE-005 shared preview schemas", () => {
     expect(viaPreview).toEqual(viaWrite);
   });
 
+  it("defaultLeads空配列をプレビュー入力として保持する", () => {
+    expect(
+      adminArchetypePreviewRequestSchema.parse({ ...validRequest, defaultLeads: [] }).defaultLeads,
+    ).toEqual([]);
+  });
+
   it("不正なプレビュー入力(未知キー・不正マスタID型)を拒否する", () => {
     expect(
       adminArchetypePreviewRequestSchema.safeParse({ ...validRequest, unexpected: true }).success,
@@ -90,14 +96,19 @@ describe("ARCHETYPE-005 shared preview schemas", () => {
     ).toBe(false);
   });
 
-  it("プレビューでもactualStatsを必須にする", () => {
-    const { actualStats: _actualStats, ...pokemon } = validRequest.pokemons[0];
+  it("プレビューでもpartialのnull actualStatsを保持する", () => {
     expect(
-      adminArchetypePreviewRequestSchema.safeParse({
+      adminArchetypePreviewRequestSchema.parse({
         ...validRequest,
-        pokemons: [pokemon],
-      }).success,
-    ).toBe(false);
+        pokemons: [
+          {
+            ...validRequest.pokemons[0],
+            actualStats: null,
+            statDataStatus: "partial",
+          },
+        ],
+      }).pokemons[0],
+    ).toMatchObject({ actualStats: null, statDataStatus: "partial" });
   });
 
   it("正常なプレビューレスポンスを検証する", () => {

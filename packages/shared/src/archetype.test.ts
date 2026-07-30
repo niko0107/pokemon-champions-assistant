@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  archetypeDefaultLeadsForPickSizeSchema,
   archetypeDefaultLeadsSchema,
   archetypeEvsSchema,
   archetypeItemAlternativeIdsSchema,
@@ -18,17 +19,30 @@ describe("ARCHETYPE-001 shared schemas", () => {
     expect(archetypePokemonRoleSchema.safeParse("ace").success).toBe(false);
   });
 
-  it("順序を維持した重複なしの基本選出slotを受理する", () => {
+  it("空配列または順序を維持した重複なしの基本選出slotを受理する", () => {
+    expect(archetypeDefaultLeadsSchema.parse([])).toEqual([]);
     expect(archetypeDefaultLeadsSchema.parse([2, 5, 1])).toEqual([2, 5, 1]);
   });
 
   it.each([
-    ["空配列", []],
     ["重複", [1, 1]],
     ["範囲外", [0, 2]],
     ["7枠超", [1, 2, 3, 4, 5, 6, 6]],
+    ["小数", [1.5]],
+    ["NaN", [Number.NaN]],
+    ["Infinity", [Number.POSITIVE_INFINITY]],
   ])("不正な基本選出（%s）を拒否する", (_label, slots) => {
     expect(archetypeDefaultLeadsSchema.safeParse(slots).success).toBe(false);
+  });
+
+  it("Rule.pickSize取得後は空配列または同じ件数だけを受理する", () => {
+    const singlesDefaultLeadsSchema = archetypeDefaultLeadsForPickSizeSchema(3);
+
+    expect(singlesDefaultLeadsSchema.parse([])).toEqual([]);
+    expect(singlesDefaultLeadsSchema.parse([1, 2, 3])).toEqual([1, 2, 3]);
+    expect(singlesDefaultLeadsSchema.safeParse([1]).success).toBe(false);
+    expect(singlesDefaultLeadsSchema.safeParse([1, 2]).success).toBe(false);
+    expect(singlesDefaultLeadsSchema.safeParse([1, 2, 3, 4]).success).toBe(false);
   });
 
   it("空または重複しない正の代替持ち物IDを受理する", () => {

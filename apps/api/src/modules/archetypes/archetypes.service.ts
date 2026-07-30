@@ -40,7 +40,9 @@ const publicArchetypeDetailSelect = {
       nature: true,
       teraType: true,
       evs: true,
+      ivs: true,
       actualStats: true,
+      statDataStatus: true,
       role: true,
       threatNotes: true,
       pokemon: {

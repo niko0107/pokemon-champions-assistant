@@ -3,6 +3,7 @@ import {
   counterplanCautionMoveTagSchema,
   counterplanStrategyCodeSchema,
   knockoutClassificationSchema,
+  matchupCalculationModeSchema,
   matchupReasonCodeSchema,
   matchupVerdictSchema,
 } from "../matchup";
@@ -57,6 +58,7 @@ export const counterplanMatchupScoreSchema = z
     damageRaceScore: safeIntegerSchema.min(-15).max(15),
     totalScore: scoreSchema,
     classification: matchupVerdictSchema,
+    calculationMode: matchupCalculationModeSchema,
     bestOffensiveMoveId: positiveSafeIntegerSchema.nullable(),
     mostThreateningMoveId: positiveSafeIntegerSchema.nullable(),
     outgoingDamage: counterplanDamageResultSchema.nullable(),
@@ -80,7 +82,30 @@ export const counterplanMatchupScoreSchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .superRefine((score, context) => {
+    if (
+      score.calculationMode === "type_only" &&
+      (score.damageRaceScore !== 0 ||
+        score.outgoingDamage !== null ||
+        score.incomingDamage !== null ||
+        score.outgoingKnockoutCount !== null ||
+        score.incomingKnockoutCount !== null ||
+        score.breakdown.damageRace !== 0 ||
+        score.breakdown.speed !== 0 ||
+        score.reasonCodes.some(
+          (code) =>
+            code === "WINS_DAMAGE_RACE" ||
+            code === "LOSES_DAMAGE_RACE" ||
+            code === "EVEN_DAMAGE_RACE",
+        ))
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "type_onlyではダメージ・確定数・素早さ比較を返せません",
+      });
+    }
+  });
 
 export const counterplanCautionMoveSchema = z
   .object({

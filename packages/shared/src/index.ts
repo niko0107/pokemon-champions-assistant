@@ -27,5 +27,6 @@ export * from "./master/rule";
 export * from "./master/season";
 export * from "./matchup";
 export * from "./party";
+export * from "./stat-calculation";
 export * from "./type-effectiveness";
 export * from "./user";

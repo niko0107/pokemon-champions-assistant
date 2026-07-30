@@ -212,6 +212,17 @@ describe("AdminArchetypesService.preview (ARCHETYPE-005)", () => {
     expectNoWrites();
   });
 
+  it("defaultLeads空配列でpreviewでき、書き込みを行わない", async () => {
+    const result = await service.preview({ ...input, defaultLeads: [] });
+
+    expect(result).toEqual({
+      exactDuplicate: false,
+      exactDuplicateArchetypeId: null,
+      candidates: [],
+    });
+    expectNoWrites();
+  });
+
   it("完全一致する既存構築を exactDuplicate として返す(200・409にしない)", async () => {
     const id = "11111111-1111-4111-8111-111111111111";
     archetypeFindMany.mockResolvedValue([exactRecord(id)]);

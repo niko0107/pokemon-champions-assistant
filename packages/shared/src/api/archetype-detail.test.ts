@@ -14,6 +14,7 @@ function pokemon(slot: number): PublicArchetypeDetail["pokemons"][number] {
     nature: slot === 1 ? "ようき" : null,
     teraType: slot === 1 ? "fire" : null,
     evs: slot === 1 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+    ivs: null,
     actualStats: {
       hp: 150 + slot,
       attack: 120,
@@ -22,6 +23,7 @@ function pokemon(slot: number): PublicArchetypeDetail["pokemons"][number] {
       specialDefense: 100,
       speed: 110,
     },
+    statDataStatus: "exact",
     role: slot === 1 ? "lead" : "support",
     threatNotes: slot === 1 ? "積み技に注意" : null,
     pokemon: {
@@ -128,7 +130,9 @@ describe("WEB-008 public archetype detail schema", () => {
     detail.pokemons[0] = {
       ...detail.pokemons[0]!,
       evs: null,
+      ivs: null,
       actualStats: null,
+      statDataStatus: "partial",
       threatNotes: null,
       item: null,
       ability: null,
@@ -137,6 +141,16 @@ describe("WEB-008 public archetype detail schema", () => {
 
     expect(publicArchetypeDetailSchema.safeParse(detail).success).toBe(true);
   });
+
+  it.each([[[1]], [[1, 2]], [[1, 2, 3, 4]]])(
+    "空でもRule.pickSize件でもない基本選出%sを拒否する",
+    (defaultLeads) => {
+      const detail = validDetail();
+      detail.defaultLeads = defaultLeads;
+
+      expect(publicArchetypeDetailSchema.safeParse(detail).success).toBe(false);
+    },
+  );
 
   it.each([
     ["不正URL", "javascript:alert(1)"],
@@ -187,6 +201,48 @@ describe("WEB-008 public archetype detail schema", () => {
       },
     };
     expect(publicArchetypeDetailSchema.safeParse(detail).success).toBe(false);
+  });
+
+  it("部分IVと実数値データ状態をstrictに検証する", () => {
+    const detail = validDetail();
+    detail.pokemons[0] = {
+      ...detail.pokemons[0]!,
+      ivs: { hp: 31, atk: null, def: 31, spa: null, spd: 31, spe: null },
+      actualStats: null,
+      statDataStatus: "partial",
+    };
+    expect(publicArchetypeDetailSchema.safeParse(detail).success).toBe(true);
+    expect(
+      publicArchetypeDetailSchema.safeParse({
+        ...detail,
+        pokemons: [{ ...detail.pokemons[0], statDataStatus: "estimated" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("実数値データ状態とactualStats・計算材料の不整合を拒否する", () => {
+    const exactWithoutStats = validDetail();
+    exactWithoutStats.pokemons[0] = {
+      ...exactWithoutStats.pokemons[0]!,
+      actualStats: null,
+      statDataStatus: "exact",
+    };
+    expect(publicArchetypeDetailSchema.safeParse(exactWithoutStats).success).toBe(false);
+
+    const partialWithStats = validDetail();
+    partialWithStats.pokemons[0] = {
+      ...partialWithStats.pokemons[0]!,
+      statDataStatus: "partial",
+    };
+    expect(publicArchetypeDetailSchema.safeParse(partialWithStats).success).toBe(false);
+
+    const derivedWithoutCompleteIvs = validDetail();
+    derivedWithoutCompleteIvs.pokemons[0] = {
+      ...derivedWithoutCompleteIvs.pokemons[0]!,
+      statDataStatus: "derived",
+      ivs: { hp: 31, atk: null, def: 31, spa: 31, spd: 31, spe: 31 },
+    };
+    expect(publicArchetypeDetailSchema.safeParse(derivedWithoutCompleteIvs).success).toBe(false);
   });
 
   it("Rule人数不一致・重複・存在しない基本選出slotを拒否する", () => {

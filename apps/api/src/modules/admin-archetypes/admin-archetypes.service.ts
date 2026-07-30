@@ -19,9 +19,12 @@ import {
   adminArchetypePreviewResponseSchema,
   adminArchetypeSummarySchema,
   archetypeDefaultLeadsSchema,
+  archetypeDefaultLeadsForPickSizeSchema,
   archetypeItemAlternativeIdsSchema,
   archetypePokemonRoleSchema,
   archetypePopularityTierSchema,
+  calculatePokemonActualStats,
+  completeArchetypeIvsSchema,
   moveTagsSchema,
   pokemonAbilitiesSchema,
   type AdminArchetypeDetail,
@@ -82,7 +85,9 @@ const archetypeDetailSelect = {
       nature: true,
       teraType: true,
       evs: true,
+      ivs: true,
       actualStats: true,
+      statDataStatus: true,
       role: true,
       usageRate: true,
       threatNotes: true,
@@ -435,7 +440,9 @@ export class AdminArchetypesService {
       nature: pokemon.nature,
       teraType: pokemon.teraType,
       evs: pokemon.evs === null ? Prisma.DbNull : pokemon.evs,
-      actualStats: pokemon.actualStats,
+      ivs: pokemon.ivs === null ? Prisma.DbNull : pokemon.ivs,
+      actualStats: pokemon.actualStats === null ? Prisma.DbNull : pokemon.actualStats,
+      statDataStatus: pokemon.statDataStatus,
       role: pokemon.role,
       usageRate: pokemon.usageRate,
       threatNotes: pokemon.threatNotes,
@@ -485,11 +492,20 @@ export class AdminArchetypesService {
       }),
       transaction.rule.findUnique({
         where: { id: input.ruleId },
-        select: { id: true, teamSize: true, pickSize: true },
+        select: { id: true, teamSize: true, pickSize: true, battleLevel: true },
       }),
       transaction.pokemon.findMany({
         where: { id: { in: pokemonIds } },
-        select: { id: true, abilities: true },
+        select: {
+          id: true,
+          abilities: true,
+          baseHp: true,
+          baseAtk: true,
+          baseDef: true,
+          baseSpa: true,
+          baseSpd: true,
+          baseSpe: true,
+        },
       }),
       transaction.item.findMany({
         where: { id: { in: itemIds } },
@@ -522,10 +538,12 @@ export class AdminArchetypesService {
           message: `採用ポケモン数はルールのteamSize（${rule.teamSize}）と一致させてください`,
         });
       }
-      if (input.defaultLeads.length !== rule.pickSize) {
+      if (
+        !archetypeDefaultLeadsForPickSizeSchema(rule.pickSize).safeParse(input.defaultLeads).success
+      ) {
         issues.push({
           path: "defaultLeads",
-          message: `基本選出数はルールのpickSize（${rule.pickSize}）と一致させてください`,
+          message: `基本選出数は0件またはルールのpickSize（${rule.pickSize}）件にしてください`,
         });
       }
     }
@@ -580,6 +598,55 @@ export class AdminArchetypesService {
               message: "指定されたポケモンが持てない特性です",
             });
           }
+        }
+      }
+
+      if (
+        pokemonInput.statDataStatus === "derived" &&
+        pokemon &&
+        rule &&
+        pokemonInput.actualStats !== null &&
+        pokemonInput.evs !== null &&
+        pokemonInput.nature !== null
+      ) {
+        const ivs = completeArchetypeIvsSchema.safeParse(pokemonInput.ivs);
+        if (!ivs.success) {
+          this.throwMasterIntegrityError();
+        }
+        let calculated;
+        try {
+          calculated = calculatePokemonActualStats({
+            baseStats: {
+              hp: pokemon.baseHp,
+              attack: pokemon.baseAtk,
+              defense: pokemon.baseDef,
+              specialAttack: pokemon.baseSpa,
+              specialDefense: pokemon.baseSpd,
+              speed: pokemon.baseSpe,
+            },
+            evs: pokemonInput.evs,
+            ivs: ivs.data,
+            level: rule.battleLevel,
+            nature: pokemonInput.nature,
+          });
+        } catch {
+          issues.push({
+            path: `pokemons.${pokemonIndex}.nature`,
+            message: "derivedの実数値を算出できない性格または能力値です",
+          });
+          calculated = null;
+        }
+        if (
+          calculated !== null &&
+          Object.entries(calculated).some(
+            ([key, value]) => pokemonInput.actualStats?.[key as keyof typeof calculated] !== value,
+          )
+        ) {
+          issues.push({
+            path: `pokemons.${pokemonIndex}.actualStats`,
+            message:
+              "actualStatsが明示されたIV・EV・性格・Rule.battleLevelの算出結果と一致しません",
+          });
         }
       }
 

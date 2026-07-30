@@ -37,8 +37,10 @@ describe("calculateMatchupScore (MATCHUP-002〜004)", () => {
   });
 
   it("承認済み対象外の素早さ値をスコアへ加えない", () => {
-    const slow = { ...dummyCombatant, pokemonId: 1, stats: { ...dummyCombatant.stats, spe: 1 } };
-    const fast = { ...dummyCombatant, pokemonId: 2, stats: { ...dummyCombatant.stats, spe: 999 } };
+    const baseStats = dummyCombatant.stats;
+    if (baseStats === null) throw new Error("test fixture must have stats");
+    const slow = { ...dummyCombatant, pokemonId: 1, stats: { ...baseStats, spe: 1 } };
+    const fast = { ...dummyCombatant, pokemonId: 2, stats: { ...baseStats, spe: 999 } };
     expect(
       calculateMatchupScore({
         self: slow,

@@ -372,10 +372,30 @@
 - **目的:** MVP 用のテンプレ構築データを登録する(運用タスク、§15 フェーズ1)
 - **作業範囲:** 攻略サイト調査→構造化データ登録(本文・画像は転載しない。出典 URL のみ)。Pokemon・Move・Abilityは既存masterから選び、Itemは出典で明示されたものだけを追加する
 - **変更予定パッケージ:** なし(データのみ)
-- **完了条件:** published 30件、全件に出典URLがあり、持ち物・actualStats・対象Rule/Seasonを推測していない。持ち物不明の構築は採用せず、持ち物なしが確認できる場合だけnullとする
+- **完了条件:** published 30件、全件に出典URLがあり、持ち物・IV・actualStats・対象Rule/Seasonを推測していない。実数値未確認はpartialとして明示し、持ち物不明の構築は採用せず、持ち物なしが確認できる場合だけnullとする
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
+
+### ✅ ARCHETYPE-004A 基本選出の任意化
+
+- **目的:** 出典から一意な基本選出を確認できない構築も、基本選出を推測せず登録・利用可能にする
+- **作業範囲:** defaultLeadsを空配列またはRule.pickSize件に制限し、admin CRUD/preview、counterplan、公開詳細の既存経路へ反映する
+- **変更予定パッケージ:** packages/database, packages/shared, apps/api, apps/web, docs
+- **完了条件:** 空配列が保存・返却され、候補・詳細・counterplanが成功し、leadPokemonIdを推測しない
+- **必要なテスト:** shared、admin Service/API、counterplan、Web回帰テスト
+- **前提タスク:** ARCHETYPE-002, ARCHETYPE-005, MATCHUP-006〜008, WEB-008
+- **対象外:** 構築データ登録、既存migrationの変更、基本選出の自動推定
+
+### ✅ ARCHETYPE-004B 構築の実数値・IV要件の見直し
+
+- **目的:** 公開構築の確認済み情報を保存しつつ、実数値が未確認の構築と厳密な対戦計算を分離する
+- **作業範囲:** IVと実数値状態(exact / derived / partial)の保存・strict API契約、明示された全計算材料の検証、実数値不足時のタイプ相性限定counterplan、公開詳細の状態表示
+- **変更予定パッケージ:** packages/database, packages/shared, packages/matchup, apps/api, apps/web, docs
+- **完了条件:** partial構築を登録・候補・詳細・counterplanで利用でき、未確認IVを補完せず、ダメージ・確定数・素早さを誤って確定表示しない
+- **必要なテスト:** migration、shared、admin CRUD/preview、公開詳細、matchup/counterplan、Web、実DB・Playwright
+- **前提タスク:** ARCHETYPE-004A, MATCHUP-005〜008, WEB-008〜009
+- **対象外:** 構築データ登録、IV推定、既存migrationの変更、MATCHUP計算式の変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
 
@@ -835,7 +855,8 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
-  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
+  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B
+  → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
 次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。

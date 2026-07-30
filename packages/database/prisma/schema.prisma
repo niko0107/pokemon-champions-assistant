@@ -277,7 +277,9 @@ model ArchetypePokemon {
   nature           String?
   teraType         String?                @map("tera_type")
   evs              Json?                  @db.JsonB
+  ivs              Json?                  @db.JsonB
   actualStats      Json?                  @map("actual_stats") @db.JsonB
+  statDataStatus   String                 @default("exact") @map("stat_data_status")
   role             String
   usageRate        Decimal                @default(1.0) @map("usage_rate") @db.Decimal(5, 4)
   threatNotes      String?                @map("threat_notes")

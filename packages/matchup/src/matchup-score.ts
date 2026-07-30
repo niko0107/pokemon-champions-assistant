@@ -5,7 +5,11 @@ import {
   calculateDamageRange,
   calculateKnockoutCount,
 } from "./damage-estimation";
-import { getDefensiveTypeProfile, getOffensiveTypeProfile } from "./type-effectiveness";
+import {
+  getCombinedTypeEffectiveness,
+  getDefensiveTypeProfile,
+  getOffensiveTypeProfile,
+} from "./type-effectiveness";
 import type {
   CombatantSnapshot,
   DamageCalculationInput,
@@ -29,6 +33,18 @@ interface EvaluatedMove {
 
 interface EvaluatedMoveSet {
   readonly selected: EvaluatedMove | null;
+  readonly hasImmuneDamagingMove: boolean;
+}
+
+interface TypeOnlyEvaluatedMove {
+  readonly moveId: number;
+  readonly power: number;
+  readonly adoptionRate: number;
+  readonly typeMultiplier: TypeEffectivenessMultiplier;
+}
+
+interface TypeOnlyEvaluatedMoveSet {
+  readonly selected: TypeOnlyEvaluatedMove | null;
   readonly hasImmuneDamagingMove: boolean;
 }
 
@@ -64,8 +80,10 @@ function assertCombatant(combatant: CombatantSnapshot, path: string): void {
 
   getDefensiveTypeProfile(toDefensiveTyping(combatant, path));
 
-  for (const stat of STAT_KEYS) {
-    assertPositiveSafeInteger(combatant.stats[stat], `${path}.stats.${stat}`);
+  if (combatant.stats !== null) {
+    for (const stat of STAT_KEYS) {
+      assertPositiveSafeInteger(combatant.stats[stat], `${path}.stats.${stat}`);
+    }
   }
 
   if (!Array.isArray(combatant.moves)) {
@@ -92,6 +110,9 @@ function toDamageInput(
   defender: CombatantSnapshot,
   move: MoveSnapshot,
 ): DamageCalculationInput {
+  if (attacker.stats === null || defender.stats === null) {
+    throw new RangeError("damage calculation requires complete actual stats");
+  }
   const attackerTyping = toDefensiveTyping(attacker, "attacker");
   const defenderTyping = toDefensiveTyping(defender, "defender");
   return {
@@ -117,6 +138,37 @@ function toDamageInput(
       category: move.category,
       power: move.power,
     },
+  };
+}
+
+function evaluateMovesByType(
+  attacker: CombatantSnapshot,
+  defender: CombatantSnapshot,
+): TypeOnlyEvaluatedMoveSet {
+  const defenderTyping = toDefensiveTyping(defender, "defender");
+  const evaluated = attacker.moves
+    .filter(
+      (move): move is MoveSnapshot & { power: number } =>
+        move.category !== "status" && move.power !== null,
+    )
+    .map((move): TypeOnlyEvaluatedMove => ({
+      moveId: move.moveId,
+      power: move.power,
+      adoptionRate: move.adoptionRate,
+      typeMultiplier: getCombinedTypeEffectiveness(move.type, defenderTyping),
+    }));
+  const candidates = evaluated
+    .filter(({ typeMultiplier }) => typeMultiplier > 0)
+    .sort(
+      (left, right) =>
+        right.typeMultiplier - left.typeMultiplier ||
+        right.power - left.power ||
+        right.adoptionRate - left.adoptionRate ||
+        left.moveId - right.moveId,
+    );
+  return {
+    selected: candidates[0] ?? null,
+    hasImmuneDamagingMove: evaluated.some(({ typeMultiplier }) => typeMultiplier === 0),
   };
 }
 
@@ -146,12 +198,16 @@ function evaluateMoves(
   attackerLevel: number,
   defender: CombatantSnapshot,
 ): EvaluatedMoveSet {
+  if (attacker.stats === null || defender.stats === null) {
+    throw new RangeError("damage evaluation requires complete actual stats");
+  }
+  const defenderStats = defender.stats;
   const evaluated = attacker.moves
     .filter((move) => move.category === "status" || move.power !== null)
     .map((move): EvaluatedMove => {
       const damage = calculateDamageRange(toDamageInput(attacker, attackerLevel, defender, move));
       const knockout = calculateKnockoutCount({
-        defenderHp: defender.stats.hp,
+        defenderHp: defenderStats.hp,
         minDamage: damage.minDamage,
         maxDamage: damage.maxDamage,
       });
@@ -311,6 +367,87 @@ function appendDefensiveReasons(reasons: MatchupReasonCode[], result: EvaluatedM
   }
 }
 
+function appendTypeOnlyOffensiveReasons(
+  reasons: MatchupReasonCode[],
+  result: TypeOnlyEvaluatedMoveSet,
+): void {
+  if (result.selected === null) {
+    if (result.hasImmuneDamagingMove) reasons.push("BEST_MOVE_IMMUNE");
+    reasons.push("NO_DAMAGING_MOVE");
+    return;
+  }
+  if (result.selected.typeMultiplier >= 2) {
+    reasons.push("BEST_MOVE_SUPER_EFFECTIVE");
+  } else if (result.selected.typeMultiplier <= 0.5) {
+    reasons.push("BEST_MOVE_RESISTED");
+  }
+}
+
+function appendTypeOnlyDefensiveReasons(
+  reasons: MatchupReasonCode[],
+  result: TypeOnlyEvaluatedMoveSet,
+): void {
+  if (result.selected === null) {
+    if (result.hasImmuneDamagingMove) reasons.push("IMMUNE_TO_THREAT");
+    reasons.push("OPPONENT_NO_DAMAGING_MOVE");
+    return;
+  }
+  if (result.selected.typeMultiplier >= 2) {
+    reasons.push("TAKES_SUPER_EFFECTIVE_DAMAGE");
+  } else if (result.selected.typeMultiplier <= 0.5) {
+    reasons.push("RESISTS_THREAT");
+  }
+}
+
+function calculateTypeOnlyMatchupScore(input: MatchupScoreInput): MatchupScore {
+  const outgoing = evaluateMovesByType(input.self, input.opponent);
+  const incoming = evaluateMovesByType(input.opponent, input.self);
+  const offensiveScore =
+    outgoing.selected === null ? 0 : scoreOffensiveTypeMultiplier(outgoing.selected.typeMultiplier);
+  const defensiveScore =
+    incoming.selected === null
+      ? 30
+      : scoreDefensiveTypeMultiplier(incoming.selected.typeMultiplier);
+  const damageRaceScore = 0;
+  const totalScore = normalizeMatchupScore(offensiveScore, defensiveScore, damageRaceScore);
+  const classification = classifyMatchupScore(totalScore);
+  const reasonCodes: MatchupReasonCode[] = [];
+  appendTypeOnlyOffensiveReasons(reasonCodes, outgoing);
+  appendTypeOnlyDefensiveReasons(reasonCodes, incoming);
+
+  return {
+    selfPokemonId: input.self.pokemonId,
+    myPokemonId: input.self.pokemonId,
+    opponentPokemonId: input.opponent.pokemonId,
+    offensiveScore,
+    defensiveScore,
+    damageRaceScore,
+    totalScore,
+    classification,
+    calculationMode: "type_only",
+    bestOffensiveMoveId: outgoing.selected?.moveId ?? null,
+    mostThreateningMoveId: incoming.selected?.moveId ?? null,
+    outgoingDamage: null,
+    incomingDamage: null,
+    outgoingKnockoutCount: null,
+    incomingKnockoutCount: null,
+    offensiveTypeMultiplier: outgoing.selected?.typeMultiplier ?? null,
+    defensiveTypeMultiplier: incoming.selected?.typeMultiplier ?? null,
+    reasonCodes,
+    score: totalScore,
+    verdict: classification,
+    breakdown: {
+      offense: offensiveScore,
+      defense: defensiveScore,
+      speed: 0,
+      damageRace: 0,
+      priority: 0,
+      statusResist: 0,
+      setupCounter: 0,
+    },
+  };
+}
+
 /**
  * 自分側と相手側の実技から攻防相性・確定数レースを統合する。
  * 技採用率による事前選択は行わず、呼び出し側が渡した技配列だけを評価する。
@@ -320,6 +457,9 @@ export function calculateMatchupScore(input: MatchupScoreInput): MatchupScore {
   assertLevel(input.opponentLevel, "opponentLevel");
   assertCombatant(input.self, "self");
   assertCombatant(input.opponent, "opponent");
+  if (input.self.stats === null || input.opponent.stats === null) {
+    return calculateTypeOnlyMatchupScore(input);
+  }
 
   const outgoing = evaluateMoves(input.self, input.selfLevel, input.opponent);
   const incoming = evaluateMoves(input.opponent, input.opponentLevel, input.self);
@@ -358,6 +498,7 @@ export function calculateMatchupScore(input: MatchupScoreInput): MatchupScore {
     damageRaceScore,
     totalScore,
     classification,
+    calculationMode: "full",
     bestOffensiveMoveId: outgoing.selected?.damage.moveId ?? null,
     mostThreateningMoveId: incoming.selected?.damage.moveId ?? null,
     outgoingDamage: outgoing.selected?.damage ?? null,

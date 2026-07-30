@@ -31,7 +31,9 @@ const detail: PublicArchetypeDetail = {
     nature: null,
     teraType: null,
     evs: null,
+    ivs: null,
     actualStats: null,
+    statDataStatus: "partial",
     role: index === 0 ? ("lead" as const) : ("support" as const),
     threatNotes: index === 0 ? "積み展開に注意" : null,
     pokemon: {

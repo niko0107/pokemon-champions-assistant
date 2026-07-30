@@ -112,6 +112,7 @@ const counterplanMatchupResult = {
   selfPokemonId: 6,
   myPokemonId: 6,
   opponentPokemonId: 10006,
+  calculationMode: "full",
   offensiveScore: 25,
   defensiveScore: 20,
   damageRaceScore: 5,

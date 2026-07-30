@@ -281,6 +281,19 @@ describe("SessionCounterplanService", () => {
     expect(response.selection.leadPokemonId).not.toBeNull();
   });
 
+  it("defaultLeads空配列でも選出を算出し、仮の先発を生成しない", async () => {
+    const session = makeSession(6, 3);
+    session.selectedArchetype.defaultLeads = [];
+    const { service } = makeService(session);
+
+    const response = await service.get(userId, sessionId);
+
+    expect(response.perOpponent).toHaveLength(6);
+    expect(response.selection.selectedPokemonIds).toHaveLength(3);
+    expect(response.selection.assignmentsByOpponent).toHaveLength(6);
+    expect(response.selection.leadPokemonId).toBeNull();
+  });
+
   it("ended Sessionでも同じ読み取り専用counterplanを返す", async () => {
     const session = makeSession();
     session.status = "ended";
@@ -382,26 +395,35 @@ describe("SessionCounterplanService", () => {
     });
   });
 
-  it.each(["party", "archetype"] as const)(
-    "%s actualStats nullを秘密情報なしの500へ変換する",
-    async (side) => {
-      const session = makeSession();
-      if (side === "party") {
-        session.party.pokemons[0]!.actualStats = null as unknown as typeof actualStats;
-      } else {
-        session.selectedArchetype.pokemons[0]!.actualStats = null as unknown as typeof actualStats;
-      }
+  it("party actualStats nullを秘密情報なしの500へ変換する", async () => {
+    const session = makeSession();
+    session.party.pokemons[0]!.actualStats = null as unknown as typeof actualStats;
 
-      await expect(makeService(session).service.get(userId, sessionId)).rejects.toMatchObject({
-        status: 500,
-        response: {
-          type: "about:blank",
-          title: "Internal Server Error",
-          code: "INTERNAL_ERROR",
-        },
-      });
-    },
-  );
+    await expect(makeService(session).service.get(userId, sessionId)).rejects.toMatchObject({
+      status: 500,
+      response: {
+        type: "about:blank",
+        title: "Internal Server Error",
+        code: "INTERNAL_ERROR",
+      },
+    });
+  });
+
+  it("archetype actualStats nullでもtype-only counterplanと選出を返す", async () => {
+    const session = makeSession();
+    session.selectedArchetype.pokemons[0]!.actualStats = null as unknown as typeof actualStats;
+
+    const response = await makeService(session).service.get(userId, sessionId);
+
+    expect(response.perOpponent[0]?.recommendations[0]?.matchupResult).toMatchObject({
+      calculationMode: "type_only",
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+    });
+    expect(response.selection.selectedPokemonIds).toEqual([1]);
+  });
 
   it("5種類を超える観測技をINVALID_SESSION_STATEにする", async () => {
     const session = makeSession();

@@ -58,6 +58,12 @@ const EV_LABELS = {
   spe: "素早さ",
 } as const;
 
+const STAT_DATA_STATUS_LABELS = {
+  exact: "出典で確認済み",
+  derived: "明示されたIV・EV・性格から算出",
+  partial: "実数値未確認",
+} as const;
+
 type ArchetypePokemon = PublicArchetypeDetail["pokemons"][number];
 
 function formatRate(rate: number): string {
@@ -74,7 +80,7 @@ function TypeBadge({ type }: { type: string }) {
 
 function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid gap-5 lg:grid-cols-3">
       <section aria-labelledby={`evs-${pokemon.slot}`}>
         <h4
           id={`evs-${pokemon.slot}`}
@@ -98,6 +104,29 @@ function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
         )}
       </section>
 
+      <section aria-labelledby={`ivs-${pokemon.slot}`}>
+        <h4
+          id={`ivs-${pokemon.slot}`}
+          className="text-xs font-black tracking-[0.12em] text-slate-400"
+        >
+          個体値
+        </h4>
+        {pokemon.ivs ? (
+          <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+            {Object.entries(EV_LABELS).map(([key, label]) => (
+              <div key={key} className="flex justify-between gap-2 border-b border-slate-100 pb-1">
+                <dt className="text-slate-500">{label}</dt>
+                <dd className="font-black tabular-nums text-slate-800">
+                  {pokemon.ivs?.[key as keyof typeof pokemon.ivs] ?? "未確認"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-2 text-sm text-slate-500">未確認</p>
+        )}
+      </section>
+
       <section aria-labelledby={`stats-${pokemon.slot}`}>
         <h4
           id={`stats-${pokemon.slot}`}
@@ -105,8 +134,11 @@ function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
         >
           実数値
         </h4>
+        <p className="mt-2 text-xs font-bold text-slate-500">
+          {STAT_DATA_STATUS_LABELS[pokemon.statDataStatus]}
+        </p>
         {pokemon.actualStats ? (
-          <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+          <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
             {Object.entries(ACTUAL_STAT_LABELS).map(([key, label]) => (
               <div key={key} className="flex justify-between gap-2 border-b border-slate-100 pb-1">
                 <dt className="text-slate-500">{label}</dt>
@@ -117,7 +149,7 @@ function PokemonStats({ pokemon }: { pokemon: ArchetypePokemon }) {
             ))}
           </dl>
         ) : (
-          <p className="mt-2 text-sm text-slate-500">データ未登録</p>
+          <p className="mt-2 text-sm text-slate-500">ダメージ・確定数計算には使用しません</p>
         )}
       </section>
     </div>

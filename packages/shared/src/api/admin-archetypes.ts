@@ -3,10 +3,13 @@ import {
   ARCHETYPE_TEAM_SIZE_MAX,
   archetypeDefaultLeadsSchema,
   archetypeEvsSchema,
+  archetypeIvsSchema,
   archetypeItemAlternativeIdsSchema,
   archetypePokemonRoleSchema,
   archetypePopularityTierSchema,
+  archetypeStatDataStatusSchema,
   archetypeStatusSchema,
+  completeArchetypeIvsSchema,
 } from "../archetype";
 import { combatActualStatsSchema } from "../combat-stats";
 import {
@@ -45,7 +48,9 @@ const adminArchetypePokemonFields = {
   nature: nullableTextSchema.default(null),
   teraType: nullableTextSchema.default(null),
   evs: archetypeEvsSchema.nullable().default(null),
-  actualStats: combatActualStatsSchema,
+  ivs: archetypeIvsSchema.nullable().default(null),
+  actualStats: combatActualStatsSchema.nullable(),
+  statDataStatus: archetypeStatDataStatusSchema.default("exact"),
   role: archetypePokemonRoleSchema,
   usageRate: rateSchema.default(1),
   threatNotes: nullableTextSchema.default(null),
@@ -56,6 +61,11 @@ function validateAdminArchetypePokemon(
   pokemon: {
     itemId: number | null;
     itemAlternatives: number[];
+    nature: string | null;
+    evs: z.infer<typeof archetypeEvsSchema> | null;
+    ivs: z.infer<typeof archetypeIvsSchema> | null;
+    actualStats: z.infer<typeof combatActualStatsSchema> | null;
+    statDataStatus: z.infer<typeof archetypeStatDataStatusSchema>;
     moves: Array<{ moveId: number }>;
   },
   context: z.RefinementCtx,
@@ -77,6 +87,36 @@ function validateAdminArchetypePokemon(
       code: z.ZodIssueCode.custom,
       message: "同じポケモンへ同じ技を重複指定できません",
       path: ["moves"],
+    });
+  }
+
+  if (pokemon.statDataStatus === "partial" && pokemon.actualStats !== null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "partialではactualStatsをnullにしてください",
+      path: ["actualStats"],
+    });
+  }
+
+  if (pokemon.statDataStatus !== "partial" && pokemon.actualStats === null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "exactまたはderivedではactualStatsを指定してください",
+      path: ["actualStats"],
+    });
+  }
+
+  if (
+    pokemon.statDataStatus === "derived" &&
+    (pokemon.nature === null ||
+      pokemon.evs === null ||
+      pokemon.ivs === null ||
+      !completeArchetypeIvsSchema.safeParse(pokemon.ivs).success)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "derivedでは性格・EV・全6能力のIVを指定してください",
+      path: ["statDataStatus"],
     });
   }
 }
@@ -163,10 +203,7 @@ const timestampSchema = z.string().datetime({ offset: true });
 
 export const adminArchetypeMoveSchema = adminArchetypeMoveInputSchema;
 export const adminArchetypePokemonSchema = z
-  .object({
-    ...adminArchetypePokemonFields,
-    actualStats: combatActualStatsSchema.nullable(),
-  })
+  .object(adminArchetypePokemonFields)
   .strict()
   .superRefine(validateAdminArchetypePokemon);
 export const adminArchetypeSourceSchema = adminArchetypeSourceInputSchema;
