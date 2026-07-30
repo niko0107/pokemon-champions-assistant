@@ -301,6 +301,38 @@ describe("calculateMatchupScore", () => {
     expect(result.myPokemonId).toBe(result.selfPokemonId);
     expect(result.score).toBe(result.totalScore);
     expect(result.verdict).toBe(result.classification);
+    expect(result.calculationMode).toBe("full");
+  });
+
+  it("実数値不足時はタイプ相性だけを評価しダメージ・確定数を生成しない", () => {
+    const self = makeCombatant(1, [makeMove(1, "fire", "special", 100)], {
+      types: ["fire"],
+    });
+    const opponent = makeCombatant(2, [makeMove(2, "water", "special", 100)], {
+      types: ["grass"],
+      stats: null,
+    });
+
+    const result = calculateMatchupScore(makeInput(self, opponent));
+
+    expect(result).toMatchObject({
+      calculationMode: "type_only",
+      offensiveScore: 25,
+      defensiveScore: 5,
+      damageRaceScore: 0,
+      bestOffensiveMoveId: 1,
+      mostThreateningMoveId: 2,
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+    });
+    expect(result.reasonCodes).toEqual([
+      "BEST_MOVE_SUPER_EFFECTIVE",
+      "TAKES_SUPER_EFFECTIVE_DAMAGE",
+    ]);
+    expect(result.reasonCodes).not.toContain("EVEN_DAMAGE_RACE");
+    expect(result.breakdown.speed).toBe(0);
   });
 
   it("produces asymmetric results when combatants are swapped", () => {

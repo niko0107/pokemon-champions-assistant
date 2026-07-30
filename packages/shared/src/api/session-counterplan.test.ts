@@ -19,6 +19,7 @@ function matchupResult() {
     damageRaceScore: 5,
     totalScore: 44,
     classification: "slightly_favorable",
+    calculationMode: "full",
     bestOffensiveMoveId: 11,
     mostThreateningMoveId: 21,
     outgoingDamage: {
@@ -179,6 +180,34 @@ describe("sessionCounterplanResponseSchema", () => {
       input.strategyCodes = [strategyCode];
       expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(true);
     }
+  });
+
+  it("type_onlyではダメージ・確定数をstrictに返さない", () => {
+    const input = validResponse();
+    const result = input.perOpponent[0]!.recommendations[0]!.matchupResult;
+    Object.assign(result, {
+      calculationMode: "type_only",
+      damageRaceScore: 0,
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+      reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE"],
+      breakdown: { ...result.breakdown, damageRace: 0, speed: 0 },
+    });
+    input.selection.assignmentsByOpponent[0]!.matchupResult = result;
+    expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(true);
+
+    result.outgoingKnockoutCount = 2;
+    expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(false);
+
+    Object.assign(result, { outgoingKnockoutCount: null });
+    result.breakdown.speed = 1;
+    expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(false);
+
+    result.breakdown.speed = 0;
+    result.reasonCodes = ["WINS_DAMAGE_RACE"];
+    expect(sessionCounterplanResponseSchema.safeParse(input).success).toBe(false);
   });
 
   it("トップレベルとネストした余分なキーを拒否する", () => {

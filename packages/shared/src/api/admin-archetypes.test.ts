@@ -78,6 +78,12 @@ const validInput = {
 } as const;
 
 describe("ARCHETYPE-002 shared API schemas", () => {
+  it("defaultLeads空配列をPOST・PUT・preview共通入力として保持する", () => {
+    const parsed = adminArchetypeWriteSchema.parse({ ...validInput, defaultLeads: [] });
+
+    expect(parsed.defaultLeads).toEqual([]);
+  });
+
   it("作成・PUT入力をtrimし、省略可能値へ安全な既定値を設定する", () => {
     const parsed = adminArchetypeWriteSchema.parse(validInput);
 
@@ -152,7 +158,7 @@ describe("ARCHETYPE-002 shared API schemas", () => {
     ).toBe(false);
   });
 
-  it("actualStatsを必須とし、不正値と余分なキーを拒否する", () => {
+  it("従来入力はexactとして扱い、不正actualStatsと余分なキーを拒否する", () => {
     const { actualStats: _actualStats, ...withoutActualStats } = validInput.pokemons[0];
     expect(
       adminArchetypeWriteSchema.safeParse({
@@ -161,6 +167,10 @@ describe("ARCHETYPE-002 shared API schemas", () => {
         defaultLeads: [1],
       }).success,
     ).toBe(false);
+    expect(adminArchetypeWriteSchema.parse(validInput).pokemons[0]).toMatchObject({
+      ivs: null,
+      statDataStatus: "exact",
+    });
     expect(
       adminArchetypeWriteSchema.safeParse({
         ...validInput,
@@ -182,6 +192,56 @@ describe("ARCHETYPE-002 shared API schemas", () => {
             actualStats: { ...validInput.pokemons[0].actualStats, extra: 1 },
           },
         ],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("partialは未確認IVとnull actualStatsを保持する", () => {
+    const parsed = adminArchetypeWriteSchema.parse({
+      ...validInput,
+      pokemons: [
+        {
+          ...validInput.pokemons[0],
+          ivs: { hp: 31, atk: null, def: null, spa: 31, spd: null, spe: null },
+          actualStats: null,
+          statDataStatus: "partial",
+        },
+      ],
+      defaultLeads: [1],
+    });
+
+    expect(parsed.pokemons[0]).toMatchObject({
+      ivs: { hp: 31, atk: null, def: null, spa: 31, spd: null, spe: null },
+      actualStats: null,
+      statDataStatus: "partial",
+    });
+  });
+
+  it("derivedは全IV・EV・性格・actualStatsを要求する", () => {
+    const derived = {
+      ...validInput.pokemons[0],
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      statDataStatus: "derived",
+    };
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [derived],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(true);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...derived, ivs: { ...derived.ivs, spe: null } }],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...derived, nature: null }],
         defaultLeads: [1],
       }).success,
     ).toBe(false);

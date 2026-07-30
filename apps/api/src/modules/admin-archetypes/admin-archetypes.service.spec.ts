@@ -1,5 +1,9 @@
 import { Prisma } from "@pokemon-champions/database";
-import { adminArchetypeWriteSchema, type AdminArchetypeWrite } from "@pokemon-champions/shared";
+import {
+  adminArchetypeWriteSchema,
+  calculatePokemonActualStats,
+  type AdminArchetypeWrite,
+} from "@pokemon-champions/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../prisma/prisma.service";
 import { AdminArchetypesService } from "./admin-archetypes.service";
@@ -39,6 +43,28 @@ const validInput: AdminArchetypeWrite = adminArchetypeWriteSchema.parse({
       title: "構築記事",
       url: "https://example.com/archetype",
       siteName: "Example",
+    },
+  ],
+});
+
+const pickSizeThreeInput: AdminArchetypeWrite = adminArchetypeWriteSchema.parse({
+  ...validInput,
+  defaultLeads: [1, 2, 3],
+  pokemons: [
+    validInput.pokemons[0],
+    {
+      slot: 2,
+      pokemonId: 11,
+      actualStats,
+      role: "sweeper",
+      moves: [{ moveId: 41 }],
+    },
+    {
+      slot: 3,
+      pokemonId: 12,
+      actualStats,
+      role: "support",
+      moves: [{ moveId: 42 }],
     },
   ],
 });
@@ -127,8 +153,19 @@ describe("AdminArchetypesService", () => {
     sourceDeleteMany.mockResolvedValue({ count: 1 });
     pokemonDeleteMany.mockResolvedValue({ count: 1 });
     seasonFindUnique.mockResolvedValue({ id: 1 });
-    ruleFindUnique.mockResolvedValue({ id: 1, teamSize: 1, pickSize: 1 });
-    pokemonFindMany.mockResolvedValue([{ id: 10, abilities: ["いかく"] }]);
+    ruleFindUnique.mockResolvedValue({ id: 1, teamSize: 1, pickSize: 1, battleLevel: 50 });
+    pokemonFindMany.mockResolvedValue([
+      {
+        id: 10,
+        abilities: ["いかく"],
+        baseHp: 95,
+        baseAtk: 125,
+        baseDef: 79,
+        baseSpa: 60,
+        baseSpd: 100,
+        baseSpe: 81,
+      },
+    ]);
     itemFindMany.mockResolvedValue([{ id: 20 }, { id: 21 }]);
     abilityFindMany.mockResolvedValue([{ id: 30, nameJa: "いかく" }]);
     moveFindMany.mockResolvedValue([{ id: 40 }]);
@@ -195,6 +232,120 @@ describe("AdminArchetypesService", () => {
     );
   });
 
+  it("defaultLeads空配列を作成時にそのまま保存・返却する", async () => {
+    const input = { ...validInput, defaultLeads: [] };
+    transactionArchetypeCreate.mockResolvedValue({
+      ...detailRecord,
+      defaultLeads: [],
+    });
+
+    await expect(service.create(input)).resolves.toMatchObject({ defaultLeads: [] });
+    expect(transactionArchetypeCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ defaultLeads: [] }),
+      }),
+    );
+  });
+
+  it("partialは未確認IVとnull actualStatsを補完せずPOST・PUTで保存する", async () => {
+    const partialPokemon = {
+      ...validInput.pokemons[0]!,
+      ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
+      actualStats: null,
+      statDataStatus: "partial" as const,
+    };
+    const input: AdminArchetypeWrite = { ...validInput, pokemons: [partialPokemon] };
+    const partialRecord = {
+      ...detailRecord,
+      pokemons: [
+        {
+          ...detailRecord.pokemons[0]!,
+          ...partialPokemon,
+          usageRate: new Prisma.Decimal(1),
+          moves: [{ moveId: 40, adoptionRate: new Prisma.Decimal(1) }],
+        },
+      ],
+    };
+    transactionArchetypeCreate.mockResolvedValue(partialRecord);
+    transactionArchetypeUpdate.mockResolvedValue(partialRecord);
+
+    await expect(service.create(input)).resolves.toMatchObject({
+      pokemons: [{ actualStats: null, statDataStatus: "partial" }],
+    });
+    await expect(service.update(archetypeId, input)).resolves.toMatchObject({
+      pokemons: [{ actualStats: null, statDataStatus: "partial" }],
+    });
+    for (const operation of [transactionArchetypeCreate, transactionArchetypeUpdate]) {
+      expect(operation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            pokemons: {
+              create: [
+                expect.objectContaining({
+                  ivs: partialPokemon.ivs,
+                  actualStats: Prisma.DbNull,
+                  statDataStatus: "partial",
+                }),
+              ],
+            },
+          }),
+        }),
+      );
+    }
+  });
+
+  it("derivedをRule.battleLevelで検算し、不一致なら部分保存しない", async () => {
+    const evs = { hp: 252, atk: 252, def: 0, spa: 0, spd: 4, spe: 0 };
+    const ivs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+    const derivedPokemon = {
+      ...validInput.pokemons[0]!,
+      nature: "いじっぱり",
+      evs,
+      ivs,
+      actualStats: calculatePokemonActualStats({
+        baseStats: {
+          hp: 95,
+          attack: 125,
+          defense: 79,
+          specialAttack: 60,
+          specialDefense: 100,
+          speed: 81,
+        },
+        evs,
+        ivs,
+        level: 50,
+        nature: "いじっぱり",
+      }),
+      statDataStatus: "derived" as const,
+    };
+    const input: AdminArchetypeWrite = { ...validInput, pokemons: [derivedPokemon] };
+
+    await expect(service.create(input)).resolves.toMatchObject({ id: archetypeId });
+
+    await expect(
+      service.create({
+        ...input,
+        pokemons: [
+          {
+            ...derivedPokemon,
+            actualStats: {
+              ...derivedPokemon.actualStats,
+              speed: derivedPokemon.actualStats.speed + 1,
+            },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        errors: expect.arrayContaining([
+          expect.objectContaining({ path: "pokemons.0.actualStats" }),
+        ]),
+      },
+    });
+    expect(transactionArchetypeCreate).toHaveBeenCalledTimes(1);
+  });
+
   it("存在しないマスタ・習得不能技・所持不能特性を400にして保存しない", async () => {
     seasonFindUnique.mockResolvedValue(null);
     pokemonFindMany.mockResolvedValue([{ id: 10, abilities: ["別の特性"] }]);
@@ -216,16 +367,42 @@ describe("AdminArchetypesService", () => {
     expect(transactionArchetypeCreate).not.toHaveBeenCalled();
   });
 
-  it("RuleのteamSize・pickSizeと構築内容の不一致を400にする", async () => {
+  it("RuleのteamSizeと構築内容の不一致を400にする", async () => {
     ruleFindUnique.mockResolvedValue({ id: 1, teamSize: 2, pickSize: 2 });
 
     await expect(service.create(validInput)).rejects.toMatchObject({
       status: 400,
       response: {
-        errors: expect.arrayContaining([
-          expect.objectContaining({ path: "pokemons" }),
-          expect.objectContaining({ path: "defaultLeads" }),
-        ]),
+        errors: expect.arrayContaining([expect.objectContaining({ path: "pokemons" })]),
+      },
+    });
+    expect(transactionArchetypeCreate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["1件", [1]],
+    ["2件", [1, 2]],
+    ["pickSize超過", [1, 2, 3, 4]],
+  ])("Rule.pickSize=3に対する中途半端なdefaultLeads（%s）を400にする", async (_label, slots) => {
+    ruleFindUnique.mockResolvedValue({ id: 1, teamSize: 3, pickSize: 3 });
+    pokemonFindMany.mockResolvedValue([
+      { id: 10, abilities: ["いかく"] },
+      { id: 11, abilities: [] },
+      { id: 12, abilities: [] },
+    ]);
+    moveFindMany.mockResolvedValue([{ id: 40 }, { id: 41 }, { id: 42 }]);
+    pokemonMoveFindMany.mockResolvedValue([
+      { pokemonId: 10, moveId: 40 },
+      { pokemonId: 11, moveId: 41 },
+      { pokemonId: 12, moveId: 42 },
+    ]);
+
+    await expect(
+      service.create({ ...pickSizeThreeInput, defaultLeads: slots }),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        errors: expect.arrayContaining([expect.objectContaining({ path: "defaultLeads" })]),
       },
     });
     expect(transactionArchetypeCreate).not.toHaveBeenCalled();
@@ -236,7 +413,7 @@ describe("AdminArchetypesService", () => {
       ...validInput,
       pokemons: validInput.pokemons.map((pokemon) => ({
         ...pokemon,
-        actualStats: { ...pokemon.actualStats, speed: 99 },
+        actualStats: { ...pokemon.actualStats!, speed: 99 },
       })),
     };
     transactionArchetypeUpdate.mockResolvedValue({
@@ -270,6 +447,23 @@ describe("AdminArchetypesService", () => {
       }),
     );
     expect(runTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("PUTでもdefaultLeads空配列をそのまま保存・返却する", async () => {
+    const replacement = { ...validInput, defaultLeads: [] };
+    transactionArchetypeUpdate.mockResolvedValue({
+      ...detailRecord,
+      defaultLeads: [],
+    });
+
+    await expect(service.update(archetypeId, replacement)).resolves.toMatchObject({
+      defaultLeads: [],
+    });
+    expect(transactionArchetypeUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ defaultLeads: [] }),
+      }),
+    );
   });
 
   it("nested create失敗をそのままロールバック対象にし、トランザクション外へ書き込まない", async () => {

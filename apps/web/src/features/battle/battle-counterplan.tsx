@@ -62,11 +62,7 @@ const CAUTION_TAG_LABELS: Readonly<Record<string, string>> = {
 const BREAKDOWN_LABELS = {
   offense: "攻撃相性",
   defense: "防御相性",
-  speed: "素早さ",
   damageRace: "確定数",
-  priority: "優先度",
-  statusResist: "状態耐性",
-  setupCounter: "積み対策",
 } as const;
 
 type MatchupResult =
@@ -178,11 +174,25 @@ function MatchupBreakdown({
   result: MatchupResult;
   moveName: (moveId: number) => string;
 }) {
+  const breakdownEntries =
+    result.calculationMode === "type_only"
+      ? ([
+          ["offense", BREAKDOWN_LABELS.offense],
+          ["defense", BREAKDOWN_LABELS.defense],
+        ] as const)
+      : Object.entries(BREAKDOWN_LABELS);
   return (
     <div className="mt-4 rounded-xl bg-slate-50 p-4">
-      <h5 className="text-xs font-black tracking-[0.12em] text-slate-500">MATCHUP 内訳</h5>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h5 className="text-xs font-black tracking-[0.12em] text-slate-500">MATCHUP 内訳</h5>
+        {result.calculationMode === "type_only" && (
+          <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-900">
+            タイプ相性のみ
+          </span>
+        )}
+      </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 text-sm sm:grid-cols-4">
-        {Object.entries(BREAKDOWN_LABELS).map(([key, label]) => (
+        {breakdownEntries.map(([key, label]) => (
           <div key={key}>
             <dt className="text-xs font-bold text-slate-400">{label}</dt>
             <dd className="mt-1 font-black tabular-nums text-slate-800">
@@ -191,18 +201,27 @@ function MatchupBreakdown({
           </div>
         ))}
       </dl>
-      <dl className="mt-4 grid gap-3 border-t border-slate-200 pt-4 text-sm sm:grid-cols-2">
-        <DamageSummary
-          label="こちらからの最大打点"
-          damage={result.outgoingDamage}
-          moveName={moveName}
-        />
-        <DamageSummary
-          label="相手からの最大打点"
-          damage={result.incomingDamage}
-          moveName={moveName}
-        />
-      </dl>
+      {result.calculationMode === "type_only" ? (
+        <p
+          role="note"
+          className="mt-4 border-t border-slate-200 pt-4 text-sm leading-6 text-amber-900"
+        >
+          相手の実数値が未確認のため、ダメージ・確定数・素早さは算出していません。
+        </p>
+      ) : (
+        <dl className="mt-4 grid gap-3 border-t border-slate-200 pt-4 text-sm sm:grid-cols-2">
+          <DamageSummary
+            label="こちらからの最大打点"
+            damage={result.outgoingDamage}
+            moveName={moveName}
+          />
+          <DamageSummary
+            label="相手からの最大打点"
+            damage={result.incomingDamage}
+            moveName={moveName}
+          />
+        </dl>
+      )}
     </div>
   );
 }
@@ -307,7 +326,7 @@ export function BattleCounterplanPanel({
             対策
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            選択した構築と使用パーティを、保存済みの能力値で比較した結果です。
+            選択した構築と使用パーティを、確認済みの構築情報で比較した結果です。
           </p>
         </div>
         {(isFetching || masterIsFetching) && response && (

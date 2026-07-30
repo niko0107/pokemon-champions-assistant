@@ -149,6 +149,10 @@ function toStats(actualStats: unknown, path: string): CombatantSnapshot["stats"]
   };
 }
 
+function toOptionalStats(actualStats: unknown, path: string): CombatantSnapshot["stats"] {
+  return actualStats === null ? null : toStats(actualStats, path);
+}
+
 function toMoveSnapshot(
   moveId: number,
   move: CounterplanMoveRecord,
@@ -365,7 +369,7 @@ export function toArchetypeCounterplanSnapshots(
       combatant: {
         pokemonId: entry.pokemonId,
         types: parseTypes(entry.pokemon, `archetype.pokemons[${index}].pokemon`),
-        stats: toStats(entry.actualStats, `archetype.pokemons[${index}].actualStats`),
+        stats: toOptionalStats(entry.actualStats, `archetype.pokemons[${index}].actualStats`),
         isMega: entry.pokemon.isMega,
         role: role.data,
         moves: moveSnapshots,

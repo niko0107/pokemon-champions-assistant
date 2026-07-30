@@ -37,6 +37,7 @@ function makeScore(
     damageRaceScore,
     totalScore,
     classification,
+    calculationMode: "full",
     bestOffensiveMoveId: null,
     mostThreateningMoveId: null,
     outgoingDamage: null,

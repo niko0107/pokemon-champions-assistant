@@ -1,9 +1,14 @@
 import { z } from "zod";
 import {
   ARCHETYPE_TEAM_SIZE_MAX,
+  archetypeDefaultLeadsForPickSizeSchema,
+  archetypeDefaultLeadsSchema,
   archetypeEvsSchema,
+  archetypeIvsSchema,
   archetypePokemonRoleSchema,
   archetypeSlotSchema,
+  archetypeStatDataStatusSchema,
+  completeArchetypeIvsSchema,
 } from "../archetype";
 import { combatActualStatsSchema } from "../combat-stats";
 import { POKEMON_TYPES } from "../enums";
@@ -84,7 +89,9 @@ export const publicArchetypePokemonSchema = z
     nature: nullableTextSchema,
     teraType: nullableTextSchema,
     evs: archetypeEvsSchema.nullable(),
+    ivs: archetypeIvsSchema.nullable(),
     actualStats: combatActualStatsSchema.nullable(),
+    statDataStatus: archetypeStatDataStatusSchema,
     role: archetypePokemonRoleSchema,
     threatNotes: nullableTextSchema,
     pokemon: publicArchetypePokemonMasterSchema,
@@ -100,6 +107,36 @@ export const publicArchetypePokemonSchema = z
         code: z.ZodIssueCode.custom,
         message: "同じポケモンの技は重複できません",
         path: ["moves"],
+      });
+    }
+
+    if (pokemon.statDataStatus === "partial" && pokemon.actualStats !== null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "partialではactualStatsをnullにしてください",
+        path: ["actualStats"],
+      });
+    }
+
+    if (pokemon.statDataStatus !== "partial" && pokemon.actualStats === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "exactまたはderivedではactualStatsが必要です",
+        path: ["actualStats"],
+      });
+    }
+
+    if (
+      pokemon.statDataStatus === "derived" &&
+      (pokemon.nature === null ||
+        pokemon.evs === null ||
+        pokemon.ivs === null ||
+        !completeArchetypeIvsSchema.safeParse(pokemon.ivs).success)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "derivedでは性格・EV・全6能力のIVが必要です",
+        path: ["statDataStatus"],
       });
     }
   });
@@ -124,7 +161,7 @@ export const publicArchetypeDetailSchema = z
     description: requiredTextSchema,
     rule: publicArchetypeRuleSchema,
     season: publicArchetypeSeasonSchema,
-    defaultLeads: z.array(archetypeSlotSchema).max(ARCHETYPE_TEAM_SIZE_MAX),
+    defaultLeads: archetypeDefaultLeadsSchema,
     playstyleNotes: nullableTextSchema,
     pokemons: z.array(publicArchetypePokemonSchema).min(1).max(ARCHETYPE_TEAM_SIZE_MAX),
     sources: z.array(publicArchetypeSourceSchema),
@@ -165,10 +202,14 @@ export const publicArchetypeDetailSchema = z
       });
     }
 
-    if (new Set(archetype.defaultLeads).size !== archetype.defaultLeads.length) {
+    if (
+      !archetypeDefaultLeadsForPickSizeSchema(archetype.rule.pickSize).safeParse(
+        archetype.defaultLeads,
+      ).success
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "基本選出のslotは重複できません",
+        message: "基本選出数は0件またはRuleの選出数と一致させてください",
         path: ["defaultLeads"],
       });
     }

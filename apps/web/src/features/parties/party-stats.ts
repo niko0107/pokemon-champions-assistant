@@ -1,8 +1,9 @@
-import type {
-  MasterPokemonDetail,
-  PartyActualStats,
-  PartyEvs,
-  PartyIvs,
+import {
+  calculatePokemonActualStats,
+  type MasterPokemonDetail,
+  type PartyActualStats,
+  type PartyEvs,
+  type PartyIvs,
 } from "@pokemon-champions/shared";
 
 export type BattleStat = "atk" | "def" | "spa" | "spd" | "spe";
@@ -83,25 +84,6 @@ export const NATURE_OPTIONS: readonly NatureOption[] = [
   { value: "きまぐれ", label: "きまぐれ（補正なし）", increased: null, decreased: null },
 ] as const;
 
-const baseStatKeys: Readonly<Record<PartyStat, keyof MasterPokemonDetail>> = {
-  hp: "baseHp",
-  atk: "baseAtk",
-  def: "baseDef",
-  spa: "baseSpa",
-  spd: "baseSpd",
-  spe: "baseSpe",
-};
-
-function natureMultiplier(nature: NatureOption, stat: BattleStat): number {
-  if (nature.increased === stat) {
-    return 1.1;
-  }
-  if (nature.decreased === stat) {
-    return 0.9;
-  }
-  return 1;
-}
-
 export function calculateActualStats(input: {
   pokemon: MasterPokemonDetail;
   evs: PartyEvs;
@@ -109,31 +91,18 @@ export function calculateActualStats(input: {
   level: number;
   nature: string;
 }): PartyActualStats {
-  const nature = NATURE_OPTIONS.find((option) => option.value === input.nature);
-  if (!nature) {
-    throw new RangeError("未対応の性格です");
-  }
-  if (!Number.isSafeInteger(input.level) || input.level < 1 || input.level > 100) {
-    throw new RangeError("レベルは1〜100の整数で指定してください");
-  }
-
-  const base = (stat: PartyStat) => input.pokemon[baseStatKeys[stat]] as number;
-  const beforeNature = (stat: BattleStat) =>
-    Math.floor(
-      ((2 * base(stat) + input.ivs[stat] + Math.floor(input.evs[stat] / 4)) * input.level) / 100,
-    ) + 5;
-
-  return {
-    hp:
-      Math.floor(
-        ((2 * base("hp") + input.ivs.hp + Math.floor(input.evs.hp / 4)) * input.level) / 100,
-      ) +
-      input.level +
-      10,
-    attack: Math.floor(beforeNature("atk") * natureMultiplier(nature, "atk")),
-    defense: Math.floor(beforeNature("def") * natureMultiplier(nature, "def")),
-    specialAttack: Math.floor(beforeNature("spa") * natureMultiplier(nature, "spa")),
-    specialDefense: Math.floor(beforeNature("spd") * natureMultiplier(nature, "spd")),
-    speed: Math.floor(beforeNature("spe") * natureMultiplier(nature, "spe")),
-  };
+  return calculatePokemonActualStats({
+    baseStats: {
+      hp: input.pokemon.baseHp,
+      attack: input.pokemon.baseAtk,
+      defense: input.pokemon.baseDef,
+      specialAttack: input.pokemon.baseSpa,
+      specialDefense: input.pokemon.baseSpd,
+      speed: input.pokemon.baseSpe,
+    },
+    evs: input.evs,
+    ivs: input.ivs,
+    level: input.level,
+    nature: input.nature,
+  });
 }

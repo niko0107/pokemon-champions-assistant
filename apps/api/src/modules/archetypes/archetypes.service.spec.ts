@@ -15,6 +15,7 @@ function pokemon(slot: number) {
     nature: slot === 1 ? "ようき" : null,
     teraType: slot === 1 ? "fire" : null,
     evs: slot === 1 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+    ivs: null,
     actualStats: {
       hp: 150,
       attack: 120,
@@ -30,6 +31,7 @@ function pokemon(slot: number) {
       specialDefense: number;
       speed: number;
     } | null,
+    statDataStatus: "exact",
     role: slot === 1 ? "lead" : "support",
     threatNotes: slot === 1 ? "積み技に注意" : null,
     pokemon: {
@@ -170,7 +172,9 @@ describe("ArchetypesService", () => {
       item: null,
       ability: null,
       evs: null,
+      ivs: null,
       actualStats: null,
+      statDataStatus: "partial",
       threatNotes: null,
       moves: [],
     };
@@ -181,10 +185,20 @@ describe("ArchetypesService", () => {
       item: null,
       ability: null,
       evs: null,
+      ivs: null,
       actualStats: null,
+      statDataStatus: "partial",
       threatNotes: null,
       moves: [],
     });
+  });
+
+  it("defaultLeads空配列を補完せず公開詳細へ返す", async () => {
+    const value = record();
+    value.defaultLeads = [];
+    findFirst.mockResolvedValue(value);
+
+    await expect(service.get(archetypeId)).resolves.toMatchObject({ defaultLeads: [] });
   });
 
   it.each(["不存在", "archived", "想定外の非公開status"])("%sを同じ404にする", async () => {

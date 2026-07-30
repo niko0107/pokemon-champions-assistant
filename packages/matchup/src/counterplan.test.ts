@@ -62,6 +62,7 @@ function makeScore(
     damageRaceScore: values.damageRaceScore ?? 0,
     totalScore,
     classification: "even",
+    calculationMode: "full",
     bestOffensiveMoveId: null,
     mostThreateningMoveId: null,
     outgoingDamage: null,

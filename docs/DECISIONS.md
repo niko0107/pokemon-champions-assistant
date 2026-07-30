@@ -773,3 +773,24 @@
 - **判断:** Move tagは構造化された正のpriorityから得られる`priority`だけを付け、setup / hazard / screen / status / pivot、Item / Ability tagを名称や説明文から推測しない。Pyroarの上流form統合、Megaの別Pokemon表現、既存v1.0関係の非破壊を品質検収へ固定する
 - **理由:** 公開確認できる現行Pokemon・Move・Ability・Champions Train習得関係は正確に更新できる一方、完全な公式Item合法性集合は公開情報から再現できない。網羅性を虚偽表示せず、出典単位のItem追加へ責務を分けることで、正確性を維持したままARCHETYPE-004へ進むため
 - **影響:** MASTER-009A / 009Bの完了でMASTER-009のMVPを完了可能とする。Item全合法集合、構築ごとの持ち物・actualStats、Regulation Set M-Bに対応する正式Rule / Seasonは既知制限としてARCHETYPE-004以降の出典確認へ残す
+
+## 2026-07-29 基本選出の任意化(ARCHETYPE-004A)
+
+### D-071: defaultLeadsは空配列またはRule.pickSize件
+
+- **判断:** `Archetype.defaultLeads`は空配列、または参照Ruleの`pickSize`と同じ件数の重複しない既存slotだけを許可する。空配列は「出典から一意な基本選出を確認できないため未登録」を表し、null、使用率、Pokemonの並び、スコア、playstyleNotesから基本選出を補完しない
+- **判断:** sharedはJSON配列のstrictな要素・範囲・重複を検証し、Ruleを取得できるadmin Serviceが空またはpickSize件の件数整合を検証する。POST、PUT、previewは空配列をそのまま保存・返却する。既存Archetypeの値と既存migrationは変更せず、新規migrationで`archetypes_default_leads_array`の許容件数を0〜6件へ広げる
+- **判断:** defaultLeadsが空の場合、counterplanは`priorityOpponentPokemonIds=[]`で既存MATCHUP-006を呼び、通常どおり選出を算出する一方、`leadPokemonId=null`を維持して仮の先発を生成しない。候補・公開詳細・counterplanは利用可能で、詳細画面は既存の「基本選出の登録なし」を表示する
+- **理由:** Regulation Set M-Bの公開構築では6体・技・能力値等が確認できても一意な基本選出が公開されない例が多く、基本選出を必須にすると推測登録か有効な構築データの除外を招くため
+- **影響:** 基本選出位置の一致加点とpriority基準の先発提案は登録済み構築だけで利用する。ARCHETYPE-004の構築登録、基本選出の自動推定、既存migrationの変更は本タスクに含めない
+
+## 2026-07-29 構築の実数値・IV要件の見直し(ARCHETYPE-004B)
+
+### D-072: 実数値状態とタイプ相性限定counterplan
+
+- **判断:** ArchetypePokemonへ能力ごとに未確認を表せる`ivs`と、`exact / derived / partial`の`statDataStatus`を追加する。`exact`は出典で実数値を直接確認済み、`derived`は出典で明示された全6能力のIV・EV・性格とRule.battleLevelから純粋関数で算出してAPIが一致検証済み、`partial`は構築情報を利用できるが実数値未確認を表す
+- **判断:** `partial`では`actualStats=null`とし、IV全体または能力ごとのnullを31等へ暗黙補完しない。`derived`は全IV・EV・性格・actualStatsを必須とし、未知の性格や再計算不一致を登録前に拒否する。既存クライアントの実数値付き入力はstatus省略時`exact`、既存DBの実数値付き行は`exact`、null行は新規migrationで`partial`として後方互換を維持する
+- **判断:** 候補検索・一致度・重複previewは従来どおりPokemon・技・Item・Ability等の構造情報を正とし、partialを除外しない。counterplanは両者の実数値がある場合だけ`calculationMode=full`で既存計算を行い、どちらかが不足する場合は`calculationMode=type_only`としてタイプ相性だけを評価する。type_onlyではダメージ・確定数をnull、ダメージレース・素早さ内訳を0とし、対応する勝敗reasonCodeや説明文を生成しない
+- **判断:** 公開詳細APIはIV・実数値状態をstrictに返し、Webは直接確認値・明示材料からの算出値・未確認を区別する。未確認時はダメージ計算へ使わない旨を表示し、counterplanも「タイプ相性のみ」と未算出項目を明示する。出典URLは既存ArchetypeSource契約を維持し、推定値や出典にない仮定を保存しない
+- **理由:** Regulation Set M-Bの再監査38件は実数値または全IVを公開していない一方、30件は6体・技・Item・Ability・性格・EVまで確認可能であり、構築候補として有用な構造情報と厳密なダメージ計算の可否を同一条件にすると、推測か全件除外を招くため
+- **影響:** 再監査では30件を`partial`として構造上登録可能、`exact` 0件、`derived` 0件、残る8件は6体ちょうどでないため登録不能と判定した。ARCHETYPE-004はpartial 30件を対象に再開できるが、各出典・Item・Rule/Season・previewを登録時に再確認する。将来、全計算材料が公開された行だけderivedへ更新できる

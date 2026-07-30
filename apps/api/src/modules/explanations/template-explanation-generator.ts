@@ -195,12 +195,16 @@ function buildOpponentExplanation(opponent: StructuredOpponentCounterplan): stri
   }
 
   const result = recommendation.matchupResult;
+  const scoreSentence =
+    result.calculationMode === "type_only"
+      ? `タイプ相性のみの総合スコアは${recommendation.totalScore}です（攻撃${result.offensiveScore}、防御${result.defensiveScore}）。実数値が未確認のため、ダメージ・確定数・素早さは算出していません。`
+      : `総合スコアは${recommendation.totalScore}です（攻撃${result.offensiveScore}、防御${result.defensiveScore}、確定数比較${result.damageRaceScore}）。`;
   const sentences = [
     `${pokemonLabel(opponent.opponentPokemonId)}には${pokemonLabel(
       recommendation.selfPokemonId,
     )}がおすすめです。`,
     classification,
-    `総合スコアは${recommendation.totalScore}です（攻撃${result.offensiveScore}、防御${result.defensiveScore}、確定数比較${result.damageRaceScore}）。`,
+    scoreSentence,
     ...reasonTexts,
   ];
 

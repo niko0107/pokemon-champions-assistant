@@ -128,6 +128,42 @@ describe("ARCHETYPE-005 admin archetype preview API", () => {
     expect(preview).toHaveBeenCalledWith(previewInput);
   });
 
+  it("defaultLeads空配列をプレビューへそのまま渡す", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes/preview")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...previewInput, defaultLeads: [] })
+      .expect(200);
+
+    expect(adminArchetypePreviewResponseSchema.parse(response.body)).toEqual(previewResult);
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({ defaultLeads: [] }));
+  });
+
+  it("partial・未確認IV・null actualStatsをプレビューへそのまま渡す", async () => {
+    const partialPokemon = {
+      ...previewInput.pokemons[0]!,
+      ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
+      actualStats: null,
+      statDataStatus: "partial",
+    };
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes/preview")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...previewInput, pokemons: [partialPokemon] })
+      .expect(200);
+
+    expect(preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pokemons: [
+          expect.objectContaining({
+            actualStats: null,
+            statDataStatus: "partial",
+          }),
+        ],
+      }),
+    );
+  });
+
   it("AuthorizationなしはRFC 9457形式の401にする", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/admin/archetypes/preview")

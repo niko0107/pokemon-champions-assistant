@@ -328,20 +328,20 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 
 #### archetypes(テンプレ構築)
 
-| カラム                    | 型               | 説明                                 |
-| ------------------------- | ---------------- | ------------------------------------ |
-| id                        | uuid PK          |                                      |
-| name                      | text             | 構築名(例: メガギャラドス展開構築)   |
-| description               | text             | 構築の特徴・コンセプト               |
-| season_id / rule_id       | int FK           | 対応シーズン・ルール                 |
-| popularity_tier           | text             | `high` / `mid` / `low`(MVP用)        |
-| popularity_score          | numeric nullable | 将来の数値スコア                     |
-| encounter_count           | int default 0    | 遭遇報告数(集計値)                   |
-| pick_count                | int default 0    | アプリ内で候補選択された回数         |
-| default_leads             | jsonb            | 基本選出(先発/控え/エースのslot指定) |
-| playstyle_notes           | text             | 立ち回りの基本方針                   |
-| status                    | text             | `published` / `archived`             |
-| published_at / updated_at | timestamptz      | データの新しさ判定に使用             |
+| カラム                    | 型               | 説明                                   |
+| ------------------------- | ---------------- | -------------------------------------- |
+| id                        | uuid PK          |                                        |
+| name                      | text             | 構築名(例: メガギャラドス展開構築)     |
+| description               | text             | 構築の特徴・コンセプト                 |
+| season_id / rule_id       | int FK           | 対応シーズン・ルール                   |
+| popularity_tier           | text             | `high` / `mid` / `low`(MVP用)          |
+| popularity_score          | numeric nullable | 将来の数値スコア                       |
+| encounter_count           | int default 0    | 遭遇報告数(集計値)                     |
+| pick_count                | int default 0    | アプリ内で候補選択された回数           |
+| default_leads             | jsonb            | 基本選出のslot配列。空は出典上確認不能 |
+| playstyle_notes           | text             | 立ち回りの基本方針                     |
+| status                    | text             | `published` / `archived`               |
+| published_at / updated_at | timestamptz      | データの新しさ判定に使用               |
 
 #### archetype_pokemons
 
@@ -357,14 +357,23 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 | nature            | text nullable       |                                                      |
 | tera_type         | text nullable       |                                                      |
 | evs               | jsonb nullable      | 定番の努力値配分                                     |
-| actual_stats      | jsonb nullable      | 確定済み実数値。構造はparty_pokemonsと共通           |
+| ivs               | jsonb nullable      | 出典で確認できた個体値。能力ごとのnullは未確認       |
+| actual_stats      | jsonb nullable      | 確定または算出済み実数値。構造はparty_pokemonsと共通 |
+| stat_data_status  | text                | `exact` / `derived` / `partial`                      |
 | role              | text                | `lead` / `sweeper` / `wall` / `pivot` / `support` 等 |
 | usage_rate        | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現       |
 | threat_notes      | text                | このポケモンの警戒ポイント                           |
 
-Archetypeの対戦計算では`archetype_pokemons.actual_stats`と参照Ruleの`battle_level`を使用する。
-既存データへ根拠のないIV・EV・性格・レベルを仮定しないためDB列はnullableとする一方、
-adminの新規作成・PUT全置換・preview入力では6能力を必須とする。種族値からの自動補完は行わない。
+`stat_data_status`の意味は次のとおりとする。
+
+- `exact`: 出典で6能力の実数値が直接確認できる
+- `derived`: 出典で明示された全6能力のIV・EV・性格と参照Ruleの`battle_level`から算出し、
+  APIが再計算して一致を確認している
+- `partial`: 構築情報は利用可能だが実数値は未確認。`actual_stats`はnullとし、未確認IVを
+  31等へ暗黙補完しない
+
+既存の実数値付きデータは`exact`として互換性を維持する。`derived`では全計算材料を必須とし、
+`partial`では確認できたIVだけを能力ごとに保存できる。種族値や既定IVからの自動補完は行わない。
 
 #### archetype_pokemon_moves
 
@@ -475,6 +484,8 @@ match_rate = clamp(raw_score / max_score, 0, 1) × 100
 - 観測が増えるほど max_score が増え、一致度が安定する
 - 減点により raw_score が負になる場合は 0% とする
 - **除外条件:** ポケモン不一致が3体以上、またはメガ矛盾が発生した構築は候補から除外(表示しない)
+- `default_leads`が空の場合は、出典から一意な基本選出を確認できない状態として位置一致を
+  加点せず、使用率・slot順・スコア等から基本選出を補完しない
 
 ### 7.3 ソート仕様
 
@@ -605,6 +616,11 @@ damage ≒ (22 × 威力 × 攻撃実数値 / 防御実数値) / 50 + 2
 
 乱数・急所は考慮しない。テラスタイプが登録されている場合はテラス後の相性も併記する。
 
+両者の実数値が揃う場合だけ`calculationMode=full`としてダメージ・確定数・ダメージレースを
+算出する。どちらかの実数値が未確認の場合は`calculationMode=type_only`とし、登録済みの
+Pokemonタイプと技タイプによる相性だけを評価する。この場合、ダメージ・確定数はnull、
+ダメージレースと素早さの内訳は0とし、勝敗理由や説明文でも未算出値を確定値として扱わない。
+
 ### 9.4 選出提案アルゴリズム
 
 1. 自6体 × 相手6体 の相性マトリクス(36セル)を計算
@@ -612,7 +628,8 @@ damage ≒ (22 × 威力 × 攻撃実数値 / 防御実数値) / 50 + 2
 3. 上位から3体を選出候補とする。ただし以下の制約を適用:
    - 相手のエース級に対する回答が最低1体含まれること
    - 起点回避手段(挑発・自主退場・ほえる等)の有無を評価
-4. 先発: 相手の default_leads(テンプレの基本先発)に対して最も有利なポケモン
+4. 先発: 相手の default_leads(テンプレの基本先発)が登録済みの場合だけ、その相手に対して
+   最も有利なポケモンを提示する。未登録時は先発を推測しない
 5. エース: 評価値が高く、積み技/高火力を持つポケモン
 6. 控え: 残り1枠。先発とエースが苦手な相手をカバーするポケモン(補完重視)
 
@@ -837,14 +854,20 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 1. 管理者が攻略サイト・上位構築を調査
 2. 管理画面から構造化データとして登録(本文・画像は転載しない)
    - 構築名 / 採用ポケモン / 技(採用率) / 持ち物 / 特性 / 基本選出 / 特徴 / 出典URL / シーズン / ルール
+   - 基本選出は出典から一意に確認できる場合だけRuleのpick_size件を登録し、確認できない場合は空配列にする
    - 持ち物は出典で明示的に確認できるものだけをItemマスタへ追加して選択する。持ち物が不明な構築は登録対象外とし、実際に持ち物なしと確認できる場合だけnullを許容する
+   - 実数値が直接確認できれば`exact`、全IV・EV・性格から算出できれば`derived`、
+     それ以外は`partial`として保存する。未確認IV・実数値を推測しない
 3. プレビューで一致判定テスト(観測をシミュレート入力して候補に出るか確認)
 4. `published` に変更して公開
 
 ### 13.2 データ品質ルール
 
 - 出典URL必須(最低1件)
-- Pokemon・Move・Abilityは現行マスタから選択し、持ち物とactualStatsを推測補完しない
+- 基本選出は空配列またはRuleのpick_size件。空配列は「出典から一意に確認できない」を表し、自動補完しない
+- Pokemon・Move・Abilityは現行マスタから選択し、持ち物・IV・actualStatsを推測補完しない
+- 実数値が未確認の`partial`構築も候補・詳細・counterplanで利用できるが、counterplanは
+  タイプ相性だけを返し、ダメージ・確定数・素早さを算出済みとして表示しない
 - シーズン終了時に旧構築を一括で `archived`(検索対象外)へ
 - 同名構築の重複チェック(ポケモン6体の一致度90%以上で警告)
 

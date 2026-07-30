@@ -8,6 +8,8 @@ export const MATCHUP_VERDICTS = [
   "unfavorable",
 ] as const;
 
+export const MATCHUP_CALCULATION_MODES = ["full", "type_only"] as const;
+
 export const MATCHUP_REASON_CODES = [
   "BEST_MOVE_SUPER_EFFECTIVE",
   "BEST_MOVE_RESISTED",
@@ -49,12 +51,14 @@ export const COUNTERPLAN_STRATEGY_CODES = [
 ] as const;
 
 export const matchupVerdictSchema = z.enum(MATCHUP_VERDICTS);
+export const matchupCalculationModeSchema = z.enum(MATCHUP_CALCULATION_MODES);
 export const matchupReasonCodeSchema = z.enum(MATCHUP_REASON_CODES);
 export const knockoutClassificationSchema = z.enum(KNOCKOUT_CLASSIFICATIONS);
 export const counterplanCautionMoveTagSchema = z.enum(COUNTERPLAN_CAUTION_MOVE_TAGS);
 export const counterplanStrategyCodeSchema = z.enum(COUNTERPLAN_STRATEGY_CODES);
 
 export type MatchupVerdictValue = z.infer<typeof matchupVerdictSchema>;
+export type MatchupCalculationModeValue = z.infer<typeof matchupCalculationModeSchema>;
 export type MatchupReasonCodeValue = z.infer<typeof matchupReasonCodeSchema>;
 export type KnockoutClassificationValue = z.infer<typeof knockoutClassificationSchema>;
 export type CounterplanCautionMoveTagValue = z.infer<typeof counterplanCautionMoveTagSchema>;

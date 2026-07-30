@@ -193,12 +193,24 @@ describe("Archetype counterplan Snapshot変換", () => {
     });
   });
 
-  it.each([
-    ["null", null],
-    ["不正JSON", { ...stats, speed: Number.POSITIVE_INFINITY }],
-  ])("actualStatsが%sなら推測せず拒否する", (_label, actualStats) => {
+  it("actualStatsがnullなら補完せずtype-only Snapshotへ変換する", () => {
+    const result = toArchetypeCounterplanSnapshots(
+      [archetypePokemon({ actualStats: null })],
+      [],
+      50,
+      null,
+    );
+    expect(result.combatants[0]?.combatant.stats).toBeNull();
+  });
+
+  it("不正な非null actualStatsは推測せず拒否する", () => {
     expect(() =>
-      toArchetypeCounterplanSnapshots([archetypePokemon({ actualStats })], [], 50, null),
+      toArchetypeCounterplanSnapshots(
+        [archetypePokemon({ actualStats: { ...stats, speed: Number.POSITIVE_INFINITY } })],
+        [],
+        50,
+        null,
+      ),
     ).toThrow(RangeError);
   });
 

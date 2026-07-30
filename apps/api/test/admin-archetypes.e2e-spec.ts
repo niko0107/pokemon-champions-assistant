@@ -181,6 +181,64 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
     expect(archive).toHaveBeenCalledWith(archetypeId);
   });
 
+  it("POSTとPUTでdefaultLeads空配列を受理し、そのまま返す", async () => {
+    const emptyLeadsDetail = { ...detail, defaultLeads: [] };
+    create.mockResolvedValueOnce(emptyLeadsDetail);
+    update.mockResolvedValueOnce(emptyLeadsDetail);
+
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, defaultLeads: [] })
+      .expect(201);
+    expect(created.body.defaultLeads).toEqual([]);
+
+    const updated = await request(app.getHttpServer())
+      .put(`/api/v1/admin/archetypes/${archetypeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, defaultLeads: [] })
+      .expect(200);
+    expect(updated.body.defaultLeads).toEqual([]);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ defaultLeads: [] }));
+    expect(update).toHaveBeenCalledWith(archetypeId, expect.objectContaining({ defaultLeads: [] }));
+  });
+
+  it("POSTとPUTでpartial・未確認IV・null actualStatsを受理する", async () => {
+    const partialPokemon = {
+      ...writeInput.pokemons[0]!,
+      ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
+      actualStats: null,
+      statDataStatus: "partial" as const,
+    };
+    const partialDetail = {
+      ...detail,
+      pokemons: [{ ...detail.pokemons[0]!, ...partialPokemon }],
+    };
+    create.mockResolvedValueOnce(partialDetail);
+    update.mockResolvedValueOnce(partialDetail);
+
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, pokemons: [partialPokemon] })
+      .expect(201);
+    expect(created.body.pokemons[0]).toMatchObject({
+      ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
+      actualStats: null,
+      statDataStatus: "partial",
+    });
+
+    const updated = await request(app.getHttpServer())
+      .put(`/api/v1/admin/archetypes/${archetypeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, pokemons: [partialPokemon] })
+      .expect(200);
+    expect(updated.body.pokemons[0]).toMatchObject({
+      actualStats: null,
+      statDataStatus: "partial",
+    });
+  });
+
   it("AuthorizationなしはRFC 9457形式の401にする", async () => {
     const response = await request(app.getHttpServer()).get("/api/v1/admin/archetypes").expect(401);
 
@@ -266,6 +324,21 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       status: 400,
       code: "VALIDATION_ERROR",
     });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["重複slot", [1, 1]],
+    ["存在しないslot", [2]],
+    ["小数", [1.5]],
+    ["文字列Infinity", ["Infinity"]],
+  ])("不正なdefaultLeads（%s）をDB呼び出し前に400にする", async (_label, defaultLeads) => {
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ ...writeInput, defaultLeads })
+      .expect(400);
+
     expect(create).not.toHaveBeenCalled();
   });
 

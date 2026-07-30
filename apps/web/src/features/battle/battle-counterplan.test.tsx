@@ -32,6 +32,7 @@ const matchupResult = {
   selfPokemonId: 1,
   myPokemonId: 1,
   opponentPokemonId: 101,
+  calculationMode: "full",
   offensiveScore: 25,
   defensiveScore: 20,
   damageRaceScore: 5,
@@ -319,6 +320,55 @@ describe("WEB-007 counterplan panel", () => {
     expect(screen.getByText("・設置技の回数を抑える")).toBeVisible();
     expect(screen.getByText("・状態異常を管理する")).toBeVisible();
     expect(screen.getAllByText("あくびからの展開に注意").length).toBeGreaterThan(0);
+  });
+
+  it("実数値が不明な相手はタイプ相性のみを表示し、ダメージ・確定数・素早さを作らない", async () => {
+    const typeOnlyMatchupResult = {
+      ...matchupResult,
+      calculationMode: "type_only" as const,
+      damageRaceScore: 0,
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+      reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE"] as const,
+      breakdown: {
+        ...matchupResult.breakdown,
+        damageRace: 0,
+        speed: 0,
+      },
+    };
+    const typeOnlyResponse = sessionCounterplanResponseSchema.parse({
+      ...counterplan,
+      perOpponent: [
+        {
+          ...counterplan.perOpponent[0],
+          recommendations: [
+            {
+              ...counterplan.perOpponent[0]!.recommendations[0],
+              reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE"],
+              matchupResult: typeOnlyMatchupResult,
+            },
+          ],
+        },
+      ],
+      selection: {
+        ...counterplan.selection,
+        assignmentsByOpponent: [
+          {
+            ...counterplan.selection.assignmentsByOpponent[0],
+            matchupResult: typeOnlyMatchupResult,
+          },
+        ],
+      },
+    });
+
+    render(panel({ response: typeOnlyResponse }), { wrapper: wrapper() });
+
+    expect(await screen.findByText("タイプ相性のみ")).toBeVisible();
+    expect(screen.getByText(/ダメージ・確定数・素早さは算出していません/u)).toBeVisible();
+    expect(screen.queryByText(/ムーンフォース · 52\.6%/u)).not.toBeInTheDocument();
+    expect(screen.queryByText("確定数の競争で優位")).not.toBeInTheDocument();
   });
 
   it("master取得失敗でもcounterplanを壊さずID fallbackを表示する", async () => {

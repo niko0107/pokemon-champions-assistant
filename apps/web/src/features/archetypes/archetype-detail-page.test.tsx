@@ -46,6 +46,7 @@ function detail(): PublicArchetypeDetail {
       nature: index === 0 ? "ようき" : null,
       teraType: index === 0 ? "fire" : null,
       evs: index === 0 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+      ivs: null,
       actualStats:
         index === 0
           ? {
@@ -57,6 +58,7 @@ function detail(): PublicArchetypeDetail {
               speed: 167,
             }
           : null,
+      statDataStatus: index === 0 ? "exact" : "partial",
       role: index === 0 ? ("lead" as const) : ("support" as const),
       threatNotes: index === 0 ? "積み展開に注意" : null,
       pokemon: {
@@ -158,6 +160,9 @@ describe("WEB-008 archetype detail page", () => {
     expect(screen.getByText("かたいツメ")).toBeVisible();
     expect(screen.getByText("フレアドライブ")).toBeVisible();
     expect(screen.getByText("採用率 87.5%")).toBeVisible();
+    expect(screen.getByText("出典で確認済み")).toBeVisible();
+    expect(screen.getAllByText("実数値未確認")).toHaveLength(5);
+    expect(screen.getAllByText("未確認").length).toBeGreaterThan(0);
     expect(screen.getByText("積み展開に注意")).toBeVisible();
     expect(screen.getByText("壁から積みエースを展開する")).toBeVisible();
 
@@ -192,7 +197,9 @@ describe("WEB-008 archetype detail page", () => {
       nature: null,
       teraType: null,
       evs: null,
+      ivs: null,
       actualStats: null,
+      statDataStatus: "partial",
       threatNotes: null,
       moves: [],
     };
@@ -209,6 +216,21 @@ describe("WEB-008 archetype detail page", () => {
     expect(screen.getByText("技データ未登録")).toBeVisible();
     expect(screen.getAllByText("データ未登録").length).toBeGreaterThan(1);
     expect(screen.getAllByText("備考なし").length).toBeGreaterThan(0);
+  });
+
+  it("基本選出が登録済みの場合は従来どおりslot順で表示する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response(detail()))),
+    );
+    renderRoute();
+
+    const defaultPicks = (await screen.findByRole("heading", { name: "基本選出" })).parentElement;
+    expect(defaultPicks).not.toBeNull();
+    expect(within(defaultPicks!).queryByText("基本選出の登録なし")).not.toBeInTheDocument();
+    expect(within(defaultPicks!).getByText("メガリザードンX")).toBeVisible();
+    expect(within(defaultPicks!).getByText("ポケモン2")).toBeVisible();
+    expect(within(defaultPicks!).getByText("ポケモン3")).toBeVisible();
   });
 
   it.each([

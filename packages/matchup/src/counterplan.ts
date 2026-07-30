@@ -210,6 +210,26 @@ function assertMatchupScore(score: MatchupScore, path: string): void {
   ) {
     throw new RangeError(`${path}.breakdown must match the approved score fields`);
   }
+  if (score.calculationMode !== "full" && score.calculationMode !== "type_only") {
+    throw new RangeError(`${path}.calculationMode must be full or type_only`);
+  }
+  if (
+    score.calculationMode === "type_only" &&
+    (score.damageRaceScore !== 0 ||
+      score.outgoingDamage !== null ||
+      score.incomingDamage !== null ||
+      score.outgoingKnockoutCount !== null ||
+      score.incomingKnockoutCount !== null ||
+      score.breakdown.speed !== 0 ||
+      score.reasonCodes.some(
+        (code) =>
+          code === "WINS_DAMAGE_RACE" ||
+          code === "LOSES_DAMAGE_RACE" ||
+          code === "EVEN_DAMAGE_RACE",
+      ))
+  ) {
+    throw new RangeError(`${path} must not contain exact damage results in type_only mode`);
+  }
 
   assertNullablePositiveSafeInteger(score.bestOffensiveMoveId, `${path}.bestOffensiveMoveId`);
   assertNullablePositiveSafeInteger(score.mostThreateningMoveId, `${path}.mostThreateningMoveId`);
@@ -529,6 +549,7 @@ function matchupScoresEqual(left: MatchupScore, right: MatchupScore): boolean {
     left.damageRaceScore === right.damageRaceScore &&
     left.totalScore === right.totalScore &&
     left.classification === right.classification &&
+    left.calculationMode === right.calculationMode &&
     left.bestOffensiveMoveId === right.bestOffensiveMoveId &&
     left.mostThreateningMoveId === right.mostThreateningMoveId &&
     damageResultsEqual(left.outgoingDamage, right.outgoingDamage) &&

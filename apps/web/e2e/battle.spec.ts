@@ -74,7 +74,13 @@ interface BattleMockState {
   rejectNextUndo: boolean;
 }
 
-async function mockBattleApis(page: Page): Promise<BattleMockState> {
+async function mockBattleApis(
+  page: Page,
+  options: {
+    defaultLeads?: number[];
+    counterplanCalculationMode?: "full" | "type_only";
+  } = {},
+): Promise<BattleMockState> {
   const state: BattleMockState = {
     createBodies: [],
     observationBodies: [],
@@ -344,13 +350,15 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
   });
   await page.route(`**/api/v1/sessions/${sessionId}/counterplan`, async (route) => {
     state.counterplanRequests += 1;
+    const isTypeOnly = options.counterplanCalculationMode === "type_only";
     const matchupResult = {
       selfPokemonId: 6,
       myPokemonId: 6,
       opponentPokemonId: 10006,
+      calculationMode: isTypeOnly ? "type_only" : "full",
       offensiveScore: 25,
       defensiveScore: 20,
-      damageRaceScore: 5,
+      damageRaceScore: isTypeOnly ? 0 : 5,
       totalScore: 44,
       classification: "slightly_favorable",
       bestOffensiveMoveId: 53,
@@ -361,14 +369,16 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
       incomingKnockoutCount: null,
       offensiveTypeMultiplier: 2,
       defensiveTypeMultiplier: 1,
-      reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+      reasonCodes: isTypeOnly
+        ? ["BEST_MOVE_SUPER_EFFECTIVE"]
+        : ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
       score: 44,
       verdict: "slightly_favorable",
       breakdown: {
         offense: 25,
         defense: 20,
-        speed: 4,
-        damageRace: 5,
+        speed: isTypeOnly ? 0 : 4,
+        damageRace: isTypeOnly ? 0 : 5,
         priority: 2,
         statusResist: 1,
         setupCounter: 3,
@@ -397,7 +407,7 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
                 opponentPokemonId: 10006,
                 totalScore: 44,
                 classification: "slightly_favorable",
-                reasonCodes: ["BEST_MOVE_SUPER_EFFECTIVE", "WINS_DAMAGE_RACE"],
+                reasonCodes: matchupResult.reasonCodes,
                 matchupResult,
               },
             ],
@@ -459,7 +469,7 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
           battleLevel: 50,
         },
         season: { id: 1, name: "シーズン1" },
-        defaultLeads: [1, 2, 3],
+        defaultLeads: options.defaultLeads ?? [1, 2, 3],
         playstyleNotes: "壁から積みエースを展開する",
         pokemons: Array.from({ length: 6 }, (_, index) => ({
           slot: index + 1,
@@ -467,6 +477,7 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
           nature: index === 0 ? "ようき" : null,
           teraType: index === 0 ? "fire" : null,
           evs: index === 0 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+          ivs: null,
           actualStats:
             index === 0
               ? {
@@ -478,6 +489,7 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
                   speed: 167,
                 }
               : null,
+          statDataStatus: index === 0 ? "exact" : "partial",
           role: index === 0 ? "lead" : "support",
           threatNotes: index === 0 ? "積み展開に注意" : null,
           pokemon: {
@@ -550,6 +562,32 @@ async function mockBattleApis(page: Page): Promise<BattleMockState> {
 
   return state;
 }
+
+test("実数値未確認の対策はタイプ相性だけを表示し、ダメージ・素早さを確定しない", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockBattleApis(page, { counterplanCalculationMode: "type_only" });
+  await login(page);
+  await page.goto(`/battle/${sessionId}`);
+
+  await page.getByLabel("相手ポケモン").fill("リザ");
+  await page.getByRole("button", { name: "リザードン（normal）を追加" }).click();
+  await page.getByRole("button", { name: "この構築で対策を見る" }).first().click();
+
+  await expect(page.getByText("タイプ相性のみ")).toBeVisible();
+  await expect(
+    page.getByText("相手の実数値が未確認のため、ダメージ・確定数・素早さは算出していません。"),
+  ).toBeVisible();
+  await expect(page.getByText("こちらからの最大打点")).toHaveCount(0);
+  await expect(page.getByText("相手からの最大打点")).toHaveCount(0);
+  await expect(page.getByText("素早さ", { exact: true })).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
 
 async function login(page: Page): Promise<void> {
   await page.goto("/login");
@@ -844,6 +882,27 @@ for (const viewport of [
     await page.getByRole("link", { name: "← 対戦画面へ戻る" }).click();
     await expect(page).toHaveURL(`/battle/${sessionId}`);
     await expect(page.getByRole("button", { name: "この構築で対策を見る" }).first()).toBeEnabled();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+for (const viewport of [
+  { width: 375, height: 812 },
+  { width: 1440, height: 900 },
+]) {
+  test(`${viewport.width}pxで基本選出未登録を表示し、横overflowを起こさない`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockBattleApis(page, { defaultLeads: [] });
+    await login(page);
+    await page.goto(`/battle/${sessionId}/archetypes/30000000-0000-4000-8000-000000000001`);
+
+    await expect(page.getByRole("heading", { name: "基本選出" })).toBeVisible();
+    await expect(page.getByText("基本選出の登録なし")).toBeVisible();
+    await expect(page.getByText(/^SLOT /u)).toHaveCount(6);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

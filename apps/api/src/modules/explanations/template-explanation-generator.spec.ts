@@ -50,6 +50,7 @@ function score(
     damageRaceScore: 5,
     totalScore: 44,
     classification,
+    calculationMode: "full",
     bestOffensiveMoveId: 11,
     mostThreateningMoveId: 21,
     outgoingDamage: null,
