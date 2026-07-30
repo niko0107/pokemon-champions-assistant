@@ -78,6 +78,42 @@ const validInput = {
 } as const;
 
 describe("ARCHETYPE-002 shared API schemas", () => {
+  it("unclassifiedをcreate・PUTのstrict入力とadmin詳細レスポンスで保持する", () => {
+    const parsed = adminArchetypeWriteSchema.parse({
+      ...validInput,
+      pokemons: [{ ...validInput.pokemons[0], role: "unclassified" }],
+      defaultLeads: [1],
+    });
+    const detail = {
+      ...parsed,
+      id: "e7e7a0d4-5e2d-4f3d-9f09-8576ca1ca94e",
+      popularityTier: "mid",
+      popularityScore: null,
+      encounterCount: 0,
+      pickCount: 0,
+      publishedAt: "2026-07-25T00:00:00.000Z",
+      createdAt: "2026-07-25T00:00:00.000Z",
+      updatedAt: "2026-07-25T00:00:00.000Z",
+    };
+
+    expect(parsed.pokemons[0]?.role).toBe("unclassified");
+    expect(adminArchetypeDetailSchema.parse(detail).pokemons[0]?.role).toBe("unclassified");
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...validInput.pokemons[0], role: "" }],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...validInput.pokemons[0], role: "unclassified", roleReason: "推測" }],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+  });
+
   it("defaultLeads空配列をPOST・PUT・preview共通入力として保持する", () => {
     const parsed = adminArchetypeWriteSchema.parse({ ...validInput, defaultLeads: [] });
 

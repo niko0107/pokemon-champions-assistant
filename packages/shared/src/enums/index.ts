@@ -27,7 +27,14 @@ export const OBSERVATION_POSITIONS = ["lead", "back"] as const;
 export type ObservationPosition = (typeof OBSERVATION_POSITIONS)[number];
 
 /** 構築内のポケモンの役割(archetype_pokemons.role) */
-export const POKEMON_ROLES = ["lead", "sweeper", "wall", "pivot", "support"] as const;
+export const POKEMON_ROLES = [
+  "lead",
+  "sweeper",
+  "wall",
+  "pivot",
+  "support",
+  "unclassified",
+] as const;
 export type PokemonRole = (typeof POKEMON_ROLES)[number];
 
 /** 技分類(moves.category) */

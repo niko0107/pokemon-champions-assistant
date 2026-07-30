@@ -322,6 +322,25 @@ describe("scoreArchetype: SCORE-002 ポケモン一致", () => {
     expect(observations).toEqual(observationsBefore);
   });
 
+  it("unclassifiedは具体roleとして加点・減点せず、決定性と入力非破壊を維持する", () => {
+    const observations = [observePokemon(1, 1), observeMove(1, 10, 2)];
+    const concrete = createArchetype([
+      { ...createPokemon(1, 1, false, [createMove(10)]), role: "sweeper" },
+    ]);
+    const unclassified = createArchetype([
+      { ...createPokemon(1, 1, false, [createMove(10)]), role: "unclassified" },
+    ]);
+    const before = structuredClone(unclassified);
+
+    expect(scoreArchetype(unclassified, observations)).toEqual(
+      scoreArchetype(concrete, observations),
+    );
+    expect(scoreArchetype(unclassified, observations)).toEqual(
+      scoreArchetype(unclassified, observations),
+    );
+    expect(unclassified).toEqual(before);
+  });
+
   it("通常形態・別フォルム・メガ形態をpokemonId単位で区別する", () => {
     const normalOnly = scoreArchetype(createArchetype([createPokemon(130, 1, false)]), [
       observePokemon(1_130, 1),

@@ -203,7 +203,7 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
     expect(update).toHaveBeenCalledWith(archetypeId, expect.objectContaining({ defaultLeads: [] }));
   });
 
-  it("POSTとPUTでpartial・未確認IV・null actualStatsを受理する", async () => {
+  it("POST・PUT・admin GETでpartial + unclassifiedを変換せず保持する", async () => {
     const statPoints = {
       hp: 32,
       attack: 0,
@@ -219,6 +219,7 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial" as const,
+      role: "unclassified" as const,
     };
     const partialDetail = {
       ...detail,
@@ -239,6 +240,7 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     });
 
     const updated = await request(app.getHttpServer())
@@ -251,6 +253,7 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       statPoints,
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     });
 
     const fetched = await request(app.getHttpServer())
@@ -262,7 +265,31 @@ describe("ARCHETYPE-002 admin archetype CRUD API", () => {
       statPoints,
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     });
+  });
+
+  it.each(["", "ace"])("不正role「%s」を部分保存前に400にする", async (role) => {
+    for (const [method, url] of [
+      ["post", "/api/v1/admin/archetypes"],
+      ["put", `/api/v1/admin/archetypes/${archetypeId}`],
+    ] as const) {
+      const testRequest = request(app.getHttpServer());
+      const response = await (method === "post" ? testRequest.post(url) : testRequest.put(url))
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          ...writeInput,
+          pokemons: [{ ...writeInput.pokemons[0], role }],
+        })
+        .expect(400);
+
+      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+        status: 400,
+        code: "VALIDATION_ERROR",
+      });
+    }
+    expect(create).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -43,6 +43,7 @@ function archetype(
     updatedAt: Date;
     pokemonId: number;
     isMega: boolean;
+    role: string;
   }> = {},
 ): unknown {
   const pokemonId = overrides.pokemonId ?? 10;
@@ -61,7 +62,7 @@ function archetype(
         itemId: 20,
         itemAlternatives: [21],
         abilityId: 30,
-        role: "lead",
+        role: overrides.role ?? "lead",
         usageRate: new Prisma.Decimal(1),
         pokemon: { isMega: overrides.isMega ?? false },
         moves: [
@@ -175,6 +176,23 @@ describe("SessionsService.getCandidates", () => {
     expect(response.candidates[0]).not.toHaveProperty("rawScore");
     expect(response.candidates[0]).not.toHaveProperty("maxScore");
     expect(response.candidates[0]).not.toHaveProperty("excluded");
+  });
+
+  it("unclassifiedを含むpublished構築もcandidateとして決定的に返す", async () => {
+    sessionFindFirst.mockResolvedValue({
+      id: sessionId,
+      ruleId: 1,
+      status: "active",
+      selectedArchetypeId: null,
+      observations: [observation(1, "pokemon")],
+    });
+    archetypeFindMany.mockResolvedValue([archetype(archetypeId, { role: "unclassified" })]);
+
+    const first = await service.getCandidates(userId, sessionId);
+    const second = await service.getCandidates(userId, sessionId);
+
+    expect(first).toEqual(second);
+    expect(first.candidates[0]).toMatchObject({ archetypeId, rank: 1, matchRate: 100 });
   });
 
   it("move/item/ability/position/megaを型安全に変換し表示要素を保持する", async () => {

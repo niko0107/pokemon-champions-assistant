@@ -173,7 +173,7 @@ describe("ArchetypesService", () => {
     expect(result).not.toHaveProperty("pickCount");
   });
 
-  it("nullable値と能力ポイントをEV・actualStatsへ補完せず返す", async () => {
+  it("nullable値・能力ポイント・unclassifiedを補完や変換せず公開GETで返す", async () => {
     const value = record();
     const statPoints = {
       hp: 32,
@@ -192,6 +192,7 @@ describe("ArchetypesService", () => {
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
       threatNotes: null,
       moves: [],
     };
@@ -206,6 +207,7 @@ describe("ArchetypesService", () => {
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
       threatNotes: null,
       moves: [],
     });

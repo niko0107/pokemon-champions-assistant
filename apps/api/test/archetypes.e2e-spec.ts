@@ -45,7 +45,7 @@ const detail: PublicArchetypeDetail = {
     ivs: null,
     actualStats: null,
     statDataStatus: "partial",
-    role: index === 0 ? ("lead" as const) : ("support" as const),
+    role: index === 0 ? ("unclassified" as const) : ("support" as const),
     threatNotes: index === 0 ? "積み展開に注意" : null,
     pokemon: {
       id: index + 1,
@@ -141,6 +141,7 @@ describe("GET /api/v1/archetypes/:id", () => {
       statPoints: { hp: 32, defense: 10, specialDefense: 24 },
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     });
     expect(response.body).not.toHaveProperty("status");
     expect(response.body).not.toHaveProperty("createdAt");

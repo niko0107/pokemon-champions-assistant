@@ -139,7 +139,7 @@ describe("ARCHETYPE-005 admin archetype preview API", () => {
     expect(preview).toHaveBeenCalledWith(expect.objectContaining({ defaultLeads: [] }));
   });
 
-  it("partial・未確認IV・null actualStatsをプレビューへそのまま渡す", async () => {
+  it("partial + unclassifiedをプレビューへそのまま渡す", async () => {
     const statPoints = {
       hp: 32,
       attack: 0,
@@ -155,6 +155,7 @@ describe("ARCHETYPE-005 admin archetype preview API", () => {
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     };
     await request(app.getHttpServer())
       .post("/api/v1/admin/archetypes/preview")
@@ -170,10 +171,24 @@ describe("ARCHETYPE-005 admin archetype preview API", () => {
             statPoints,
             actualStats: null,
             statDataStatus: "partial",
+            role: "unclassified",
           }),
         ],
       }),
     );
+  });
+
+  it("不正roleをService呼び出し前に400にする", async () => {
+    await request(app.getHttpServer())
+      .post("/api/v1/admin/archetypes/preview")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        ...previewInput,
+        pokemons: [{ ...previewInput.pokemons[0], role: "ace" }],
+      })
+      .expect(400);
+
+    expect(preview).not.toHaveBeenCalled();
   });
 
   it("能力ポイント合計67をDB呼び出し前に400にする", async () => {

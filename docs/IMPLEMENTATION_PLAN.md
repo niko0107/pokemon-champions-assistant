@@ -374,7 +374,7 @@
 - **変更予定パッケージ:** なし(データのみ)
 - **完了条件:** published 30件、全件に出典URLがあり、持ち物・IV・actualStats・対象Rule/Seasonを推測していない。実数値未確認はpartialとして明示し、持ち物不明の構築は採用せず、持ち物なしが確認できる場合だけnullとする
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, ARCHETYPE-004C, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, ARCHETYPE-004C, ARCHETYPE-004D, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
 
 ### ✅ ARCHETYPE-004A 基本選出の任意化
@@ -406,6 +406,16 @@
 - **必要なテスト:** migration、shared境界、admin POST/PUT/preview/GET、公開詳細、counterplan回帰、375px/1440px E2E、実DB
 - **前提タスク:** ARCHETYPE-004A, ARCHETYPE-004B
 - **対象外:** ARCHETYPE-004の構築データ登録、role契約変更、MATCHUP計算式変更
+
+### ✅ ARCHETYPE-004D 役割未分類の構築対応
+
+- **目的:** 記事から具体的な役割を裏付けられない構築も、roleを推測せず中立値として登録・利用可能にする
+- **作業範囲:** 必須roleへ`unclassified`を追加するDB・strict shared/API契約、candidate・preview・counterplanの中立性回帰、公開詳細の「役割未分類」表示
+- **変更予定パッケージ:** packages/database, packages/shared, packages/scoring, packages/matchup, apps/api, apps/web, docs
+- **完了条件:** `unclassified`を変換せず保存・返却でき、scoringで加点・減点せず、partial構築がcandidate・preview・type_only counterplan・公開詳細で利用できる
+- **必要なテスト:** migration、shared、admin POST/PUT/preview/GET、公開GET、scoring、matchup/counterplan、375px/1440px E2E、実DB
+- **前提タスク:** ARCHETYPE-004A, ARCHETYPE-004B, ARCHETYPE-004C
+- **対象外:** ARCHETYPE-004の構築データ登録、role自動推測、既存具体roleの変更、MATCHUP計算式変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
 
@@ -865,8 +875,8 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
-  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B → ARCHETYPE-004C
+  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B → ARCHETYPE-004C → ARCHETYPE-004D
   → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。ただし、2026-07-31再監査の最終候補は25件のため、30件以上へ候補を補充できるまで正式登録は着手保留とする。
+次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。2026-07-31のARCHETYPE-004D後の再監査では、具体roleを使用する25件と`unclassified`を使用する11件の計36件が他の必須条件を満たしたため、記事ID昇順の全36候補を対象として正式登録を再開できる。

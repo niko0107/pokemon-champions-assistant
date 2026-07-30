@@ -247,7 +247,7 @@ describe("AdminArchetypesService", () => {
     );
   });
 
-  it("partialは未確認IVとnull actualStatsを補完せずPOST・PUTで保存する", async () => {
+  it("partial + unclassifiedは値を推測・補完せずPOST・PUT・admin GETで保持する", async () => {
     const statPoints = {
       hp: 32,
       attack: 0,
@@ -263,6 +263,7 @@ describe("AdminArchetypesService", () => {
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial" as const,
+      role: "unclassified" as const,
     };
     const input: AdminArchetypeWrite = { ...validInput, pokemons: [partialPokemon] };
     const partialRecord = {
@@ -280,10 +281,30 @@ describe("AdminArchetypesService", () => {
     transactionArchetypeUpdate.mockResolvedValue(partialRecord);
 
     await expect(service.create(input)).resolves.toMatchObject({
-      pokemons: [{ evs: null, statPoints, actualStats: null, statDataStatus: "partial" }],
+      pokemons: [
+        {
+          evs: null,
+          statPoints,
+          actualStats: null,
+          statDataStatus: "partial",
+          role: "unclassified",
+        },
+      ],
     });
     await expect(service.update(archetypeId, input)).resolves.toMatchObject({
-      pokemons: [{ evs: null, statPoints, actualStats: null, statDataStatus: "partial" }],
+      pokemons: [
+        {
+          evs: null,
+          statPoints,
+          actualStats: null,
+          statDataStatus: "partial",
+          role: "unclassified",
+        },
+      ],
+    });
+    getFindUnique.mockResolvedValue(partialRecord);
+    await expect(service.get(archetypeId)).resolves.toMatchObject({
+      pokemons: [{ role: "unclassified" }],
     });
     for (const operation of [transactionArchetypeCreate, transactionArchetypeUpdate]) {
       expect(operation).toHaveBeenCalledWith(
@@ -297,6 +318,7 @@ describe("AdminArchetypesService", () => {
                   ivs: partialPokemon.ivs,
                   actualStats: Prisma.DbNull,
                   statDataStatus: "partial",
+                  role: "unclassified",
                 }),
               ],
             },

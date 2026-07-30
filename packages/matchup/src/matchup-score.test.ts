@@ -335,6 +335,33 @@ describe("calculateMatchupScore", () => {
     expect(result.breakdown.speed).toBe(0);
   });
 
+  it("unclassifiedのpartial相手を具体roleへ推測せず同じtype_only評価にする", () => {
+    const self = makeCombatant(1, [makeMove(1, "fire", "special", 100)], {
+      types: ["fire"],
+    });
+    const unclassified = makeCombatant(2, [makeMove(2, "water", "special", 100)], {
+      types: ["grass"],
+      stats: null,
+      role: "unclassified",
+    });
+    const concrete = { ...unclassified, role: "sweeper" as const };
+    const input = makeInput(self, unclassified);
+    const before = structuredClone(input);
+
+    const result = calculateMatchupScore(input);
+
+    expect(result).toEqual(calculateMatchupScore(makeInput(self, concrete)));
+    expect(result).toMatchObject({
+      calculationMode: "type_only",
+      outgoingDamage: null,
+      incomingDamage: null,
+      outgoingKnockoutCount: null,
+      incomingKnockoutCount: null,
+      breakdown: { speed: 0, damageRace: 0 },
+    });
+    expect(input).toEqual(before);
+  });
+
   it("produces asymmetric results when combatants are swapped", () => {
     const fire = makeCombatant(1, [makeMove(1, "fire", "special", 120)], {
       types: ["fire"],

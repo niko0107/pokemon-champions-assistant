@@ -11,13 +11,16 @@ import {
 } from "./archetype";
 
 describe("ARCHETYPE-001 shared schemas", () => {
-  it("人気度・公開状態・ポケモン役割の許可値を受理する", () => {
+  it("人気度・公開状態・既存および未分類のポケモン役割を受理する", () => {
     expect(archetypePopularityTierSchema.parse("high")).toBe("high");
     expect(archetypeStatusSchema.parse("published")).toBe("published");
-    expect(archetypePokemonRoleSchema.parse("sweeper")).toBe("sweeper");
+    for (const role of ["lead", "sweeper", "wall", "pivot", "support", "unclassified"]) {
+      expect(archetypePokemonRoleSchema.parse(role)).toBe(role);
+    }
     expect(archetypePopularityTierSchema.safeParse("unknown").success).toBe(false);
     expect(archetypeStatusSchema.safeParse("draft").success).toBe(false);
     expect(archetypePokemonRoleSchema.safeParse("ace").success).toBe(false);
+    expect(archetypePokemonRoleSchema.safeParse("").success).toBe(false);
   });
 
   it("空配列または順序を維持した重複なしの基本選出slotを受理する", () => {
