@@ -123,6 +123,25 @@ describe("WEB-008 public archetype detail schema", () => {
     expect(parsed.sources[0]?.url).toBe("https://example.com/archetype");
   });
 
+  it("unclassifiedを公開詳細レスポンスで保持し、未知roleと余分なキーを拒否する", () => {
+    const detail = validDetail();
+    detail.pokemons[0] = { ...detail.pokemons[0]!, role: "unclassified" };
+
+    expect(publicArchetypeDetailSchema.parse(detail).pokemons[0]?.role).toBe("unclassified");
+    expect(
+      publicArchetypeDetailSchema.safeParse({
+        ...detail,
+        pokemons: [{ ...detail.pokemons[0], role: "ace" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      publicArchetypeDetailSchema.safeParse({
+        ...detail,
+        pokemons: [{ ...detail.pokemons[0], roleSource: "generated" }],
+      }).success,
+    ).toBe(false);
+  });
+
   it("空の基本選出・notes・出典とnullの登録値を許可する", () => {
     const detail = validDetail();
     detail.defaultLeads = [];

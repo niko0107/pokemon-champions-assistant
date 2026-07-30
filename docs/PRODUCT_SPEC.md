@@ -345,25 +345,25 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 
 #### archetype_pokemons
 
-| カラム            | 型                  | 説明                                                 |
-| ----------------- | ------------------- | ---------------------------------------------------- |
-| id                | uuid PK             |                                                      |
-| archetype_id      | uuid FK             |                                                      |
-| slot              | int                 | 1〜6                                                 |
-| pokemon_id        | int FK              |                                                      |
-| item_id           | int FK nullable     | 定番の持ち物                                         |
-| item_alternatives | jsonb               | 代替持ち物のID配列                                   |
-| ability_id        | int FK nullable     |                                                      |
-| nature            | text nullable       |                                                      |
-| tera_type         | text nullable       |                                                      |
-| evs               | jsonb nullable      | 定番の努力値配分                                     |
-| stat_points       | jsonb nullable      | Pokémon Championsの能力ポイント(各0〜32・合計66以下) |
-| ivs               | jsonb nullable      | 出典で確認できた個体値。能力ごとのnullは未確認       |
-| actual_stats      | jsonb nullable      | 確定または算出済み実数値。構造はparty_pokemonsと共通 |
-| stat_data_status  | text                | `exact` / `derived` / `partial`                      |
-| role              | text                | `lead` / `sweeper` / `wall` / `pivot` / `support` 等 |
-| usage_rate        | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現       |
-| threat_notes      | text                | このポケモンの警戒ポイント                           |
+| カラム            | 型                  | 説明                                                                     |
+| ----------------- | ------------------- | ------------------------------------------------------------------------ |
+| id                | uuid PK             |                                                                          |
+| archetype_id      | uuid FK             |                                                                          |
+| slot              | int                 | 1〜6                                                                     |
+| pokemon_id        | int FK              |                                                                          |
+| item_id           | int FK nullable     | 定番の持ち物                                                             |
+| item_alternatives | jsonb               | 代替持ち物のID配列                                                       |
+| ability_id        | int FK nullable     |                                                                          |
+| nature            | text nullable       |                                                                          |
+| tera_type         | text nullable       |                                                                          |
+| evs               | jsonb nullable      | 定番の努力値配分                                                         |
+| stat_points       | jsonb nullable      | Pokémon Championsの能力ポイント(各0〜32・合計66以下)                     |
+| ivs               | jsonb nullable      | 出典で確認できた個体値。能力ごとのnullは未確認                           |
+| actual_stats      | jsonb nullable      | 確定または算出済み実数値。構造はparty_pokemonsと共通                     |
+| stat_data_status  | text                | `exact` / `derived` / `partial`                                          |
+| role              | text                | 必須。`lead` / `sweeper` / `wall` / `pivot` / `support` / `unclassified` |
+| usage_rate        | numeric default 1.0 | この構築内での採用率(0〜1)。準スタメン枠を表現                           |
+| threat_notes      | text                | このポケモンの警戒ポイント                                               |
 
 `stat_data_status`の意味は次のとおりとする。
 
@@ -381,6 +381,11 @@ Pokémon Championsの能力ポイント`stat_points`は、従来シリーズの�
 各0〜32・合計66以下とする。能力ポイントしか確認できない構築は`stat_points`へ出典値を保存し、
 `evs=null`、`actual_stats=null`、`stat_data_status=partial`とする。能力ポイントをEVへ変換せず、
 EVを能力ポイントへ変換せず、能力ポイントから実数値を算出しない。
+
+`role`は必須の分類値とする。記事本文等の出典から具体的な役割を裏付けられない場合は
+`unclassified`（役割未分類）を明示し、技、Item、能力ポイント、Pokemon名、使用率、slot、
+AI・LLMから具体的roleを推測しない。`unclassified`はデータ不足や登録失敗ではなく、具体的な
+役割だけを未分類として保持する中立値である。
 
 #### archetype_pokemon_moves
 
@@ -641,6 +646,9 @@ Pokemonタイプと技タイプによる相性だけを評価する。この場�
 5. エース: 評価値が高く、積み技/高火力を持つポケモン
 6. 控え: 残り1枠。先発とエースが苦手な相手をカバーするポケモン(補完重視)
 
+`unclassified`は特定roleとして一致させず、role由来の加点・減点、具体的roleの不足・重複判定へ
+含めない。現行の選出実装がroleを評価軸として利用していない場合も、自動分類処理は追加しない。
+
 ### 9.5 警戒技・立ち回りの生成
 
 - **警戒技:** 相手構築内の技のうち `tags` が `setup` / `hazard` / `screen` / `priority` / `status` のもの+各 `threat_notes` を優先度順に列挙
@@ -878,7 +886,10 @@ LLMは **判定しない**。以下の言語化のみを担当する:
   タイプ相性だけを返し、ダメージ・確定数・素早さを算出済みとして表示しない
 - Pokémon Championsの能力ポイントは努力値と別に保存し、構築詳細では「能力ポイント」と
   表示する。努力値欄への代入、相互変換、実数値計算への利用を行わない
-- 各ポケモンの`role`は記事本文等の出典で既存literalを裏付けられる場合だけ登録し、自動推測しない
+- 各ポケモンの`role`は必須。記事本文等の出典で具体的roleを裏付けられる場合はそれを優先し、
+  裏付けられない場合は`unclassified`を保存する。自動推測せず、Webでは「役割未分類」と表示する
+- `unclassified`はscoringで加点・減点せず、candidate・preview・counterplanで利用できる。
+  Item、Season、Pokemon数、その他の構造化必須情報の不足を救済する値としては使用しない
 - シーズン終了時に旧構築を一括で `archived`(検索対象外)へ
 - 同名構築の重複チェック(ポケモン6体の一致度90%以上で警告)
 

@@ -240,9 +240,15 @@ describe("AdminArchetypesService.preview (ARCHETYPE-005)", () => {
         statPoints: index === 0 ? statPoints : null,
         actualStats: null,
         statDataStatus: "partial",
+        role: index === 0 ? "unclassified" : pokemon.role,
       })),
     });
-    archetypeFindMany.mockResolvedValue([exactRecord("11111111-1111-4111-8111-111111111111")]);
+    const existing = exactRecord("11111111-1111-4111-8111-111111111111") as {
+      pokemons: Array<{ role: string }>;
+    };
+    existing.pokemons[0]!.role = "unclassified";
+    archetypeFindMany.mockResolvedValue([existing]);
+    const before = structuredClone(partialInput);
 
     const result = await service.preview(partialInput);
 
@@ -251,9 +257,11 @@ describe("AdminArchetypesService.preview (ARCHETYPE-005)", () => {
       statPoints,
       actualStats: null,
       statDataStatus: "partial",
+      role: "unclassified",
     });
     expect(result.exactDuplicate).toBe(true);
     expect(result.candidates[0]).toMatchObject({ rank: 1, matchRate: 100 });
+    expect(partialInput).toEqual(before);
     expectNoWrites();
   });
 

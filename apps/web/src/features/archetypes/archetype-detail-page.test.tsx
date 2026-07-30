@@ -70,7 +70,12 @@ function detail(): PublicArchetypeDetail {
             }
           : null,
       statDataStatus: index === 0 ? "exact" : "partial",
-      role: index === 0 ? ("lead" as const) : ("support" as const),
+      role:
+        index === 0
+          ? ("lead" as const)
+          : index === 1
+            ? ("unclassified" as const)
+            : ("support" as const),
       threatNotes: index === 0 ? "積み展開に注意" : null,
       pokemon: {
         id: index + 1,
@@ -228,6 +233,20 @@ describe("WEB-008 archetype detail page", () => {
     expect(statPointSection).toHaveTextContent("防御10");
     expect(statPointSection).toHaveTextContent("特防24");
     expect(statPointSection).not.toHaveTextContent("努力値");
+  });
+
+  it("unclassifiedを空欄や具体roleへ置換せず「役割未分類」と表示する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response(detail()))),
+    );
+    renderRoute();
+
+    const pokemon = (await screen.findByRole("heading", { name: "ポケモン2" })).closest("li");
+    expect(pokemon).not.toBeNull();
+    expect(within(pokemon!).getByText(/役割未分類/u)).toBeVisible();
+    expect(pokemon).not.toHaveTextContent("sweeper");
+    expect(pokemon).not.toHaveTextContent("<script>");
   });
 
   it("nullable・空配列を虚偽の値で補完せず空状態として表示する", async () => {

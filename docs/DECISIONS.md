@@ -807,3 +807,15 @@
 - **理由:** Pokémon Championsの公開構築が示す各最大32・合計66の能力ポイントは、従来シリーズの各最大252・合計510のEVと意味・尺度が異なり、同じ`evs`へ保存するとデータの意味と対戦計算の前提を損なうため
 - **影響:** 既存行は`statPoints=null`のまま移行する。ARCHETYPE-004の正式登録は本タスクに含めず、実装検証後に現行PokeSol候補を決定的順序で再監査し、出典から既存roleまで裏付けられる全候補を次タスクへ引き渡す
 - **運用結果:** 2026-07-31にPokeSolのRegulation M-B / Season M-4検索結果を記事ID昇順で再監査した。対象48件・HTTP 200は48件・6体構築は38件・Pokemon、Move、Item、Ability、Nature、能力ポイントが揃う構築は37件だった。記事本文から6体すべての既存roleを裏付けられ、Seasonの矛盾がなく、同一6体・主要情報の重複もない最終候補は25件、重複除外は0件だった。30件未満のためARCHETYPE-004の正式登録は再開せず、候補補充または追加の出典根拠が必要
+
+## 2026-07-31 役割未分類の構築対応(ARCHETYPE-004D)
+
+### D-074: 必須roleの中立値`unclassified`
+
+- **判断:** ArchetypePokemonの`role`は必須・defaultなしを維持し、具体的roleを記事本文等の出典から裏付けられない場合だけ`unclassified`を明示する。既存roleが出典で確認できる場合はそれを優先し、技、Item、能力ポイント、Pokemon名、使用率、slot、AI・LLMからroleを推測しない
+- **判断:** `unclassified`はデータ不足や登録失敗ではなく、具体的役割だけが未分類であることを表す中立値とする。既存具体roleの別名として扱わず、scoringで加点・減点せず、具体的roleの不足・重複判定へ含めない。現行scoring・matchup・選出はroleを計算に使用していないため、計算式や重みは追加しない
+- **判断:** admin POST / PUT / preview / GET、公開詳細、candidate、counterplanは同じshared unionを使用する。partialは`unclassified`でも`type_only`を維持し、役割、実数値、ダメージ、確定数、素早さを推測しない。Web構築詳細はプレーンテキストの「役割未分類」と表示する
+- **判断:** `unclassified`は具体的role以外の必須条件を緩和しない。Pokemon 6体、Move、Item、Ability、Nature、能力ポイント、Season、Regulation、出典URLが確認できない候補やSeason矛盾候補を救済しない
+- **理由:** 公開構築の記事は客観的な構成値を掲載していても、各Pokemonの具体的な役割を常に明示するとは限らない。必須roleを推測で埋めず、構造化された構築情報を失わないため
+- **影響:** DB CHECK制約は新規migrationで`unclassified`だけを追加し、既存migration・既存role・既存行を変更しない。ARCHETYPE-004の正式登録は本タスクに含めず、全検証後の再監査で他の必須条件を満たす全候補を次タスクへ引き渡す
+- **運用結果:** 2026-07-31にPokeSolのRegulation M-B / Season M-4検索結果を記事ID昇順で再取得・再監査した。対象48件・HTTP 200は48件・6体構築は38件・Pokemon、Move、Item、Ability、Nature、能力ポイントが揃う構築は37件だった。具体roleだけを使用できる候補は25件、具体roleを確認できないPokemonへ`unclassified`を使用する候補は11件、Item不足は1件、記事タイトル・本文とSeasonメタデータの矛盾は1件、同一6体・主要情報の重複は0件で、最終登録可能候補は36件となった。30件以上を満たすためARCHETYPE-004は全36候補を対象に再開できるが、本タスクでは正式登録していない

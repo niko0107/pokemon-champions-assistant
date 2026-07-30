@@ -417,8 +417,9 @@ describe("SessionCounterplanService", () => {
     });
   });
 
-  it("partial + statPointsでも実数値を生成せずtype-only counterplanと選出を返す", async () => {
+  it("partial + statPoints + unclassifiedでも役割や実数値を生成せずtype-onlyを返す", async () => {
     const session = makeSession();
+    session.selectedArchetype.pokemons[0]!.role = "unclassified";
     session.selectedArchetype.pokemons[0]!.statPoints = {
       hp: 32,
       attack: 0,
@@ -445,6 +446,7 @@ describe("SessionCounterplanService", () => {
       expect.arrayContaining(["WINS_DAMAGE_RACE", "LOSES_DAMAGE_RACE"]),
     );
     expect(response.selection.selectedPokemonIds).toEqual([1]);
+    expect(JSON.stringify(response.explanation)).not.toMatch(/sweeper|アタッカー|エース/u);
     expect(
       findFirst.mock.calls[0]?.[0]?.select.selectedArchetype.select.pokemons.select,
     ).not.toHaveProperty("statPoints");

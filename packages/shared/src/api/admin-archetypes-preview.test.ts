@@ -81,6 +81,15 @@ describe("ARCHETYPE-005 shared preview schemas", () => {
     expect(viaPreview).toEqual(viaWrite);
   });
 
+  it("unclassifiedをプレビュー共通入力で変換せず保持する", () => {
+    const parsed = adminArchetypePreviewRequestSchema.parse({
+      ...validRequest,
+      pokemons: [{ ...validRequest.pokemons[0], role: "unclassified" }],
+    });
+
+    expect(parsed.pokemons[0]?.role).toBe("unclassified");
+  });
+
   it("defaultLeads空配列をプレビュー入力として保持する", () => {
     expect(
       adminArchetypePreviewRequestSchema.parse({ ...validRequest, defaultLeads: [] }).defaultLeads,

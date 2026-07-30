@@ -32,6 +32,7 @@ const ROLE_LABELS: Readonly<Record<string, string>> = {
   wall: "受け",
   pivot: "サイクル",
   support: "サポート",
+  unclassified: "役割未分類",
 };
 
 const CATEGORY_LABELS: Readonly<Record<string, string>> = {

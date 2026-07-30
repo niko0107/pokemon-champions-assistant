@@ -117,6 +117,15 @@ describe("session candidate ArchetypeSnapshot変換", () => {
     });
   });
 
+  it("unclassifiedを候補Snapshotへ変換せず保持する", () => {
+    const record = {
+      ...archetypeRecord,
+      pokemons: [{ ...archetypeRecord.pokemons[0]!, role: "unclassified" }],
+    };
+
+    expect(toArchetypeSnapshot(record).pokemons[0]?.role).toBe("unclassified");
+  });
+
   it.each([
     { ...archetypeRecord, popularityTier: "unknown" },
     { ...archetypeRecord, defaultLeads: [2] },
