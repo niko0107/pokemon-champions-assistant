@@ -7,6 +7,7 @@ import {
   archetypeIvsSchema,
   archetypePokemonRoleSchema,
   archetypeSlotSchema,
+  archetypeStatPointsSchema,
   archetypeStatDataStatusSchema,
   completeArchetypeIvsSchema,
 } from "../archetype";
@@ -89,6 +90,7 @@ export const publicArchetypePokemonSchema = z
     nature: nullableTextSchema,
     teraType: nullableTextSchema,
     evs: archetypeEvsSchema.nullable(),
+    statPoints: archetypeStatPointsSchema.nullable(),
     ivs: archetypeIvsSchema.nullable(),
     actualStats: combatActualStatsSchema.nullable(),
     statDataStatus: archetypeStatDataStatusSchema,

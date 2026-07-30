@@ -40,6 +40,7 @@ const publicArchetypeDetailSelect = {
       nature: true,
       teraType: true,
       evs: true,
+      statPoints: true,
       ivs: true,
       actualStats: true,
       statDataStatus: true,

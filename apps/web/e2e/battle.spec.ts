@@ -477,6 +477,17 @@ async function mockBattleApis(
           nature: index === 0 ? "ようき" : null,
           teraType: index === 0 ? "fire" : null,
           evs: index === 0 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+          statPoints:
+            index === 1
+              ? {
+                  hp: 32,
+                  attack: 0,
+                  defense: 10,
+                  specialAttack: 0,
+                  specialDefense: 24,
+                  speed: 0,
+                }
+              : null,
           ivs: null,
           actualStats:
             index === 0
@@ -871,6 +882,13 @@ for (const viewport of [
     await expect(page.getByText("リザードナイトX")).toBeVisible();
     await expect(page.getByText("壁から積みエースを展開する")).toBeVisible();
     await expect(page.getByText("積み展開に注意")).toBeVisible();
+    const statPointPokemon = page
+      .getByRole("heading", { name: "ポケモン2" })
+      .locator("xpath=ancestor::li");
+    await expect(statPointPokemon.getByRole("heading", { name: "能力ポイント" })).toBeVisible();
+    await expect(statPointPokemon).toContainText("HP32");
+    await expect(statPointPokemon).toContainText("防御10");
+    await expect(statPointPokemon).toContainText("特防24");
     await expect(page.getByRole("heading", { name: "基本選出" })).toBeVisible();
     const source = page.getByRole("link", {
       name: "公式大会結果（外部サイトを新しいタブで開く）",

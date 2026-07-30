@@ -5,6 +5,8 @@ export const ARCHETYPE_TEAM_SIZE_MAX = 6;
 export const ARCHETYPE_EV_STAT_MAX = 252;
 export const ARCHETYPE_EV_TOTAL_MAX = 510;
 export const ARCHETYPE_IV_STAT_MAX = 31;
+export const ARCHETYPE_STAT_POINT_STAT_MAX = 32;
+export const ARCHETYPE_STAT_POINT_TOTAL_MAX = 66;
 export const ARCHETYPE_STAT_DATA_STATUSES = ["exact", "derived", "partial"] as const;
 
 export const archetypePopularityTierSchema = z.enum(POPULARITY_TIERS);
@@ -80,6 +82,32 @@ export const archetypeEvsSchema = z
     }
   });
 
+const statPointValueSchema = z.number().int().safe().min(0).max(ARCHETYPE_STAT_POINT_STAT_MAX);
+
+/**
+ * Pokémon Championsの能力ポイント。従来シリーズのEVとは別の値であり、
+ * EV・実数値へ変換せず出典値をそのまま保持する。
+ */
+export const archetypeStatPointsSchema = z
+  .object({
+    hp: statPointValueSchema,
+    attack: statPointValueSchema,
+    defense: statPointValueSchema,
+    specialAttack: statPointValueSchema,
+    specialDefense: statPointValueSchema,
+    speed: statPointValueSchema,
+  })
+  .strict()
+  .superRefine((statPoints, context) => {
+    const total = Object.values(statPoints).reduce((sum, value) => sum + value, 0);
+    if (total > ARCHETYPE_STAT_POINT_TOTAL_MAX) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `能力ポイントの合計は${ARCHETYPE_STAT_POINT_TOTAL_MAX}以下にしてください`,
+      });
+    }
+  });
+
 const individualValueSchema = z.number().int().min(0).max(ARCHETYPE_IV_STAT_MAX);
 
 /**
@@ -116,5 +144,6 @@ export type ArchetypeStatDataStatus = z.infer<typeof archetypeStatDataStatusSche
 export type ArchetypeDefaultLeads = z.infer<typeof archetypeDefaultLeadsSchema>;
 export type ArchetypeItemAlternativeIds = z.infer<typeof archetypeItemAlternativeIdsSchema>;
 export type ArchetypeEvs = z.infer<typeof archetypeEvsSchema>;
+export type ArchetypeStatPoints = z.infer<typeof archetypeStatPointsSchema>;
 export type ArchetypeIvs = z.infer<typeof archetypeIvsSchema>;
 export type CompleteArchetypeIvs = z.infer<typeof completeArchetypeIvsSchema>;

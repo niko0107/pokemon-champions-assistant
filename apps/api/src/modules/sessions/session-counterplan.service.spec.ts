@@ -92,6 +92,14 @@ function makeSession(teamSize = 1, pickSize = 1) {
       pokemonId,
       role: index === 0 ? "sweeper" : "support",
       usageRate: new Prisma.Decimal(index === 0 ? "1" : "0.8"),
+      statPoints: null as {
+        hp: number;
+        attack: number;
+        defense: number;
+        specialAttack: number;
+        specialDefense: number;
+        speed: number;
+      } | null,
       actualStats,
       threatNotes: index === 0 ? "積み展開に注意" : null,
       pokemon: {
@@ -409,11 +417,20 @@ describe("SessionCounterplanService", () => {
     });
   });
 
-  it("archetype actualStats nullでもtype-only counterplanと選出を返す", async () => {
+  it("partial + statPointsでも実数値を生成せずtype-only counterplanと選出を返す", async () => {
     const session = makeSession();
+    session.selectedArchetype.pokemons[0]!.statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
     session.selectedArchetype.pokemons[0]!.actualStats = null as unknown as typeof actualStats;
 
-    const response = await makeService(session).service.get(userId, sessionId);
+    const { service, findFirst } = makeService(session);
+    const response = await service.get(userId, sessionId);
 
     expect(response.perOpponent[0]?.recommendations[0]?.matchupResult).toMatchObject({
       calculationMode: "type_only",
@@ -421,8 +438,16 @@ describe("SessionCounterplanService", () => {
       incomingDamage: null,
       outgoingKnockoutCount: null,
       incomingKnockoutCount: null,
+      damageRaceScore: 0,
+      breakdown: { speed: 0, damageRace: 0 },
     });
+    expect(response.perOpponent[0]?.recommendations[0]?.matchupResult.reasonCodes).not.toEqual(
+      expect.arrayContaining(["WINS_DAMAGE_RACE", "LOSES_DAMAGE_RACE"]),
+    );
     expect(response.selection.selectedPokemonIds).toEqual([1]);
+    expect(
+      findFirst.mock.calls[0]?.[0]?.select.selectedArchetype.select.pokemons.select,
+    ).not.toHaveProperty("statPoints");
   });
 
   it("5種類を超える観測技をINVALID_SESSION_STATEにする", async () => {

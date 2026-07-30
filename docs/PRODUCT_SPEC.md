@@ -357,6 +357,7 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 | nature            | text nullable       |                                                      |
 | tera_type         | text nullable       |                                                      |
 | evs               | jsonb nullable      | 定番の努力値配分                                     |
+| stat_points       | jsonb nullable      | Pokémon Championsの能力ポイント(各0〜32・合計66以下) |
 | ivs               | jsonb nullable      | 出典で確認できた個体値。能力ごとのnullは未確認       |
 | actual_stats      | jsonb nullable      | 確定または算出済み実数値。構造はparty_pokemonsと共通 |
 | stat_data_status  | text                | `exact` / `derived` / `partial`                      |
@@ -374,6 +375,12 @@ DB直接操作等によりnullが残る場合はcounterplan計算不能な不整
 
 既存の実数値付きデータは`exact`として互換性を維持する。`derived`では全計算材料を必須とし、
 `partial`では確認できたIVだけを能力ごとに保存できる。種族値や既定IVからの自動補完は行わない。
+
+Pokémon Championsの能力ポイント`stat_points`は、従来シリーズの努力値`evs`と異なる値として
+分離する。6能力を`hp / attack / defense / specialAttack / specialDefense / speed`で保持し、
+各0〜32・合計66以下とする。能力ポイントしか確認できない構築は`stat_points`へ出典値を保存し、
+`evs=null`、`actual_stats=null`、`stat_data_status=partial`とする。能力ポイントをEVへ変換せず、
+EVを能力ポイントへ変換せず、能力ポイントから実数値を算出しない。
 
 #### archetype_pokemon_moves
 
@@ -620,6 +627,7 @@ damage ≒ (22 × 威力 × 攻撃実数値 / 防御実数値) / 50 + 2
 算出する。どちらかの実数値が未確認の場合は`calculationMode=type_only`とし、登録済みの
 Pokemonタイプと技タイプによる相性だけを評価する。この場合、ダメージ・確定数はnull、
 ダメージレースと素早さの内訳は0とし、勝敗理由や説明文でも未算出値を確定値として扱わない。
+能力ポイントが登録済みでも実数値の代用にはせず、`partial`構築は同じ`type_only`契約を維持する。
 
 ### 9.4 選出提案アルゴリズム
 
@@ -868,6 +876,9 @@ LLMは **判定しない**。以下の言語化のみを担当する:
 - Pokemon・Move・Abilityは現行マスタから選択し、持ち物・IV・actualStatsを推測補完しない
 - 実数値が未確認の`partial`構築も候補・詳細・counterplanで利用できるが、counterplanは
   タイプ相性だけを返し、ダメージ・確定数・素早さを算出済みとして表示しない
+- Pokémon Championsの能力ポイントは努力値と別に保存し、構築詳細では「能力ポイント」と
+  表示する。努力値欄への代入、相互変換、実数値計算への利用を行わない
+- 各ポケモンの`role`は記事本文等の出典で既存literalを裏付けられる場合だけ登録し、自動推測しない
 - シーズン終了時に旧構築を一括で `archived`(検索対象外)へ
 - 同名構築の重複チェック(ポケモン6体の一致度90%以上で警告)
 

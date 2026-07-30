@@ -46,6 +46,17 @@ function detail(): PublicArchetypeDetail {
       nature: index === 0 ? "ようき" : null,
       teraType: index === 0 ? "fire" : null,
       evs: index === 0 ? { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 } : null,
+      statPoints:
+        index === 1
+          ? {
+              hp: 32,
+              attack: 0,
+              defense: 10,
+              specialAttack: 0,
+              specialDefense: 24,
+              speed: 0,
+            }
+          : null,
       ivs: null,
       actualStats:
         index === 0
@@ -185,6 +196,40 @@ describe("WEB-008 archetype detail page", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("能力ポイントを努力値と別表示し、相互に補完しない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response(detail()))),
+    );
+    renderRoute();
+
+    const evPokemon = (await screen.findByRole("heading", { name: "メガリザードンX" })).closest(
+      "li",
+    );
+    const statPointPokemon = screen.getByRole("heading", { name: "ポケモン2" }).closest("li");
+    expect(evPokemon).not.toBeNull();
+    expect(statPointPokemon).not.toBeNull();
+
+    const evSection = within(evPokemon!).getByRole("heading", { name: "努力値" }).parentElement;
+    const emptyStatPointSection = within(evPokemon!).getByRole("heading", {
+      name: "能力ポイント",
+    }).parentElement;
+    expect(evSection).toHaveTextContent("252");
+    expect(emptyStatPointSection).toHaveTextContent("データ未登録");
+
+    const emptyEvSection = within(statPointPokemon!).getByRole("heading", {
+      name: "努力値",
+    }).parentElement;
+    const statPointSection = within(statPointPokemon!).getByRole("heading", {
+      name: "能力ポイント",
+    }).parentElement;
+    expect(emptyEvSection).toHaveTextContent("データ未登録");
+    expect(statPointSection).toHaveTextContent("HP32");
+    expect(statPointSection).toHaveTextContent("防御10");
+    expect(statPointSection).toHaveTextContent("特防24");
+    expect(statPointSection).not.toHaveTextContent("努力値");
+  });
+
   it("nullable・空配列を虚偽の値で補完せず空状態として表示する", async () => {
     const value = detail();
     value.defaultLeads = [];
@@ -197,6 +242,7 @@ describe("WEB-008 archetype detail page", () => {
       nature: null,
       teraType: null,
       evs: null,
+      statPoints: null,
       ivs: null,
       actualStats: null,
       statDataStatus: "partial",

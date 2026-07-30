@@ -374,7 +374,7 @@
 - **変更予定パッケージ:** なし(データのみ)
 - **完了条件:** published 30件、全件に出典URLがあり、持ち物・IV・actualStats・対象Rule/Seasonを推測していない。実数値未確認はpartialとして明示し、持ち物不明の構築は採用せず、持ち物なしが確認できる場合だけnullとする
 - **必要なテスト:** データ品質チェック(§13.2)
-- **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
+- **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, ARCHETYPE-004C, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
 
 ### ✅ ARCHETYPE-004A 基本選出の任意化
@@ -396,6 +396,16 @@
 - **必要なテスト:** migration、shared、admin CRUD/preview、公開詳細、matchup/counterplan、Web、実DB・Playwright
 - **前提タスク:** ARCHETYPE-004A, MATCHUP-005〜008, WEB-008〜009
 - **対象外:** 構築データ登録、IV推定、既存migrationの変更、MATCHUP計算式の変更
+
+### ✅ ARCHETYPE-004C Champions能力ポイントの正規化
+
+- **目的:** Pokémon Championsの能力ポイントを従来EVと混同せず、公開構築の確認値として保存・表示できるようにする
+- **作業範囲:** nullableな`statPoints`のDB・strict shared/API契約、admin CRUD/preview・公開詳細への反映、能力ポイントの独立表示、partial/type_only回帰
+- **変更予定パッケージ:** packages/database, packages/shared, apps/api, apps/web, docs
+- **完了条件:** 各0〜32・合計66以下の能力ポイントをEV・実数値へ変換せず保存でき、partial構築が候補・詳細・type_only counterplanで利用できる
+- **必要なテスト:** migration、shared境界、admin POST/PUT/preview/GET、公開詳細、counterplan回帰、375px/1440px E2E、実DB
+- **前提タスク:** ARCHETYPE-004A, ARCHETYPE-004B
+- **対象外:** ARCHETYPE-004の構築データ登録、role契約変更、MATCHUP計算式変更
 
 ### ✅ ARCHETYPE-005 重複チェック・プレビュー一致判定
 
@@ -855,8 +865,8 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → SCORE-002 → SCORE-003 → SCORE-006 → SCORE-004 → SCORE-005 → SCORE-007
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
-  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B
+  → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B → ARCHETYPE-004C
   → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。
+次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。ただし、2026-07-31再監査の最終候補は25件のため、30件以上へ候補を補充できるまで正式登録は着手保留とする。

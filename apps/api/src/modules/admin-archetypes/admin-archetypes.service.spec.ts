@@ -248,8 +248,18 @@ describe("AdminArchetypesService", () => {
   });
 
   it("partialは未確認IVとnull actualStatsを補完せずPOST・PUTで保存する", async () => {
+    const statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
     const partialPokemon = {
       ...validInput.pokemons[0]!,
+      evs: null,
+      statPoints,
       ivs: { hp: null, atk: null, def: null, spa: null, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial" as const,
@@ -270,10 +280,10 @@ describe("AdminArchetypesService", () => {
     transactionArchetypeUpdate.mockResolvedValue(partialRecord);
 
     await expect(service.create(input)).resolves.toMatchObject({
-      pokemons: [{ actualStats: null, statDataStatus: "partial" }],
+      pokemons: [{ evs: null, statPoints, actualStats: null, statDataStatus: "partial" }],
     });
     await expect(service.update(archetypeId, input)).resolves.toMatchObject({
-      pokemons: [{ actualStats: null, statDataStatus: "partial" }],
+      pokemons: [{ evs: null, statPoints, actualStats: null, statDataStatus: "partial" }],
     });
     for (const operation of [transactionArchetypeCreate, transactionArchetypeUpdate]) {
       expect(operation).toHaveBeenCalledWith(
@@ -282,6 +292,8 @@ describe("AdminArchetypesService", () => {
             pokemons: {
               create: [
                 expect.objectContaining({
+                  evs: Prisma.DbNull,
+                  statPoints,
                   ivs: partialPokemon.ivs,
                   actualStats: Prisma.DbNull,
                   statDataStatus: "partial",

@@ -96,6 +96,7 @@ describe("ARCHETYPE-002 shared API schemas", () => {
       nature: null,
       teraType: null,
       evs: null,
+      statPoints: null,
       usageRate: 1,
       threatNotes: null,
       moves: [{ moveId: 3, adoptionRate: 1 }],
@@ -198,11 +199,21 @@ describe("ARCHETYPE-002 shared API schemas", () => {
   });
 
   it("partialは未確認IVとnull actualStatsを保持する", () => {
+    const statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
     const parsed = adminArchetypeWriteSchema.parse({
       ...validInput,
       pokemons: [
         {
           ...validInput.pokemons[0],
+          evs: null,
+          statPoints,
           ivs: { hp: 31, atk: null, def: null, spa: 31, spd: null, spe: null },
           actualStats: null,
           statDataStatus: "partial",
@@ -212,10 +223,49 @@ describe("ARCHETYPE-002 shared API schemas", () => {
     });
 
     expect(parsed.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints,
       ivs: { hp: 31, atk: null, def: null, spa: 31, spd: null, spe: null },
       actualStats: null,
       statDataStatus: "partial",
     });
+    expect(parsed.pokemons[0]?.evs).toBeNull();
+    expect(parsed.pokemons[0]?.statPoints).toEqual(statPoints);
+  });
+
+  it("能力ポイントの不正値と余分なキーをPOST・PUT・preview共通入力で拒否する", () => {
+    const statPoints = {
+      hp: 32,
+      attack: 32,
+      defense: 3,
+      specialAttack: 0,
+      specialDefense: 0,
+      speed: 0,
+    };
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [
+          {
+            ...validInput.pokemons[0],
+            statPoints,
+          },
+        ],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminArchetypeWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [
+          {
+            ...validInput.pokemons[0],
+            statPoints: { ...statPoints, defense: 2, ev: 4 },
+          },
+        ],
+        defaultLeads: [1],
+      }).success,
+    ).toBe(false);
   });
 
   it("derivedは全IV・EV・性格・actualStatsを要求する", () => {

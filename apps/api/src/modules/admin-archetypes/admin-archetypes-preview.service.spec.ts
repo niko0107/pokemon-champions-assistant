@@ -223,6 +223,40 @@ describe("AdminArchetypesService.preview (ARCHETYPE-005)", () => {
     expectNoWrites();
   });
 
+  it("partial + statPointsを候補previewに利用し、EVや実数値へ変換しない", async () => {
+    const statPoints = {
+      hp: 32,
+      attack: 0,
+      defense: 10,
+      specialAttack: 0,
+      specialDefense: 24,
+      speed: 0,
+    };
+    const partialInput = adminArchetypeWriteSchema.parse({
+      ...input,
+      pokemons: input.pokemons.map((pokemon, index) => ({
+        ...pokemon,
+        evs: null,
+        statPoints: index === 0 ? statPoints : null,
+        actualStats: null,
+        statDataStatus: "partial",
+      })),
+    });
+    archetypeFindMany.mockResolvedValue([exactRecord("11111111-1111-4111-8111-111111111111")]);
+
+    const result = await service.preview(partialInput);
+
+    expect(partialInput.pokemons[0]).toMatchObject({
+      evs: null,
+      statPoints,
+      actualStats: null,
+      statDataStatus: "partial",
+    });
+    expect(result.exactDuplicate).toBe(true);
+    expect(result.candidates[0]).toMatchObject({ rank: 1, matchRate: 100 });
+    expectNoWrites();
+  });
+
   it("完全一致する既存構築を exactDuplicate として返す(200・409にしない)", async () => {
     const id = "11111111-1111-4111-8111-111111111111";
     archetypeFindMany.mockResolvedValue([exactRecord(id)]);
