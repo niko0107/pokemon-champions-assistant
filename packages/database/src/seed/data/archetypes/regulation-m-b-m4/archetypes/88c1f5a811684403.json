@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【MCS7月:841位】青い鳥とHot Stuff",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 394,
+      "itemId": 46,
+      "itemAlternatives": [],
+      "abilityId": 172,
+      "nature": "ずぶとい",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 10,
+        "specialAttack": 2,
+        "specialDefense": 22,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 347,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 512,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 275,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 291,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 167,
+      "nature": "れいせい",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 9,
+        "defense": 3,
+        "specialAttack": 0,
+        "specialDefense": 22,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "unclassified",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 539,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 310,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 453,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 439,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 337,
+      "itemId": 2,
+      "itemAlternatives": [],
+      "abilityId": 159,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 637,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 611,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 8,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 330,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 481,
+      "itemId": 26,
+      "itemAlternatives": [],
+      "abilityId": 225,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 4,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 30
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 356,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 203,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 477,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 6,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 350,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 208,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 422,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 472,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 426,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 377,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 2,
+      "itemId": 3,
+      "itemAlternatives": [],
+      "abilityId": 4,
+      "nature": "わんぱく",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 22,
+        "specialAttack": 0,
+        "specialDefense": 11,
+        "speed": 1
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "unclassified",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 6,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 5,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 189,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【MCS7月:841位】青い鳥とHot Stuff",
+      "url": "https://pokesol.app/u/yorun/articles/88c1f5a811684403",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

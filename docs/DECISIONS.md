@@ -819,3 +819,17 @@
 - **理由:** 公開構築の記事は客観的な構成値を掲載していても、各Pokemonの具体的な役割を常に明示するとは限らない。必須roleを推測で埋めず、構造化された構築情報を失わないため
 - **影響:** DB CHECK制約は新規migrationで`unclassified`だけを追加し、既存migration・既存role・既存行を変更しない。ARCHETYPE-004の正式登録は本タスクに含めず、全検証後の再監査で他の必須条件を満たす全候補を次タスクへ引き渡す
 - **運用結果:** 2026-07-31にPokeSolのRegulation M-B / Season M-4検索結果を記事ID昇順で再取得・再監査した。対象48件・HTTP 200は48件・6体構築は38件・Pokemon、Move、Item、Ability、Nature、能力ポイントが揃う構築は37件だった。具体roleだけを使用できる候補は25件、具体roleを確認できないPokemonへ`unclassified`を使用する候補は11件、Item不足は1件、記事タイトル・本文とSeasonメタデータの矛盾は1件、同一6体・主要情報の重複は0件で、最終登録可能候補は36件となった。30件以上を満たすためARCHETYPE-004は全36候補を対象に再開できるが、本タスクでは正式登録していない
+
+## 2026-07-31 構築データ初期登録(ARCHETYPE-004)
+
+### D-075: Regulation Set M-B / Season M-4の公開構築36件
+
+- **判断:** 2026-07-31のARCHETYPE-004D再監査で確定したPokeSol 48件を記事ID昇順で再確認し、Pokemonが6体でない10件、Item不足1件、Season矛盾1件を除く36件をすべてpublished登録する。確認中に検索結果へ追加された記事1件は、指定された監査済み48件の確定後に公開されたため今回の対象外とし、manifestへURLと理由を残す
+- **判断:** 正式Ruleは`Regulation Set M-B（シングルバトル）`（teamSize 6、pickSize 3、battleLevel 50）、正式Seasonは`Season M-4`（2026-07-08開始、2026-08-05終了）として既存の開発用Rule / Seasonを変更せず追加する
+- **判断:** 36件すべてを`partial`として、`actualStats=null`、`evs=null`、出典にIVの明示がない6能力はすべてnullで保存する。Champions能力ポイントは`statPoints`へ原値を保存し、EV・actualStatsへ変換しない。具体roleだけで構成できる候補は25件、具体roleを裏付けられないPokemonだけに`unclassified`を使用する候補は11件で、Pokemon単位では具体role 195件、`unclassified` 21件とする
+- **判断:** 出典から一意な3体を確認できた5件だけに`defaultLeads`を設定し、残る31件は空配列とする。出典はPokeSol 36件で、本文・画像・HTMLを保存せず、構造化データ、短い独自の事実表現、source title、siteName、URLだけを保存する
+- **判断:** 必要なItem 50件のうち既存3件を再利用し、記事で明示された不足47件だけをadmin master Item APIから追加する。日本語名・英語名はPokéAPI固定commit `227b573712414a86ba299d322fa398fbb2893edc`で確認し、全合法Itemの網羅を意味しない
+- **判断:** POST前に36件すべてをstrict入力・master参照・source HTTP 200・previewで確認し、完全重複、入力36件内の完全重複、重複除外はいずれも0件とする。最初の記事ID順3件を試験登録して公開詳細・candidate・counterplanを確認した後、残り33件を登録し、最終DBをArchetype 36件、ArchetypePokemon 216件、ArchetypePokemonMove 864件、ArchetypeSource 36件として全件検収する
+- **判断:** partial構築のcounterplanは`type_only`を維持し、ダメージ・確定数・素早さ比較を提供しない。`defaultLeads=[]`では`leadPokemonId=null`とし、基本選出や実数値を推測しない。実Anthropic APIは呼ばず、Template explanationとLLM無効時のフォールバックを確認する
+- **理由:** 36件はPokemon、Move、Item、Ability、Nature、statPoints、Season、Regulation、出典URLの客観的な登録条件を満たし、ARCHETYPE-004A〜004Dの正式契約により、未確認の基本選出・実数値・IV・具体roleを推測せず構築候補として利用できるため
+- **影響:** ARCHETYPE-004の30件以上という完了条件を36件で満たす。追加したJSONはadmin POSTへ再投入できるデータとして保持し、コード・DB schema・migration・API・Web・shared・scoring・matchup・LLMは変更しない。既知制限はtype_onlyとItem非網羅であり、次タスクは完了済みのBATTLE-005〜007を飛ばして、依存関係を満たす`WEB-010`とする

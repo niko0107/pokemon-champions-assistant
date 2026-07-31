@@ -1,0 +1,766 @@
+{
+  "schemaVersion": 1,
+  "task": "ARCHETYPE-004",
+  "verifiedAt": "2026-07-31",
+  "regulation": {
+    "code": "M-B",
+    "name": "Regulation Set M-B（シングルバトル）",
+    "ruleId": 48,
+    "teamSize": 6,
+    "pickSize": 3,
+    "battleLevel": 50,
+    "officialSourceUrl": "https://champions-news.pokemon-home.com/en/page/776.html"
+  },
+  "season": {
+    "code": "M-4",
+    "name": "Season M-4",
+    "seasonId": 26,
+    "startsAt": "2026-07-08",
+    "endsAt": "2026-08-05",
+    "officialSourceUrl": "https://champions-news.pokemon-home.com/en/page/795.html"
+  },
+  "sourceSearch": {
+    "siteName": "PokeSol",
+    "url": "https://pokesol.app/search?category=team&battleFormat=single&regulation=mb&season=m-4",
+    "ordering": "articleId ascending",
+    "auditedCohortCount": 48,
+    "currentResultCountAtVerification": 49
+  },
+  "counts": {
+    "archetypes": 36,
+    "partial": 36,
+    "exact": 0,
+    "derived": 0,
+    "concreteOnlyCandidates": 25,
+    "candidatesUsingUnclassified": 11,
+    "concretePokemonRoles": 195,
+    "unclassifiedPokemonRoles": 21,
+    "requiredItems": 50,
+    "addedItems": 47,
+    "defaultLeadsPresent": 5,
+    "defaultLeadsAbsent": 31,
+    "sourceSites": {
+      "PokeSol": 36
+    },
+    "excluded": 12,
+    "previewExactDuplicateExclusions": 0
+  },
+  "itemMasterSource": {
+    "repository": "https://github.com/PokeAPI/pokeapi",
+    "commit": "227b573712414a86ba299d322fa398fbb2893edc",
+    "files": ["data/v2/csv/items.csv", "data/v2/csv/item_names.csv"],
+    "note": "記事に必要なItemだけを追加し、全合法Itemは網羅しない。"
+  },
+  "candidates": [
+    {
+      "articleId": "02ca72c1de3d998b",
+      "url": "https://pokesol.app/u/hasai3_dayo/articles/02ca72c1de3d998b",
+      "sourceTitle": "M-4マスボ到達ペッタンシスターサナリオン",
+      "publishedAt": "2026-07-09T09:55:58.178Z",
+      "file": "archetypes/02ca72c1de3d998b.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "0ae58ef462f99b18",
+      "url": "https://pokesol.app/u/roke_poke/articles/0ae58ef462f99b18",
+      "sourceTitle": "第6回　くじ引きポケモン（ポケモンチャンピオンズMB-4）",
+      "publishedAt": "2026-07-14T14:53:56.510Z",
+      "file": "archetypes/0ae58ef462f99b18.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "154a8dcf28863338",
+      "url": "https://pokesol.app/u/y_poke_e/articles/154a8dcf28863338",
+      "sourceTitle": "【MCS202607最終1094位 】欺きメガクチパ【雨パ偽装】",
+      "publishedAt": "2026-07-29T08:36:18.763Z",
+      "file": "archetypes/154a8dcf28863338.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "1758625c7dc394b2",
+      "url": "https://pokesol.app/u/jindai_win12/articles/1758625c7dc394b2",
+      "sourceTitle": "【MCS2026.7 最終263位】変幻カバガルド",
+      "publishedAt": "2026-07-28T15:21:02.230Z",
+      "file": "archetypes/1758625c7dc394b2.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "304788bd0dd6f21c",
+      "url": "https://pokesol.app/u/hayassy/articles/304788bd0dd6f21c",
+      "sourceTitle": "【MCS2026-07 最終78位】バナブララウド受けサイクル 【R1813.123】",
+      "publishedAt": "2026-07-27T19:11:33.219Z",
+      "file": "archetypes/304788bd0dd6f21c.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [1, 2, 3],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "55260717244c5ba8",
+      "url": "https://pokesol.app/u/baneo_pokemon/articles/55260717244c5ba8",
+      "sourceTitle": "2026.07マンスリーチャレンジ【使用構築】御三家スピードスター集結",
+      "publishedAt": "2026-07-26T16:05:52.627Z",
+      "file": "archetypes/55260717244c5ba8.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "59e735f9833a7888",
+      "url": "https://pokesol.app/u/yuppy_poke/articles/59e735f9833a7888",
+      "sourceTitle": "フロルカイリューガルド【MCS26.7最終840位レート1736】",
+      "publishedAt": "2026-07-29T06:52:01.332Z",
+      "file": "archetypes/59e735f9833a7888.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "5dc11621e7c2eb34",
+      "url": "https://pokesol.app/u/anime_0814/articles/5dc11621e7c2eb34",
+      "sourceTitle": "シーズンM-4初日マスター到達パーティ紹介",
+      "publishedAt": "2026-07-11T11:24:23.269Z",
+      "file": "archetypes/5dc11621e7c2eb34.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [2, 1, 3],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "5f4f70f427547c7b",
+      "url": "https://pokesol.app/u/smeargleee/articles/5f4f70f427547c7b",
+      "sourceTitle": "【MCS.202607 最終38位(1820)】サーナイトキュウコン",
+      "publishedAt": "2026-07-27T03:42:40.130Z",
+      "file": "archetypes/5f4f70f427547c7b.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "668a232f65e775dc",
+      "url": "https://pokesol.app/u/donguripokemon/articles/668a232f65e775dc",
+      "sourceTitle": "【M -4シングル R1900】バンビーさんありがとう構築",
+      "publishedAt": "2026-07-18T09:02:51.099Z",
+      "file": "archetypes/668a232f65e775dc.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "66f72d3bfbb977bd",
+      "url": "https://pokesol.app/u/pien_404i/articles/66f72d3bfbb977bd",
+      "sourceTitle": "【M-4 シングル】マスター到達パーティ アマガハラバリー",
+      "publishedAt": "2026-07-18T12:38:59.545Z",
+      "file": "archetypes/66f72d3bfbb977bd.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "6d29a7b7deb98b01",
+      "url": "https://pokesol.app/u/antigravity_24_/articles/6d29a7b7deb98b01",
+      "sourceTitle": "【MCS202607 最終660位】固執ガブクチート",
+      "publishedAt": "2026-07-27T12:56:17.768Z",
+      "file": "archetypes/6d29a7b7deb98b01.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "7fd65e4d5b50f830",
+      "url": "https://pokesol.app/u/hanano1204/articles/7fd65e4d5b50f830",
+      "sourceTitle": "m4マスター達成構築（14連勝）",
+      "publishedAt": "2026-07-10T17:05:59.636Z",
+      "file": "archetypes/7fd65e4d5b50f830.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "8589a7cac2eddeaa",
+      "url": "https://pokesol.app/u/tatsuta_tsuu/articles/8589a7cac2eddeaa",
+      "sourceTitle": "【マンスリーチャレンジ2026.07使用構築】C振りスコヴィラン&ハラバリー",
+      "publishedAt": "2026-07-27T12:16:33.564Z",
+      "file": "archetypes/8589a7cac2eddeaa.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "87a153e8cf921214",
+      "url": "https://pokesol.app/u/fortune_36/articles/87a153e8cf921214",
+      "sourceTitle": "【最終1位】定数ドヒドスコヴィラン改【MCS2026.7】",
+      "publishedAt": "2026-07-27T12:13:55.470Z",
+      "file": "archetypes/87a153e8cf921214.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "88c1f5a811684403",
+      "url": "https://pokesol.app/u/yorun/articles/88c1f5a811684403",
+      "sourceTitle": "【MCS7月:841位】青い鳥とHot Stuff",
+      "publishedAt": "2026-07-27T12:47:14.705Z",
+      "file": "archetypes/88c1f5a811684403.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "8f2b56904028a987",
+      "url": "https://pokesol.app/u/taipokechampion/articles/8f2b56904028a987",
+      "sourceTitle": "［M-4レート2005］マフォブリムクホーク",
+      "publishedAt": "2026-07-29T11:34:45.848Z",
+      "file": "archetypes/8f2b56904028a987.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [2, 3, 1],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "9469abe7eb21bfd3",
+      "url": "https://pokesol.app/u/tomoe_475/articles/9469abe7eb21bfd3",
+      "sourceTitle": "【中間記録】残業中に遊んでたのバレたけど怒られずに済んで一旦マスター乗ったよ構築",
+      "publishedAt": "2026-07-21T14:56:19.868Z",
+      "file": "archetypes/9469abe7eb21bfd3.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "990ffdbd7059c1ee",
+      "url": "https://pokesol.app/u/robin_poke/articles/990ffdbd7059c1ee",
+      "sourceTitle": "【M-4シングル】ゲコハッサムサイクル【2000到達】",
+      "publishedAt": "2026-07-28T09:22:04.496Z",
+      "file": "archetypes/990ffdbd7059c1ee.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "9f7ec5609e99a107",
+      "url": "https://pokesol.app/u/gmd/articles/9f7ec5609e99a107",
+      "sourceTitle": "【最終505位】積みを許さないムドカビヤドラン受けループ【MCS2026.7】",
+      "publishedAt": "2026-07-30T03:47:59.635Z",
+      "file": "archetypes/9f7ec5609e99a107.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "a82b39adf6ec81c6",
+      "url": "https://pokesol.app/u/cielo1732/articles/a82b39adf6ec81c6",
+      "sourceTitle": "【M-4レート2050】悲しみの水悪W軸構築【MCS202607も出たよ】",
+      "publishedAt": "2026-07-29T10:59:33.613Z",
+      "file": "archetypes/a82b39adf6ec81c6.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "ae3c807b71cc2d01",
+      "url": "https://pokesol.app/u/kagaku_pokemon/articles/ae3c807b71cc2d01",
+      "sourceTitle": "構築添削よろしくお願いします！",
+      "publishedAt": "2026-07-29T12:37:47.730Z",
+      "file": "archetypes/ae3c807b71cc2d01.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "bda24d9013269dbd",
+      "url": "https://pokesol.app/u/roke_poke/articles/bda24d9013269dbd",
+      "sourceTitle": "第7回　くじ引きポケモン（ポケモンチャンピオンズMB-4）",
+      "publishedAt": "2026-07-29T15:40:36.727Z",
+      "file": "archetypes/bda24d9013269dbd.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "c3824759dd6548cc",
+      "url": "https://pokesol.app/u/zu_zu/articles/c3824759dd6548cc",
+      "sourceTitle": "シーズンM-4 シングル マスターボール級到達PT",
+      "publishedAt": "2026-07-13T12:45:57.084Z",
+      "file": "archetypes/c3824759dd6548cc.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "ddadbb60a31ea1ca",
+      "url": "https://pokesol.app/u/katagiri_poke/articles/ddadbb60a31ea1ca",
+      "sourceTitle": "【最終1065位】MCS2026.7/ライチュウY展開【アマガブライキュウバシャアシレ】",
+      "publishedAt": "2026-07-28T22:55:38.789Z",
+      "file": "archetypes/ddadbb60a31ea1ca.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "e0d4525cdc9b057c",
+      "url": "https://pokesol.app/u/harutaji_poke/articles/e0d4525cdc9b057c",
+      "sourceTitle": "HSメガクチート構築【マンスリーチャレンジ使用構築】",
+      "publishedAt": "2026-07-28T14:27:13.750Z",
+      "file": "archetypes/e0d4525cdc9b057c.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "e34a68c87780ec4b",
+      "url": "https://pokesol.app/u/kyoukun/articles/e34a68c87780ec4b",
+      "sourceTitle": "3桁到達＆レート2050 ！メガムクホーク軸対面寄りサイクルパ",
+      "publishedAt": "2026-07-24T12:01:42.048Z",
+      "file": "archetypes/e34a68c87780ec4b.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "e5452a8a4fb47ad0",
+      "url": "https://pokesol.app/u/tomoe_475/articles/e5452a8a4fb47ad0",
+      "sourceTitle": "【MCS202607】勝率丁度5割サザングロスアシレ構築【どんかんマンムー】",
+      "publishedAt": "2026-07-27T13:39:19.268Z",
+      "file": "archetypes/e5452a8a4fb47ad0.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [3, 1, 2],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "e9951e75465b2b54",
+      "url": "https://pokesol.app/u/archi_h_poke/articles/e9951e75465b2b54",
+      "sourceTitle": "【M-4】HDガモス軸+電磁波ミミグライ",
+      "publishedAt": "2026-07-29T21:30:42.655Z",
+      "file": "archetypes/e9951e75465b2b54.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "ea22107944b14e2b",
+      "url": "https://pokesol.app/u/kinketu_argent/articles/ea22107944b14e2b",
+      "sourceTitle": "対戦初心者、プレイ10時間程度でマスボ級踏んだ構築",
+      "publishedAt": "2026-07-28T23:22:50.917Z",
+      "file": "archetypes/ea22107944b14e2b.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "ec773b5b5d6df920",
+      "url": "https://pokesol.app/u/end_vstar/articles/ec773b5b5d6df920",
+      "sourceTitle": "初チャンピオン級到達記念　ゲッコウガサイクル",
+      "publishedAt": "2026-07-17T08:43:24.850Z",
+      "file": "archetypes/ec773b5b5d6df920.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "f55b939e4c09b80c",
+      "url": "https://pokesol.app/u/hasasi/articles/f55b939e4c09b80c",
+      "sourceTitle": "【最終51位】カバマンダガルドコケコゲコツルギモドキ【MCS2026.7】",
+      "publishedAt": "2026-07-27T16:37:24.349Z",
+      "file": "archetypes/f55b939e4c09b80c.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [2, 3, 4],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "faad7e7346bf868a",
+      "url": "https://pokesol.app/u/kagaku_pokemon/articles/faad7e7346bf868a",
+      "sourceTitle": "【ポケチャンM-4　構築添削よろしくお願いします！！】",
+      "publishedAt": "2026-07-22T00:44:52.654Z",
+      "file": "archetypes/faad7e7346bf868a.json",
+      "roleClassification": "uses_unclassified",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "fad62c2b3b01e758",
+      "url": "https://pokesol.app/u/hikari_560/articles/fad62c2b3b01e758",
+      "sourceTitle": "【M-4 レート1915】サザングロスに強いウルガモス",
+      "publishedAt": "2026-07-28T14:22:39.881Z",
+      "file": "archetypes/fad62c2b3b01e758.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "fb7e16a3a1883ae7",
+      "url": "https://pokesol.app/u/pen_pilot/articles/fb7e16a3a1883ae7",
+      "sourceTitle": "M-4もマスボ上がれてよかったね構築",
+      "publishedAt": "2026-07-19T04:20:27.421Z",
+      "file": "archetypes/fb7e16a3a1883ae7.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    },
+    {
+      "articleId": "fd5aa9a7993e3932",
+      "url": "https://pokesol.app/u/pokemon_135/articles/fd5aa9a7993e3932",
+      "sourceTitle": "【M-4】マスター到達パーティー【備忘録】",
+      "publishedAt": "2026-07-21T23:11:57.335Z",
+      "file": "archetypes/fd5aa9a7993e3932.json",
+      "roleClassification": "concrete_only",
+      "defaultLeads": [],
+      "preview": {
+        "exactDuplicate": false,
+        "exactDuplicateArchetypeId": null,
+        "similarCandidateCount": 0,
+        "highestMatchRate": null,
+        "highestRank": null
+      }
+    }
+  ],
+  "excludedCandidates": [
+    {
+      "articleId": "0190bfa4b6678293",
+      "url": "https://pokesol.app/u/kotoa_master/articles/0190bfa4b6678293",
+      "title": "【レギュレーションM-B｜M-4】18連勝！チャンピオン級到達構築【R2053｜順位 230 位】",
+      "reason": "Pokemonが6体ではない（カード0件）"
+    },
+    {
+      "articleId": "1ab381df63132b66",
+      "url": "https://pokesol.app/u/imaichipoke/articles/1ab381df63132b66",
+      "title": "【MCS202607 最終504位】イッカルカギャラ展開",
+      "reason": "Pokemonが6体ではない（カード7件）"
+    },
+    {
+      "articleId": "2b1e8ea6a6c5b60c",
+      "url": "https://pokesol.app/u/putyohenza_0876/articles/2b1e8ea6a6c5b60c",
+      "title": "1900乗ったので",
+      "reason": "Pokemonが6体ではない（カード9件）"
+    },
+    {
+      "articleId": "37371da33ebe93ab",
+      "url": "https://pokesol.app/u/bippa_0399/articles/37371da33ebe93ab",
+      "title": "サイクル戦を覚えたい(自分用)",
+      "reason": "Pokemonが6体ではない（カード0件）"
+    },
+    {
+      "articleId": "3d23299a2790b750",
+      "url": "https://pokesol.app/u/t2micro_pkmn/articles/3d23299a2790b750",
+      "title": "【M-4 シングル2100到達】ちいかわスターミーver. 2 前期との変更点まとめ",
+      "reason": "Pokemonが6体ではない（カード0件）"
+    },
+    {
+      "articleId": "435e9622e6b658a9",
+      "url": "https://pokesol.app/u/0127/articles/435e9622e6b658a9",
+      "title": "[S-4レート1800＆13連勝達成]対面構築の結論に限りなく近いゲコミミクチート構築を解説!",
+      "reason": "Pokemonが6体ではない（カード8件）"
+    },
+    {
+      "articleId": "7de099823a222335",
+      "url": "https://pokesol.app/u/kou_pkmn/articles/7de099823a222335",
+      "title": "【MCS202607最終237位・シーズンM-4レート2000達成】ギャラガブサフゴ",
+      "reason": "Pokemonが6体ではない（カード7件）"
+    },
+    {
+      "articleId": "810279f3e76323b7",
+      "url": "https://pokesol.app/u/yuki/articles/810279f3e76323b7",
+      "title": "人生初ガチ構築記事",
+      "reason": "Pokemonが6体ではない（カード0件）"
+    },
+    {
+      "articleId": "8b0948bef463549d",
+      "url": "https://pokesol.app/u/pogi_poke/articles/8b0948bef463549d",
+      "title": "毒菱を撒いて殺します。",
+      "reason": "Item不足"
+    },
+    {
+      "articleId": "9140d7f75dcdc1ab",
+      "url": "https://pokesol.app/u/sugar/articles/9140d7f75dcdc1ab",
+      "title": "縛りランクマ",
+      "reason": "Pokemonが6体ではない（カード12件）"
+    },
+    {
+      "articleId": "ab0ac919d64dea97",
+      "url": "https://pokesol.app/u/roke_poke/articles/ab0ac919d64dea97",
+      "title": "第5回　くじ引きポケモン（ポケモンチャンピオンズMB-3）",
+      "reason": "記事内容のSeasonがM-3で検索条件と矛盾"
+    },
+    {
+      "articleId": "dc6a481e1bc0858a",
+      "url": "https://pokesol.app/u/raz/articles/dc6a481e1bc0858a",
+      "title": "シーズンM-4マスター到達構築",
+      "reason": "Pokemonが6体ではない（カード0件）"
+    }
+  ],
+  "lateSearchResultsOutsideAuditedCohort": [
+    {
+      "articleId": "f8e27da8ccffe54d",
+      "url": "https://pokesol.app/u/sugar/articles/f8e27da8ccffe54d",
+      "reason": "2026-07-31 15:04 JST公開。指定された再監査済み48件・登録対象36件の確定後に検索へ追加されたため対象外。"
+    }
+  ],
+  "knownLimitations": [
+    "全36件はpartialであり、actualStatsは未確認、evsは従来EVの出典がないためnull。",
+    "IVは出典に明示がないため6能力すべてnull。31への補完は行わない。",
+    "statPointsはChampions能力ポイントとして原値を保存し、EVやactualStatsへ変換しない。",
+    "partial相手のcounterplanはtype_onlyで、ダメージ・確定数・素早さ比較を提供しない。",
+    "具体roleを記事で裏付けられないPokemonだけunclassifiedを使用する。",
+    "一意な基本選出3体を確認できない場合はdefaultLeadsを空配列にする。",
+    "出典本文・画像・HTMLは保存せず、構造化データとURLだけを保存する。",
+    "Item master追加は36件に必要なItemだけであり、全合法Itemを網羅しない。"
+  ],
+  "preview": {
+    "checkedBeforePost": 36,
+    "exactDuplicates": 0,
+    "batchExactInputDuplicates": 0,
+    "excludedAsDuplicate": 0
+  },
+  "registration": {
+    "trialRegistered": 3,
+    "bulkRegistered": 33,
+    "publishedVerified": 36,
+    "qualityChecked": 36
+  },
+  "databaseCountsBefore": {
+    "rule": 1,
+    "season": 1,
+    "item": 3,
+    "archetype": 0,
+    "archetypePokemon": 0,
+    "archetypePokemonMove": 0,
+    "archetypeSource": 0
+  },
+  "databaseCountsAfter": {
+    "rule": 2,
+    "season": 2,
+    "item": 50,
+    "archetype": 36,
+    "publishedArchetype": 36,
+    "archetypePokemon": 216,
+    "archetypePokemonMove": 864,
+    "archetypeSource": 36
+  },
+  "verification": {
+    "strictInputs": 36,
+    "masterReferences": 36,
+    "sourceHttp200": 36,
+    "publicDetails": 36,
+    "candidateSearch": "passed",
+    "counterplanMode": "type_only",
+    "health": "ok",
+    "responsiveViewports": ["375x812", "1440x1000"],
+    "horizontalOverflow": false,
+    "temporaryUsersRemaining": 0
+  }
+}

@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【中間記録】残業中に遊んでたのバレたけど怒られずに済んで一旦マスター乗ったよ構築",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 439,
+      "itemId": 58,
+      "itemAlternatives": [],
+      "abilityId": 54,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 16,
+        "attack": 0,
+        "defense": 18,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 541,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 466,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 322,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 296,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 369,
+      "itemId": 56,
+      "itemAlternatives": [],
+      "abilityId": 69,
+      "nature": "おだやか",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 14,
+        "specialAttack": 0,
+        "specialDefense": 20,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 282,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 428,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 301,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 213,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 283,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 86,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 205,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 540,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 206,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 406,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 323,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 68,
+      "nature": "わんぱく",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 26,
+        "specialAttack": 0,
+        "specialDefense": 8,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 453,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 375,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 8,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 337,
+      "itemId": 2,
+      "itemAlternatives": [],
+      "abilityId": 159,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 637,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 337,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 8,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 611,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 320,
+      "itemId": 24,
+      "itemAlternatives": [],
+      "abilityId": 185,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 435,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 535,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 439,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 188,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【中間記録】残業中に遊んでたのバレたけど怒られずに済んで一旦マスター乗ったよ構築",
+      "url": "https://pokesol.app/u/tomoe_475/articles/9469abe7eb21bfd3",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

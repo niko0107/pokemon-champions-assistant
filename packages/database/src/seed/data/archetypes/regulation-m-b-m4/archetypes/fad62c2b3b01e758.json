@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【M-4 レート1915】サザングロスに強いウルガモス",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 476,
+      "itemId": 38,
+      "itemAlternatives": [],
+      "abilityId": 57,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 1,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 31
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 448,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 420,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 428,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 257,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 280,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 71,
+      "nature": "ずぶとい",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 32,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 2
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 516,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 473,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 282,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 300,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 469,
+      "itemId": 3,
+      "itemAlternatives": [],
+      "abilityId": 1,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 11,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 23,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 668,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 406,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 562,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 459,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 236,
+      "itemId": 39,
+      "itemAlternatives": [],
+      "abilityId": 163,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 30,
+        "attack": 0,
+        "defense": 1,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 3
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 205,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 424,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 206,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 442,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 252,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 44,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 0,
+        "attack": 32,
+        "defense": 1,
+        "specialAttack": 0,
+        "specialDefense": 1,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 369,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 434,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 338,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 382,
+      "itemId": 52,
+      "itemAlternatives": [],
+      "abilityId": 4,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 24,
+        "attack": 32,
+        "defense": 3,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 7
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 382,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 337,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 210,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 184,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【M-4 レート1915】サザングロスに強いウルガモス",
+      "url": "https://pokesol.app/u/hikari_560/articles/fad62c2b3b01e758",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}
