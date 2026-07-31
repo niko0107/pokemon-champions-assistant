@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜M-4マスボ到達ペッタンシスターサナリオン",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 315,
+      "itemId": 24,
+      "itemAlternatives": [],
+      "abilityId": 179,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 2,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 205,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 419,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 206,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 306,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 314,
+      "itemId": 27,
+      "itemAlternatives": [],
+      "abilityId": 177,
+      "nature": "わんぱく",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 30,
+        "attack": 16,
+        "defense": 10,
+        "specialAttack": 0,
+        "specialDefense": 10,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 586,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 357,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 253,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 328,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 153,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 27,
+        "attack": 0,
+        "defense": 7,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "support",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 228,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 547,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 600,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 444,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 230,
+      "itemId": 40,
+      "itemAlternatives": [],
+      "abilityId": 127,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 30,
+        "attack": 32,
+        "defense": 1,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 3
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "support",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 607,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 439,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 274,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 296,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 219,
+      "itemId": 36,
+      "itemAlternatives": [],
+      "abilityId": 61,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 2,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 347,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 541,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 424,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 257,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 294,
+      "itemId": 2,
+      "itemAlternatives": [],
+      "abilityId": 169,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 1,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 1,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 413,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 410,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 206,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 442,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "M-4マスボ到達ペッタンシスターサナリオン",
+      "url": "https://pokesol.app/u/hasai3_dayo/articles/02ca72c1de3d998b",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

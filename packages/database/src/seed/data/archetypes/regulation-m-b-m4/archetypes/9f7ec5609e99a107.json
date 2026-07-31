@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【最終505位】積みを許さないムドカビヤドラン受けループ【MCS2026.7】",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 215,
+      "itemId": 3,
+      "itemAlternatives": [],
+      "abilityId": 37,
+      "nature": "ずぶとい",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 29,
+        "specialAttack": 0,
+        "specialDefense": 5,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 189,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 5,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 272,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 217,
+      "itemId": 27,
+      "itemAlternatives": [],
+      "abilityId": 4,
+      "nature": "しんちょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 2,
+        "specialAttack": 0,
+        "specialDefense": 32,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 382,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 337,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 253,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 200,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 438,
+      "itemId": 57,
+      "itemAlternatives": [],
+      "abilityId": 162,
+      "nature": "わんぱく",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 32,
+        "specialAttack": 0,
+        "specialDefense": 2,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 586,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 301,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 370,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 313,
+      "itemId": 62,
+      "itemAlternatives": [],
+      "abilityId": 145,
+      "nature": "しんちょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 2,
+        "specialAttack": 0,
+        "specialDefense": 32,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 227,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 550,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 235,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 239,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 398,
+      "itemId": 63,
+      "itemAlternatives": [],
+      "abilityId": 93,
+      "nature": "ずぶとい",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 32,
+        "specialAttack": 0,
+        "specialDefense": 2,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 490,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 586,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 370,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 346,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 199,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 69,
+      "nature": "しんちょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 2,
+        "specialAttack": 0,
+        "specialDefense": 32,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 194,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 185,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 6,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【最終505位】積みを許さないムドカビヤドラン受けループ【MCS2026.7】",
+      "url": "https://pokesol.app/u/gmd/articles/9f7ec5609e99a107",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

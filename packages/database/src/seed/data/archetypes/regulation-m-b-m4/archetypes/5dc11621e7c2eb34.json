@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜シーズンM-4初日マスター到達パーティ紹介",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [2, 1, 3],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 488,
+      "itemId": 60,
+      "itemAlternatives": [],
+      "abilityId": 131,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 427,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 394,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 8,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 350,
+      "itemId": 2,
+      "itemAlternatives": [],
+      "abilityId": 208,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 426,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 422,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 472,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 428,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 252,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 69,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 434,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 369,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 646,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 315,
+      "itemId": 42,
+      "itemAlternatives": [],
+      "abilityId": 179,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 32,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "support",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 580,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 247,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 2,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 521,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 280,
+      "itemId": 3,
+      "itemAlternatives": [],
+      "abilityId": 71,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 516,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 473,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 282,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 419,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 487,
+      "itemId": 67,
+      "itemAlternatives": [],
+      "abilityId": 113,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 273,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 425,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 500,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 257,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "シーズンM-4初日マスター到達パーティ紹介",
+      "url": "https://pokesol.app/u/anime_0814/articles/5dc11621e7c2eb34",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

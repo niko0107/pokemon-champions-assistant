@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【M-4シングル】ゲコハッサムサイクル【2000到達】",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 440,
+      "itemId": 33,
+      "itemAlternatives": [],
+      "abilityId": 159,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 8,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 26
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "pivot",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 206,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 472,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 413,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 455,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 213,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 115,
+      "nature": "ゆうかん",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 2,
+        "defense": 32,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "pivot",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 432,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 8,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 337,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 243,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 53,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 597,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 357,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 5,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 309,
+      "itemId": 27,
+      "itemAlternatives": [],
+      "abilityId": 86,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 27,
+        "specialAttack": 4,
+        "specialDefense": 0,
+        "speed": 3
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 556,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 536,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 380,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 253,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 488,
+      "itemId": 60,
+      "itemAlternatives": [],
+      "abilityId": 131,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 31,
+        "attack": 3,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 394,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 427,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 257,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 418,
+      "itemId": 24,
+      "itemAlternatives": [],
+      "abilityId": 173,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 1,
+        "specialAttack": 30,
+        "specialDefense": 0,
+        "speed": 3
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 445,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 243,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 222,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 309,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【M-4シングル】ゲコハッサムサイクル【2000到達】",
+      "url": "https://pokesol.app/u/robin_poke/articles/990ffdbd7059c1ee",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

@@ -367,7 +367,7 @@
 - **前提タスク:** ARCHETYPE-002
 - **対象外:** 人気度の数値スコア化(OPS-001)
 
-### ⬜ ARCHETYPE-004 構築データ初期登録(30件)
+### ✅ ARCHETYPE-004 構築データ初期登録(30件)
 
 - **目的:** MVP 用のテンプレ構築データを登録する(運用タスク、§15 フェーズ1)
 - **作業範囲:** 攻略サイト調査→構造化データ登録(本文・画像は転載しない。出典 URL のみ)。Pokemon・Move・Abilityは既存masterから選び、Itemは出典で明示されたものだけを追加する
@@ -376,6 +376,7 @@
 - **必要なテスト:** データ品質チェック(§13.2)
 - **前提タスク:** ARCHETYPE-002, ARCHETYPE-004A, ARCHETYPE-004B, ARCHETYPE-004C, ARCHETYPE-004D, MASTER-009A, MASTER-009B(または WEB-011 の管理画面)
 - **対象外:** コード変更
+- **運用結果:** 2026-07-31にRegulation Set M-B / Season M-4のPokeSol構築36件を記事ID昇順でpublished登録。全件partial、出典URL・6体・技・Item・Ability・Nature・statPointsを確認し、actualStats / evsはnull、未確認IVはnullのまま保存した
 
 ### ✅ ARCHETYPE-004A 基本選出の任意化
 
@@ -879,4 +880,4 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **ARCHETYPE-004 構築データ初期登録(30件)**。2026-07-31のARCHETYPE-004D後の再監査では、具体roleを使用する25件と`unclassified`を使用する11件の計36件が他の必須条件を満たしたため、記事ID昇順の全36候補を対象として正式登録を再開できる。
+次に着手すべきタスク: **WEB-010 PWA・スマホ最適化**。推奨実装順でARCHETYPE-004の後に位置するBATTLE-005〜007は完了済みで、WEB-010の前提タスクWEB-007も完了している。

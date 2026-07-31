@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【MCS202607最終1094位 】欺きメガクチパ【雨パ偽装】",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 455,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 86,
+      "nature": "なまいき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 10,
+        "specialAttack": 0,
+        "specialDefense": 24,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 610,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 5,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 6,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 474,
+      "itemId": 30,
+      "itemAlternatives": [],
+      "abilityId": 62,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 2,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 453,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 535,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 405,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 188,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 280,
+      "itemId": 3,
+      "itemAlternatives": [],
+      "abilityId": 71,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 22,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 25,
+        "specialDefense": 1,
+        "speed": 18
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 516,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 419,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 282,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 473,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 273,
+      "itemId": 54,
+      "itemAlternatives": [],
+      "abilityId": 126,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 26,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 30,
+        "specialDefense": 0,
+        "speed": 10
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "support",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 207,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 529,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 576,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 328,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 335,
+      "itemId": 2,
+      "itemAlternatives": [],
+      "abilityId": 106,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 32,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "pivot",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 619,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 628,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 610,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 459,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 218,
+      "itemId": 29,
+      "itemAlternatives": [],
+      "abilityId": 35,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 2,
+        "attack": 0,
+        "defense": 0,
+        "specialAttack": 32,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "lead",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 515,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 205,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 391,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 276,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【MCS202607最終1094位 】欺きメガクチパ【雨パ偽装】",
+      "url": "https://pokesol.app/u/y_poke_e/articles/154a8dcf28863338",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}

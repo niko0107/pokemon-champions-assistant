@@ -1,0 +1,313 @@
+{
+  "name": "M-B M-4｜【最終1065位】MCS2026.7/ライチュウY展開【アマガブライキュウバシャアシレ】",
+  "description": "PokeSolで公開されたRegulation Set M-B・Season M-4の6体構築。",
+  "seasonId": 26,
+  "ruleId": 48,
+  "defaultLeads": [],
+  "playstyleNotes": "構成と基本選出の確認元は出典URL。",
+  "status": "published",
+  "pokemons": [
+    {
+      "slot": 1,
+      "pokemonId": 487,
+      "itemId": 67,
+      "itemAlternatives": [],
+      "abilityId": 113,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 30,
+        "attack": 0,
+        "defense": 2,
+        "specialAttack": 4,
+        "specialDefense": 0,
+        "speed": 30
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 273,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 425,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 455,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 257,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "pokemonId": 243,
+      "itemId": 68,
+      "itemAlternatives": [],
+      "abilityId": 53,
+      "nature": "いじっぱり",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 0,
+        "attack": 31,
+        "defense": 3,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 597,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 4,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 438,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 188,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "pokemonId": 323,
+      "itemId": 45,
+      "itemAlternatives": [],
+      "abilityId": 68,
+      "nature": "わんぱく",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 32,
+        "attack": 0,
+        "defense": 25,
+        "specialAttack": 0,
+        "specialDefense": 9,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "wall",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 586,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 453,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 370,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 384,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "pokemonId": 406,
+      "itemId": 54,
+      "itemAlternatives": [],
+      "abilityId": 126,
+      "nature": "おくびょう",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 17,
+        "attack": 0,
+        "defense": 5,
+        "specialAttack": 16,
+        "specialDefense": 0,
+        "speed": 28
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "support",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 207,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 529,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 576,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 296,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "pokemonId": 309,
+      "itemId": 42,
+      "itemAlternatives": [],
+      "abilityId": 86,
+      "nature": "ひかえめ",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 30,
+        "attack": 0,
+        "defense": 19,
+        "specialAttack": 11,
+        "specialDefense": 6,
+        "speed": 0
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 536,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 556,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 459,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 610,
+          "adoptionRate": 1
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "pokemonId": 473,
+      "itemId": 50,
+      "itemAlternatives": [],
+      "abilityId": 36,
+      "nature": "ようき",
+      "teraType": null,
+      "evs": null,
+      "statPoints": {
+        "hp": 20,
+        "attack": 14,
+        "defense": 0,
+        "specialAttack": 0,
+        "specialDefense": 0,
+        "speed": 32
+      },
+      "ivs": {
+        "hp": null,
+        "atk": null,
+        "def": null,
+        "spa": null,
+        "spd": null,
+        "spe": null
+      },
+      "actualStats": null,
+      "statDataStatus": "partial",
+      "role": "sweeper",
+      "usageRate": 1,
+      "threatNotes": null,
+      "moves": [
+        {
+          "moveId": 409,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 245,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 186,
+          "adoptionRate": 1
+        },
+        {
+          "moveId": 188,
+          "adoptionRate": 1
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "【最終1065位】MCS2026.7/ライチュウY展開【アマガブライキュウバシャアシレ】",
+      "url": "https://pokesol.app/u/katagiri_poke/articles/ddadbb60a31ea1ca",
+      "siteName": "PokeSol",
+      "siteRank": null
+    }
+  ]
+}
