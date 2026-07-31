@@ -175,9 +175,18 @@ test("375pxでPartyを登録し、再読み込み後も一覧へ反映する", a
   await page.getByRole("button", { name: "ギャラドス（normal）" }).click();
   await page.getByLabel("性格").selectOption("まじめ");
 
-  await expect(page.getByLabel("ポケモン1 HP 実数値")).toHaveValue("170");
-  await page.getByLabel("ポケモン1 HP EV").fill("252");
-  await expect(page.getByLabel("ポケモン1 HP 実数値")).toHaveValue("202");
+  const labels = ["HP", "攻撃", "防御", "特攻", "特防", "素早さ"];
+  const pointValues = [32, 0, 0, 32, 2, 0];
+  const actualValues = [185, 93, 98, 177, 107, 120];
+  for (const [index, label] of labels.entries()) {
+    await page.getByLabel(`ポケモン1 ${label} 能力ポイント`).fill(String(pointValues[index]));
+    await page.getByLabel(`ポケモン1 ${label} 実数値`).fill(String(actualValues[index]));
+  }
+  await expect(page.getByText("合計 66/66")).toBeVisible();
+  await expect(page.getByLabel("ポケモン1 HP 能力ポイント")).toHaveAttribute("max", "32");
+  await expect(page.getByText(/EV 0\/510/u)).toHaveCount(0);
+  await expect(page.getByRole("spinbutton", { name: / EV$/u })).toHaveCount(0);
+  await expect(page.getByRole("spinbutton", { name: / IV$/u })).toHaveCount(0);
 
   await page.getByLabel("持ち物（任意）").fill("オボ");
   await page.getByRole("button", { name: "オボンのみ" }).click();
@@ -199,13 +208,23 @@ test("375pxでPartyを登録し、再読み込み後も一覧へ反映する", a
         pokemonId: 1,
         itemId: 1,
         abilityId: 1,
+        statPoints: {
+          hp: 32,
+          attack: 0,
+          defense: 0,
+          specialAttack: 32,
+          specialDefense: 2,
+          speed: 0,
+        },
+        evs: null,
+        ivs: null,
         actualStats: {
-          hp: 202,
-          attack: 145,
-          defense: 99,
-          specialAttack: 80,
-          specialDefense: 120,
-          speed: 101,
+          hp: 185,
+          attack: 93,
+          defense: 98,
+          specialAttack: 177,
+          specialDefense: 107,
+          speed: 120,
         },
       },
     ],
@@ -232,6 +251,9 @@ test("1440pxでホームと登録画面をキーボード操作できる", async
   await expect(page.getByLabel("パーティ名")).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Rule")).toBeFocused();
+  await page.getByLabel("Rule").selectOption("1");
+  await expect(page.getByRole("heading", { name: "能力ポイント" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "実数値" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

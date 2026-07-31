@@ -4,6 +4,7 @@ import {
   PARTY_TEAM_SIZE_MAX,
   partyPokemonSchema,
   partySchema,
+  partyWriteContentSchema,
 } from "../party";
 
 const positiveMasterIdSchema = z.number().int().positive();
@@ -23,7 +24,7 @@ export type PartyIdParams = z.infer<typeof partyIdParamsSchema>;
  * PARTY-002の作成・PUT全置換入力。
  * ルールごとの人数はDB参照が必要なためServiceで検証し、各ポケモンの技4件はここで保証する。
  */
-export const partyWriteSchema = partySchema.superRefine((party, context) => {
+export const partyWriteSchema = partyWriteContentSchema.superRefine((party, context) => {
   party.pokemons.forEach((pokemon, pokemonIndex) => {
     if (pokemon.moves.length !== PARTY_MOVE_COUNT_MAX) {
       context.addIssue({
@@ -52,7 +53,7 @@ export const partyDetailSchema = z
   })
   .strict()
   .superRefine((party, context) => {
-    const contentResult = partyWriteSchema.safeParse({
+    const contentResult = partySchema.safeParse({
       name: party.name,
       description: party.description,
       ruleId: party.ruleId,
@@ -69,6 +70,16 @@ export const partyDetailSchema = z
         });
       }
     }
+
+    party.pokemons.forEach((pokemon, pokemonIndex) => {
+      if (pokemon.moves.length !== PARTY_MOVE_COUNT_MAX) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `技は${PARTY_MOVE_COUNT_MAX}件指定してください`,
+          path: ["pokemons", pokemonIndex, "moves"],
+        });
+      }
+    });
   });
 
 export type PartyDetail = z.infer<typeof partyDetailSchema>;

@@ -133,6 +133,7 @@ const partyStateSelect = {
       nature: true,
       teraType: true,
       evs: true,
+      statPoints: true,
       ivs: true,
       actualStats: true,
       pokemon: {

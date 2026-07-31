@@ -39,6 +39,7 @@ const partyDetailSelect = {
       nature: true,
       teraType: true,
       evs: true,
+      statPoints: true,
       ivs: true,
       actualStats: true,
       moves: {
@@ -196,9 +197,10 @@ export class PartiesService {
       ability: pokemon.abilityId === null ? undefined : { connect: { id: pokemon.abilityId } },
       nature: pokemon.nature,
       teraType: pokemon.teraType,
-      evs: pokemon.evs,
+      evs: pokemon.evs === null ? Prisma.DbNull : pokemon.evs,
+      statPoints: pokemon.statPoints === null ? Prisma.DbNull : pokemon.statPoints,
       ivs: pokemon.ivs === null ? Prisma.DbNull : pokemon.ivs,
-      actualStats: pokemon.actualStats === null ? Prisma.DbNull : pokemon.actualStats,
+      actualStats: pokemon.actualStats,
       moves: {
         create: pokemon.moves.map((move) => ({
           slot: move.slot,

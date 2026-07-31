@@ -6,7 +6,9 @@ import {
   partyEvsSchema,
   partyIvsSchema,
   partySchema,
+  partyStatPointsSchema,
 } from "./party";
+import { archetypeStatPointsSchema } from "./archetype";
 
 const defaultEvs = { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 };
 const defaultIvs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
@@ -18,6 +20,14 @@ const defaultActualStats = {
   specialDefense: 130,
   speed: 110,
 };
+const defaultStatPoints = {
+  hp: 32,
+  attack: 0,
+  defense: 0,
+  specialAttack: 32,
+  specialDefense: 2,
+  speed: 0,
+};
 
 const pokemon = {
   slot: 1,
@@ -27,6 +37,7 @@ const pokemon = {
   nature: " わんぱく ",
   teraType: " みず ",
   evs: defaultEvs,
+  statPoints: defaultStatPoints,
   ivs: defaultIvs,
   actualStats: defaultActualStats,
   moves: [
@@ -68,7 +79,62 @@ describe("PARTY-001 shared schemas", () => {
       teraType: null,
       ivs: null,
       actualStats: null,
+      statPoints: null,
     });
+  });
+
+  it("Archetypeと同じ能力ポイントschemaを再利用し、EV・IVへ変換しない", () => {
+    expect(partyStatPointsSchema).toBe(archetypeStatPointsSchema);
+    const parsed = partySchema.parse({
+      name: "Champions",
+      ruleId: 1,
+      pokemons: [{ ...pokemon, evs: null, ivs: null, statPoints: defaultStatPoints }],
+    });
+
+    expect(parsed.pokemons[0]?.statPoints).toEqual(defaultStatPoints);
+    expect(parsed.pokemons[0]?.evs).toBeNull();
+    expect(parsed.pokemons[0]?.ivs).toBeNull();
+  });
+
+  it.each([
+    ["33", { ...defaultStatPoints, hp: 33 }],
+    ["負数", { ...defaultStatPoints, hp: -1 }],
+    ["小数", { ...defaultStatPoints, hp: 0.5 }],
+    ["NaN", { ...defaultStatPoints, hp: Number.NaN }],
+    ["Infinity", { ...defaultStatPoints, hp: Number.POSITIVE_INFINITY }],
+    ["合計67", { ...defaultStatPoints, defense: 1 }],
+    [
+      "キー不足",
+      {
+        hp: 32,
+        attack: 0,
+        defense: 0,
+        specialAttack: 32,
+        specialDefense: 2,
+      },
+    ],
+    ["余分なキー", { ...defaultStatPoints, extra: 0 }],
+  ])("Party能力ポイントの不正値（%s）を拒否する", (_label, statPoints) => {
+    expect(partyStatPointsSchema.safeParse(statPoints).success).toBe(false);
+  });
+
+  it("Party能力ポイントは全0・各能力32・nullを受理し、入力を変更しない", () => {
+    const allZero = {
+      hp: 0,
+      attack: 0,
+      defense: 0,
+      specialAttack: 0,
+      specialDefense: 0,
+      speed: 0,
+    };
+    expect(partyStatPointsSchema.parse(allZero)).toEqual(allZero);
+    for (const stat of Object.keys(allZero) as Array<keyof typeof allZero>) {
+      const input = { ...allZero, [stat]: 32 };
+      const before = structuredClone(input);
+      expect(partyStatPointsSchema.parse(input)[stat]).toBe(32);
+      expect(input).toEqual(before);
+    }
+    expect(partyStatPointsSchema.nullable().parse(null)).toBeNull();
   });
 
   it("努力値は6能力・各252以下・合計510以下だけを受理する", () => {

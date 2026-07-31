@@ -8,6 +8,22 @@ import {
 
 const evs = { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 };
 const ivs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+const statPoints = {
+  hp: 32,
+  attack: 0,
+  defense: 0,
+  specialAttack: 32,
+  specialDefense: 2,
+  speed: 0,
+};
+const actualStats = {
+  hp: 185,
+  attack: 93,
+  defense: 98,
+  specialAttack: 177,
+  specialDefense: 107,
+  speed: 120,
+};
 const moves = [
   { slot: 1, moveId: 101 },
   { slot: 2, moveId: 102 },
@@ -28,8 +44,10 @@ const validInput = {
       abilityId: 30,
       nature: " ようき ",
       teraType: " みず ",
-      evs,
-      ivs,
+      statPoints,
+      evs: null,
+      ivs: null,
+      actualStats,
       moves,
     },
   ],
@@ -48,7 +66,10 @@ describe("PARTY-002 shared API schemas", () => {
       nature: "ようき",
       teraType: "みず",
       moves,
-      actualStats: null,
+      statPoints,
+      evs: null,
+      ivs: null,
+      actualStats,
     });
   });
 
@@ -77,6 +98,57 @@ describe("PARTY-002 shared API schemas", () => {
         pokemons: [validInput.pokemons[0], { ...validInput.pokemons[0], slot: 2 }],
       }).success,
     ).toBe(false);
+  });
+
+  it("能力ポイントと実数値をstrict検証し、従来EV・IVへ変換しない", () => {
+    const parsed = partyWriteSchema.parse(validInput);
+    expect(parsed.pokemons[0]).toMatchObject({ statPoints, actualStats, evs: null, ivs: null });
+
+    expect(
+      partyWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...validInput.pokemons[0], statPoints: { ...statPoints, defense: 3 } }],
+      }).success,
+    ).toBe(false);
+    expect(
+      partyWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...validInput.pokemons[0], statPoints: { ...statPoints, extra: 0 } }],
+      }).success,
+    ).toBe(false);
+    const { actualStats: _actualStats, ...withoutActualStats } = validInput.pokemons[0];
+    expect(
+      partyWriteSchema.safeParse({ ...validInput, pokemons: [withoutActualStats] }).success,
+    ).toBe(false);
+    expect(
+      partyWriteSchema.safeParse({
+        ...validInput,
+        pokemons: [{ ...validInput.pokemons[0], actualStats: { ...actualStats, hp: 0 } }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("保存済みPartyはstatPoints=nullとactualStats=nullを互換レスポンスとして返せる", () => {
+    const id = "8b0c1732-e931-41d0-b3d0-b9b62ed506b9";
+    const legacyPokemon = {
+      ...validInput.pokemons[0],
+      statPoints: null,
+      evs,
+      ivs,
+      actualStats: null,
+    };
+    expect(
+      partyDetailSchema.parse({
+        id,
+        name: "既存Party",
+        description: null,
+        ruleId: 1,
+        isActive: false,
+        createdAt: "2026-07-25T00:00:00.000Z",
+        updatedAt: "2026-07-25T00:00:00.000Z",
+        pokemons: [legacyPokemon],
+      }).pokemons[0],
+    ).toMatchObject({ statPoints: null, evs, ivs, actualStats: null });
   });
 
   it("userIdなど契約外の所有者入力を拒否する", () => {
