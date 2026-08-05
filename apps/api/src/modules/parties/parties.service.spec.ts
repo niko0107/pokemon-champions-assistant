@@ -22,8 +22,24 @@ const validInput: PartyWrite = partyWriteSchema.parse({
       abilityId: 30,
       nature: "ようき",
       teraType: "みず",
-      evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
-      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      statPoints: {
+        hp: 32,
+        attack: 0,
+        defense: 0,
+        specialAttack: 32,
+        specialDefense: 2,
+        speed: 0,
+      },
+      evs: null,
+      ivs: null,
+      actualStats: {
+        hp: 185,
+        attack: 93,
+        defense: 98,
+        specialAttack: 177,
+        specialDefense: 107,
+        speed: 120,
+      },
       moves: [
         { slot: 1, moveId: 40 },
         { slot: 2, moveId: 41 },
@@ -144,7 +160,17 @@ describe("PartiesService", () => {
   });
 
   it("単体取得はIDと所有者を同時に条件にし、他人のIDも404にする", async () => {
-    await expect(service.get(userId, partyId)).resolves.toMatchObject({ id: partyId });
+    await expect(service.get(userId, partyId)).resolves.toMatchObject({
+      id: partyId,
+      pokemons: [
+        expect.objectContaining({
+          statPoints: validInput.pokemons[0]?.statPoints,
+          evs: null,
+          ivs: null,
+          actualStats: validInput.pokemons[0]?.actualStats,
+        }),
+      ],
+    });
     expect(getFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: partyId, userId } }),
     );
@@ -174,6 +200,10 @@ describe("PartiesService", () => {
                 pokemon: { connect: { id: 10 } },
                 item: { connect: { id: 20 } },
                 ability: { connect: { id: 30 } },
+                statPoints: validInput.pokemons[0]?.statPoints,
+                evs: Prisma.DbNull,
+                ivs: Prisma.DbNull,
+                actualStats: validInput.pokemons[0]?.actualStats,
                 moves: {
                   create: [
                     { slot: 1, move: { connect: { id: 40 } } },
@@ -229,6 +259,13 @@ describe("PartiesService", () => {
         }),
       }),
     );
+    const updateCall = transactionPartyUpdate.mock.calls[0]?.[0];
+    expect(updateCall?.data.pokemons.create[0]).toMatchObject({
+      statPoints: validInput.pokemons[0]?.statPoints,
+      evs: Prisma.DbNull,
+      ivs: Prisma.DbNull,
+      actualStats: validInput.pokemons[0]?.actualStats,
+    });
   });
 
   it("他人の更新は404にして子削除・マスタ検証へ進まない", async () => {

@@ -833,3 +833,14 @@
 - **判断:** partial構築のcounterplanは`type_only`を維持し、ダメージ・確定数・素早さ比較を提供しない。`defaultLeads=[]`では`leadPokemonId=null`とし、基本選出や実数値を推測しない。実Anthropic APIは呼ばず、Template explanationとLLM無効時のフォールバックを確認する
 - **理由:** 36件はPokemon、Move、Item、Ability、Nature、statPoints、Season、Regulation、出典URLの客観的な登録条件を満たし、ARCHETYPE-004A〜004Dの正式契約により、未確認の基本選出・実数値・IV・具体roleを推測せず構築候補として利用できるため
 - **影響:** ARCHETYPE-004の30件以上という完了条件を36件で満たす。追加したJSONはadmin POSTへ再投入できるデータとして保持し、コード・DB schema・migration・API・Web・shared・scoring・matchup・LLMは変更しない。既知制限はtype_onlyとItem非網羅であり、次タスクは完了済みのBATTLE-005〜007を飛ばして、依存関係を満たす`WEB-010`とする
+
+## 2026-07-31 PartyのChampions能力ポイント対応(PARTY-003)
+
+### D-076: Party能力ポイントと直接入力実数値の分離保存
+
+- **判断:** PartyPokemonへnullable JSONBの`statPoints`を追加し、ARCHETYPE-004Cと同じstrict schemaを再利用して6能力を各0〜32・合計66以下で保存する。能力ポイントは従来EV・IVと相互変換せず、能力ポイントだけからactualStatsを算出しない
+- **判断:** 新規Champions Partyの通常UIは従来EV・IV入力を表示せず、`statPoints`を入力して`evs=null`、`ivs=null`で保存する。既存のEV・IV列と値は後方互換のため保持し、statPointsへ自動移行しない。未確認IVを31、未確認EVを0へ補完しない
+- **判断:** 対戦計算に必要な`actualStats`はゲーム画面のHP・攻撃・防御・特攻・特防・素早さを6項目すべて直接入力・保存する。Pokemon、Nature、Rule、能力ポイントの変更でユーザー入力を上書きせず、逆算もしない。Ruleの`battleLevel`は対戦レベルとして表示・利用するが、能力ポイントの独自計算式には用いない
+- **判断:** POST / PUT入力ではactualStatsを必須とし、statPointsは有効なobjectまたは明示的nullを受理する。GETは既存Partyの`statPoints=null`と`actualStats=null`を安全に返せる互換契約を維持する。counterplanは従来どおり保存済みactualStatsだけをSnapshotへ射影し、statPointsをMATCHUP計算へ渡さない
+- **理由:** Pokémon Championsのゲーム画面でユーザーが確認する育成値は各最大32・合計66以下の能力ポイントと実数値であり、従来作品のEV 510・IV 31入力と自動計算は誤入力と異なる意味の値の保存を招くため
+- **影響:** `party_pokemons.evs`は互換列としてnullableへ緩和し、既存行を更新しないforward migrationを適用する。Party画面は「能力ポイント」と「実数値」を独立表示し、EV 510・IV入力を通常フローに表示しない。Archetype、Master、MATCHUP計算式、LLMは変更しない

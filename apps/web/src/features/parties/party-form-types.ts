@@ -2,31 +2,36 @@ import type {
   AbilitySummary,
   ItemSummary,
   MoveSummary,
-  PartyEvs,
-  PartyIvs,
+  PartyActualStats,
+  PartyStatPoints,
   PokemonSummary,
 } from "@pokemon-champions/shared";
 
-export const PARTY_STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const;
+export const PARTY_STAT_KEYS = [
+  "hp",
+  "attack",
+  "defense",
+  "specialAttack",
+  "specialDefense",
+  "speed",
+] as const;
 export type PartyStatKey = (typeof PARTY_STAT_KEYS)[number];
+export type PartyNumericInput = number | "";
+export type PartyStatPointInputs = {
+  [Stat in keyof PartyStatPoints]: PartyNumericInput;
+};
+export type PartyActualStatInputs = {
+  [Stat in keyof PartyActualStats]: PartyNumericInput;
+};
 
 export const PARTY_STAT_LABELS: Readonly<Record<PartyStatKey, string>> = {
   hp: "HP",
-  atk: "攻撃",
-  def: "防御",
-  spa: "特攻",
-  spd: "特防",
-  spe: "素早さ",
+  attack: "攻撃",
+  defense: "防御",
+  specialAttack: "特攻",
+  specialDefense: "特防",
+  speed: "素早さ",
 };
-
-export const PARTY_COMBAT_STAT_KEYS = {
-  hp: "hp",
-  atk: "attack",
-  def: "defense",
-  spa: "specialAttack",
-  spd: "specialDefense",
-  spe: "speed",
-} as const;
 
 export const TERA_TYPES = [
   "ノーマル",
@@ -49,14 +54,21 @@ export const TERA_TYPES = [
   "フェアリー",
 ] as const;
 
-export const EMPTY_EVS: PartyEvs = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-export const PERFECT_IVS: PartyIvs = {
-  hp: 31,
-  atk: 31,
-  def: 31,
-  spa: 31,
-  spd: 31,
-  spe: 31,
+export const EMPTY_STAT_POINTS: PartyStatPoints = {
+  hp: 0,
+  attack: 0,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
+  speed: 0,
+};
+export const EMPTY_ACTUAL_STATS: PartyActualStatInputs = {
+  hp: "",
+  attack: "",
+  defense: "",
+  specialAttack: "",
+  specialDefense: "",
+  speed: "",
 };
 
 export interface PartyPokemonFormState {
@@ -66,9 +78,8 @@ export interface PartyPokemonFormState {
   ability: AbilitySummary | null;
   nature: string;
   teraType: string;
-  evs: PartyEvs;
-  ivs: PartyIvs;
-  actualStatOverrides: Partial<Record<PartyStatKey, number>>;
+  statPoints: PartyStatPointInputs;
+  actualStats: PartyActualStatInputs;
   moves: Array<MoveSummary | null>;
 }
 
@@ -80,9 +91,8 @@ export function createEmptyPokemonSlot(slot: number): PartyPokemonFormState {
     ability: null,
     nature: "",
     teraType: "",
-    evs: { ...EMPTY_EVS },
-    ivs: { ...PERFECT_IVS },
-    actualStatOverrides: {},
+    statPoints: { ...EMPTY_STAT_POINTS },
+    actualStats: { ...EMPTY_ACTUAL_STATS },
     moves: [null, null, null, null],
   };
 }

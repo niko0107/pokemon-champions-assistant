@@ -206,7 +206,8 @@ model PartyPokemon {
   abilityId   Int?               @map("ability_id")
   nature      String
   teraType    String?            @map("tera_type")
-  evs         Json               @db.JsonB
+  evs         Json?              @db.JsonB
+  statPoints  Json?              @map("stat_points") @db.JsonB
   ivs         Json?              @db.JsonB
   actualStats Json?              @map("actual_stats") @db.JsonB
   party       Party              @relation(fields: [partyId], references: [id], onDelete: Cascade, onUpdate: Cascade)

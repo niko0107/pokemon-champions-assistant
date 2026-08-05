@@ -1,6 +1,6 @@
 import {
+  ARCHETYPE_STAT_POINT_TOTAL_MAX,
   partyWriteSchema,
-  type MasterPokemonDetail,
   type PartyWrite,
 } from "@pokemon-champions/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,6 @@ import {
   type PartyPokemonFormState,
 } from "./party-form-types";
 import { PartyShell } from "./party-shell";
-import { calculateActualStats } from "./party-stats";
 import { PokemonSlotEditor } from "./pokemon-slot-editor";
 
 interface ValidationState {
@@ -43,7 +42,6 @@ export function PartyCreatePage() {
     queryFn: fetchRules,
   });
   const selectedRule = rules.data?.items.find((rule) => rule.id === ruleId) ?? null;
-  const level = selectedRule?.battleLevel ?? null;
 
   const createMutation = useMutation({
     mutationFn: createParty,
@@ -66,9 +64,7 @@ export function PartyCreatePage() {
       rule
         ? Array.from({ length: rule.teamSize }, (_, index) => {
             const existing = current[index];
-            return existing
-              ? { ...existing, slot: index + 1, actualStatOverrides: {} }
-              : createEmptyPokemonSlot(index + 1);
+            return existing ? { ...existing, slot: index + 1 } : createEmptyPokemonSlot(index + 1);
           })
         : [],
     );
@@ -97,34 +93,25 @@ export function PartyCreatePage() {
       if (pokemon.moves.some((move) => move === null)) {
         appendSlotError(slotErrors, slot, "技を4件選択してください。");
       }
-      const evTotal = PARTY_STAT_KEYS.reduce((total, stat) => total + pokemon.evs[stat], 0);
-      if (evTotal > 510) {
-        appendSlotError(slotErrors, slot, "努力値の合計を510以下にしてください。");
+      const statPointTotal = PARTY_STAT_KEYS.reduce((total, stat) => {
+        const point = pokemon.statPoints[stat];
+        return total + (typeof point === "number" && Number.isFinite(point) ? point : 0);
+      }, 0);
+      if (statPointTotal > ARCHETYPE_STAT_POINT_TOTAL_MAX) {
+        appendSlotError(
+          slotErrors,
+          slot,
+          `能力ポイントの合計を${ARCHETYPE_STAT_POINT_TOTAL_MAX}以下にしてください。`,
+        );
+      }
+      if (PARTY_STAT_KEYS.some((stat) => pokemon.statPoints[stat] === "")) {
+        appendSlotError(slotErrors, slot, "能力ポイントを6項目すべて入力してください。");
+      }
+      if (PARTY_STAT_KEYS.some((stat) => pokemon.actualStats[stat] === "")) {
+        appendSlotError(slotErrors, slot, "実数値を6項目すべて入力してください。");
       }
 
-      const detail = pokemon.pokemon
-        ? queryClient.getQueryData<MasterPokemonDetail>(
-            partyQueryKeys.pokemonDetail(pokemon.pokemon.id),
-          )
-        : null;
-      if (pokemon.pokemon && !detail) {
-        appendSlotError(slotErrors, slot, "ポケモン詳細の取得完了を待ってください。");
-      }
-      if (!pokemon.pokemon || !detail || !pokemon.nature || level === null) {
-        return [];
-      }
-
-      let calculated;
-      try {
-        calculated = calculateActualStats({
-          pokemon: detail,
-          evs: pokemon.evs,
-          ivs: pokemon.ivs,
-          level,
-          nature: pokemon.nature,
-        });
-      } catch {
-        appendSlotError(slotErrors, slot, "実数値を計算できませんでした。");
+      if (!pokemon.pokemon || !pokemon.nature) {
         return [];
       }
 
@@ -136,16 +123,10 @@ export function PartyCreatePage() {
           abilityId: pokemon.ability?.id ?? null,
           nature: pokemon.nature,
           teraType: pokemon.teraType || null,
-          evs: pokemon.evs,
-          ivs: pokemon.ivs,
-          actualStats: {
-            hp: pokemon.actualStatOverrides.hp ?? calculated.hp,
-            attack: pokemon.actualStatOverrides.atk ?? calculated.attack,
-            defense: pokemon.actualStatOverrides.def ?? calculated.defense,
-            specialAttack: pokemon.actualStatOverrides.spa ?? calculated.specialAttack,
-            specialDefense: pokemon.actualStatOverrides.spd ?? calculated.specialDefense,
-            speed: pokemon.actualStatOverrides.spe ?? calculated.speed,
-          },
+          statPoints: pokemon.statPoints,
+          evs: null,
+          ivs: null,
+          actualStats: pokemon.actualStats,
           moves: pokemon.moves.flatMap((move, moveIndex) =>
             move ? [{ slot: moveIndex + 1, moveId: move.id }] : [],
           ),
@@ -300,12 +281,12 @@ export function PartyCreatePage() {
                 aria-label="対戦レベル"
                 className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-3"
               >
-                <p className="text-sm font-bold">実数値の計算レベル</p>
+                <p className="text-sm font-bold">対戦レベル</p>
                 <p className="mt-1 text-lg font-black text-blue-950">
                   {selectedRule ? `Lv. ${selectedRule.battleLevel}` : "Rule選択後に表示"}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  選択したRuleの対戦レベルを使用します。Party APIへlevelは送信しません。
+                  対戦時は選択したRuleのレベルを使用します。実数値はゲーム画面の値を直接入力してください。
                 </p>
               </div>
               <label className="flex min-h-12 items-center gap-3 self-start rounded-xl border border-slate-300 bg-white px-4 py-3">
@@ -348,7 +329,6 @@ export function PartyCreatePage() {
                 <PokemonSlotEditor
                   key={pokemon.slot}
                   value={pokemon}
-                  level={level}
                   excludedPokemonIds={
                     new Set(
                       pokemons.flatMap((item, itemIndex) =>

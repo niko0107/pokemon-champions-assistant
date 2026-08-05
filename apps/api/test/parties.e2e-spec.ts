@@ -35,7 +35,24 @@ const writeInput = partyWriteSchema.parse({
       abilityId: 30,
       nature: "ようき",
       teraType: "みず",
-      evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
+      statPoints: {
+        hp: 32,
+        attack: 0,
+        defense: 0,
+        specialAttack: 32,
+        specialDefense: 2,
+        speed: 0,
+      },
+      evs: null,
+      ivs: null,
+      actualStats: {
+        hp: 185,
+        attack: 93,
+        defense: 98,
+        specialAttack: 177,
+        specialDefense: 107,
+        speed: 120,
+      },
       moves: [
         { slot: 1, moveId: 40 },
         { slot: 2, moveId: 41 },
@@ -62,7 +79,7 @@ function partyNotFound(): NotFoundException {
   });
 }
 
-describe("PARTY-002 party CRUD API", () => {
+describe("PARTY-002 / PARTY-003 party CRUD API", () => {
   let app: INestApplication;
   let jwt: JwtService;
   let userAToken: string;
@@ -161,6 +178,12 @@ describe("PARTY-002 party CRUD API", () => {
       .send(writeInput)
       .expect(201);
     expect(partyDetailSchema.parse(created.body).id).toBe(partyId);
+    expect(created.body.pokemons[0]).toMatchObject({
+      statPoints: writeInput.pokemons[0]?.statPoints,
+      evs: null,
+      ivs: null,
+      actualStats: writeInput.pokemons[0]?.actualStats,
+    });
 
     const listed = await request(app.getHttpServer())
       .get("/api/v1/parties")
@@ -180,6 +203,12 @@ describe("PARTY-002 party CRUD API", () => {
       .send({ ...writeInput, name: "更新後のパーティ" })
       .expect(200);
     expect(updated.body.name).toBe("更新後のパーティ");
+    expect(updated.body.pokemons[0]).toMatchObject({
+      statPoints: writeInput.pokemons[0]?.statPoints,
+      evs: null,
+      ivs: null,
+      actualStats: writeInput.pokemons[0]?.actualStats,
+    });
 
     await request(app.getHttpServer())
       .delete(`/api/v1/parties/${partyId}`)
@@ -266,6 +295,46 @@ describe("PARTY-002 party CRUD API", () => {
       })
       .expect(400);
     expect(problemDetailsSchema.parse(duplicateResponse.body)).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("能力ポイント合計超過と不正actualStatsを部分保存前に400へする", async () => {
+    const total67 = {
+      ...writeInput,
+      pokemons: [
+        {
+          ...writeInput.pokemons[0],
+          statPoints: { ...writeInput.pokemons[0]?.statPoints, defense: 1 },
+        },
+      ],
+    };
+    const pointsResponse = await request(app.getHttpServer())
+      .post("/api/v1/parties")
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send(total67)
+      .expect(400);
+    expect(problemDetailsSchema.parse(pointsResponse.body)).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+
+    const statsResponse = await request(app.getHttpServer())
+      .post("/api/v1/parties")
+      .set("Authorization", `Bearer ${userAToken}`)
+      .send({
+        ...writeInput,
+        pokemons: [
+          {
+            ...writeInput.pokemons[0],
+            actualStats: { ...writeInput.pokemons[0]?.actualStats, hp: 0 },
+          },
+        ],
+      })
+      .expect(400);
+    expect(problemDetailsSchema.parse(statsResponse.body)).toMatchObject({
       status: 400,
       code: "VALIDATION_ERROR",
     });

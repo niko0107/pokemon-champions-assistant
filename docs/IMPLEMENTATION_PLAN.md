@@ -333,6 +333,16 @@
 - **前提タスク:** PARTY-001, AUTH-004
 - **対象外:** 複数パーティ切替 UI(U-03 は将来)、画面(WEB-006)
 
+### ✅ PARTY-003 Champions能力ポイント対応
+
+- **目的:** 自分Partyの育成値をPokémon Championsの能力ポイントとして、従来EV・IVと混同せず直接入力・保存できるようにする
+- **作業範囲:** PartyPokemonのnullable `statPoints`、既存EV互換列のnullable化、shared / Party CRUD / Session契約、Party画面の能力ポイント・実数値直接入力、docs
+- **変更予定パッケージ:** packages/database, packages/shared, apps/api, apps/web, docs
+- **完了条件:** 能力ポイントを各0〜32・合計66以下で保存・再取得でき、新規UIはEV・IVを入力せず、実数値を直接保存し、counterplanが保存済みactualStatsを利用する
+- **必要なテスト:** migration、shared境界、Party POST/PUT/GET、Session/counterplan回帰、375px/1440px E2E、実DB
+- **前提タスク:** PARTY-001, PARTY-002, ARCHETYPE-004C, WEB-006, MATCHUP-008
+- **対象外:** Archetype/Master変更、MATCHUP計算式、能力ポイントからの実数値算出、EV/IV変換、LLM
+
 ---
 
 ## フェーズ1: テンプレ構築(ARCHETYPE)
@@ -877,7 +887,7 @@ SETUP-008 → SETUP-009 → MASTER-001〜005 → AUTH-001〜004
   → BATTLE-001〜004 → MASTER-006〜007 → WEB-005 → MASTER-010 → MASTER-011 → WEB-006 → WEB-001〜004
   → MATCHUP-002〜007 → MATCHUP-008A → MATCHUP-008 → WEB-007〜008 → LLM-001〜003 → WEB-009
   → MASTER-008 → MASTER-009A → MASTER-009B → ARCHETYPE-004A → ARCHETYPE-004B → ARCHETYPE-004C → ARCHETYPE-004D
-  → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → WEB-010〜011
+  → ARCHETYPE-004(データ30件) → BATTLE-005〜007 → PARTY-003 → WEB-010〜011
 ```
 
-次に着手すべきタスク: **WEB-010 PWA・スマホ最適化**。推奨実装順でARCHETYPE-004の後に位置するBATTLE-005〜007は完了済みで、WEB-010の前提タスクWEB-007も完了している。
+次に着手すべきタスク: **WEB-010 PWA・スマホ最適化**。

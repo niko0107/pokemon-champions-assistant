@@ -73,6 +73,7 @@ describe("PARTY-001 Prisma models", () => {
         "nature",
         "teraType",
         "evs",
+        "statPoints",
         "ivs",
         "actualStats",
         "moves",
@@ -80,7 +81,12 @@ describe("PARTY-001 Prisma models", () => {
     );
     expect(partyPokemonModel.fields.find((field) => field.name === "evs")).toMatchObject({
       type: "Json",
-      isRequired: true,
+      isRequired: false,
+    });
+    expect(partyPokemonModel.fields.find((field) => field.name === "statPoints")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+      dbName: "stat_points",
     });
     expect(partyPokemonModel.fields.find((field) => field.name === "ivs")).toMatchObject({
       type: "Json",

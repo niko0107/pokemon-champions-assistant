@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type {
-  AbilitySummary,
-  ItemSummary,
-  MoveSummary,
-  PartyActualStats,
-  PokemonSummary,
+import {
+  ARCHETYPE_STAT_POINT_STAT_MAX,
+  ARCHETYPE_STAT_POINT_TOTAL_MAX,
+  type AbilitySummary,
+  type ItemSummary,
+  type MoveSummary,
+  type PokemonSummary,
 } from "@pokemon-champions/shared";
 import { fetchAbilities, fetchPokemonDetail, partyQueryKeys } from "./party-api";
 import {
@@ -12,14 +13,14 @@ import {
   PARTY_STAT_LABELS,
   TERA_TYPES,
   type PartyPokemonFormState,
+  type PartyNumericInput,
   type PartyStatKey,
 } from "./party-form-types";
-import { calculateActualStats, NATURE_OPTIONS } from "./party-stats";
+import { NATURE_OPTIONS } from "./party-stats";
 import { ItemPicker, MovePicker, PokemonPicker } from "./search-picker";
 
 interface PokemonSlotEditorProps {
   value: PartyPokemonFormState;
-  level: number | null;
   excludedPokemonIds: ReadonlySet<number>;
   errors: readonly string[];
   onChange: (value: PartyPokemonFormState) => void;
@@ -36,7 +37,6 @@ function replaceMove(
 
 export function PokemonSlotEditor({
   value,
-  level,
   excludedPokemonIds,
   errors,
   onChange,
@@ -53,38 +53,11 @@ export function PokemonSlotEditor({
     queryFn: () => fetchAbilities(pokemonId ?? 0),
     enabled: pokemonId !== null,
   });
-  const evTotal = PARTY_STAT_KEYS.reduce((total, stat) => total + value.evs[stat], 0);
-
-  let calculated: PartyActualStats | null = null;
-  if (detail.data && level !== null && value.nature) {
-    try {
-      calculated = calculateActualStats({
-        pokemon: detail.data,
-        evs: value.evs,
-        ivs: value.ivs,
-        level,
-        nature: value.nature,
-      });
-    } catch {
-      calculated = null;
-    }
-  }
-
-  const displayedActualStats: Readonly<Record<PartyStatKey, number>> | null =
-    calculated === null
-      ? null
-      : {
-          hp: value.actualStatOverrides.hp ?? calculated.hp,
-          atk: value.actualStatOverrides.atk ?? calculated.attack,
-          def: value.actualStatOverrides.def ?? calculated.defense,
-          spa: value.actualStatOverrides.spa ?? calculated.specialAttack,
-          spd: value.actualStatOverrides.spd ?? calculated.specialDefense,
-          spe: value.actualStatOverrides.spe ?? calculated.speed,
-        };
-
-  function resetCalculatedOverrides(next: PartyPokemonFormState): void {
-    onChange({ ...next, actualStatOverrides: {} });
-  }
+  const statPointTotal = PARTY_STAT_KEYS.reduce((total, stat) => {
+    const point = value.statPoints[stat];
+    return total + (typeof point === "number" && Number.isFinite(point) ? point : 0);
+  }, 0);
+  const statPointTotalExceeded = statPointTotal > ARCHETYPE_STAT_POINT_TOTAL_MAX;
 
   function selectPokemon(pokemon: PokemonSummary): void {
     onChange({
@@ -93,7 +66,6 @@ export function PokemonSlotEditor({
       item: null,
       ability: null,
       moves: [null, null, null, null],
-      actualStatOverrides: {},
     });
   }
 
@@ -104,18 +76,17 @@ export function PokemonSlotEditor({
       item: null,
       ability: null,
       moves: [null, null, null, null],
-      actualStatOverrides: {},
     });
   }
 
-  function changeNumericStat(kind: "evs" | "ivs", stat: PartyStatKey, nextValue: number): void {
-    const limit = kind === "evs" ? 252 : 31;
-    const normalized = Number.isFinite(nextValue)
-      ? Math.min(limit, Math.max(0, Math.trunc(nextValue)))
-      : 0;
-    resetCalculatedOverrides({
+  function changeNumericStat(
+    kind: "statPoints" | "actualStats",
+    stat: PartyStatKey,
+    nextValue: PartyNumericInput,
+  ): void {
+    onChange({
       ...value,
-      [kind]: { ...value[kind], [stat]: normalized },
+      [kind]: { ...value[kind], [stat]: nextValue },
     });
   }
 
@@ -253,9 +224,7 @@ export function PokemonSlotEditor({
             <select
               id={`party-nature-${value.slot}`}
               value={value.nature}
-              onChange={(event) =>
-                resetCalculatedOverrides({ ...value, nature: event.target.value })
-              }
+              onChange={(event) => onChange({ ...value, nature: event.target.value })}
               className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-700 focus:ring-3 focus:ring-blue-100"
             >
               <option value="">性格を選択</option>
@@ -289,93 +258,92 @@ export function PokemonSlotEditor({
           </div>
         </div>
 
-        <section className="mt-8">
+        <section className="mt-8" aria-labelledby={`stat-points-heading-${value.slot}`}>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <h3 className="font-black text-slate-950">努力値・個体値</h3>
-              <p className="mt-1 text-xs text-slate-500">努力値は各252、合計510まで。</p>
+              <h3 id={`stat-points-heading-${value.slot}`} className="font-black text-slate-950">
+                能力ポイント
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                各能力0〜32、合計66まで。ゲーム画面の能力値の右側に表示される数値を入力します。
+              </p>
             </div>
             <span
-              className={`text-sm font-black ${evTotal > 510 ? "text-red-700" : "text-blue-800"}`}
+              className={`shrink-0 text-sm font-black ${statPointTotalExceeded ? "text-red-700" : "text-blue-800"}`}
             >
-              EV {evTotal}/510
+              合計 {statPointTotal}/{ARCHETYPE_STAT_POINT_TOTAL_MAX}
             </span>
           </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[38rem] border-separate border-spacing-y-2 text-sm">
-              <thead>
-                <tr className="text-left text-xs text-slate-500">
-                  <th className="px-2">能力</th>
-                  <th className="px-2">EV</th>
-                  <th className="px-2">IV</th>
-                  <th className="px-2">実数値</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PARTY_STAT_KEYS.map((stat) => (
-                  <tr key={stat}>
-                    <th className="px-2 font-bold">{PARTY_STAT_LABELS[stat]}</th>
-                    <td className="px-2">
-                      <input
-                        aria-label={`ポケモン${value.slot} ${PARTY_STAT_LABELS[stat]} EV`}
-                        type="number"
-                        min="0"
-                        max="252"
-                        value={value.evs[stat]}
-                        onChange={(event) =>
-                          changeNumericStat("evs", stat, event.currentTarget.valueAsNumber)
-                        }
-                        className="w-24 rounded-lg border border-slate-300 px-2 py-2 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <input
-                        aria-label={`ポケモン${value.slot} ${PARTY_STAT_LABELS[stat]} IV`}
-                        type="number"
-                        min="0"
-                        max="31"
-                        value={value.ivs[stat]}
-                        onChange={(event) =>
-                          changeNumericStat("ivs", stat, event.currentTarget.valueAsNumber)
-                        }
-                        className="w-20 rounded-lg border border-slate-300 px-2 py-2 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <input
-                        aria-label={`ポケモン${value.slot} ${PARTY_STAT_LABELS[stat]} 実数値`}
-                        type="number"
-                        min="1"
-                        value={displayedActualStats?.[stat] ?? ""}
-                        disabled={calculated === null}
-                        onChange={(event) => {
-                          const nextValue = event.currentTarget.valueAsNumber;
-                          if (Number.isSafeInteger(nextValue) && nextValue > 0) {
-                            onChange({
-                              ...value,
-                              actualStatOverrides: {
-                                ...value.actualStatOverrides,
-                                [stat]: nextValue,
-                              },
-                            });
-                          }
-                        }}
-                        className="w-24 rounded-lg border border-slate-300 bg-blue-50 px-2 py-2 font-bold text-blue-950 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {calculated === null && (
-            <p className="mt-2 text-xs text-slate-500">
-              ポケモン・性格・Ruleの対戦レベルが揃うと実数値を表示します。
+          {statPointTotalExceeded && (
+            <p
+              id={`stat-points-error-${value.slot}`}
+              role="alert"
+              className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-800"
+            >
+              能力ポイントの合計を{ARCHETYPE_STAT_POINT_TOTAL_MAX}以下にしてください（現在
+              {statPointTotal}）。
             </p>
           )}
-          <p className="mt-2 text-xs text-slate-500">
-            実数値は自動計算されます。直接修正した値も保存できます。
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {PARTY_STAT_KEYS.map((stat) => (
+              <label key={stat} className="block text-sm font-bold text-slate-800">
+                {PARTY_STAT_LABELS[stat]}
+                <input
+                  aria-label={`ポケモン${value.slot} ${PARTY_STAT_LABELS[stat]} 能力ポイント`}
+                  aria-invalid={statPointTotalExceeded}
+                  aria-describedby={
+                    statPointTotalExceeded ? `stat-points-error-${value.slot}` : undefined
+                  }
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max={ARCHETYPE_STAT_POINT_STAT_MAX}
+                  step="1"
+                  value={value.statPoints[stat]}
+                  onChange={(event) =>
+                    changeNumericStat(
+                      "statPoints",
+                      stat,
+                      event.currentTarget.value === "" ? "" : event.currentTarget.valueAsNumber,
+                    )
+                  }
+                  className="mt-2 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8" aria-labelledby={`actual-stats-heading-${value.slot}`}>
+          <h3 id={`actual-stats-heading-${value.slot}`} className="font-black text-slate-950">
+            実数値
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            ゲーム画面に表示されている実際の能力値を6項目すべて入力します。
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {PARTY_STAT_KEYS.map((stat) => (
+              <label key={stat} className="block text-sm font-bold text-slate-800">
+                {PARTY_STAT_LABELS[stat]}
+                <input
+                  aria-label={`ポケモン${value.slot} ${PARTY_STAT_LABELS[stat]} 実数値`}
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  step="1"
+                  value={value.actualStats[stat]}
+                  onChange={(event) =>
+                    changeNumericStat(
+                      "actualStats",
+                      stat,
+                      event.currentTarget.value === "" ? "" : event.currentTarget.valueAsNumber,
+                    )
+                  }
+                  className="mt-2 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-blue-50 px-3 py-2 text-base font-bold text-blue-950 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+            ))}
+          </div>
         </section>
 
         <section className="mt-8">

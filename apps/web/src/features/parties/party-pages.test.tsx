@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -92,7 +92,7 @@ function createFetchMock(
     if (url.endsWith("/parties") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as {
         name: string;
-        pokemons: Array<{ actualStats: unknown }>;
+        pokemons: Array<{ statPoints: unknown; actualStats: unknown }>;
       };
       options.onCreate?.(body);
       const response = jsonResponse(
@@ -107,8 +107,9 @@ function createFetchMock(
               abilityId: null,
               nature: "まじめ",
               teraType: null,
-              evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
-              ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+              statPoints: body.pokemons[0]?.statPoints,
+              evs: null,
+              ivs: null,
               actualStats: body.pokemons[0]?.actualStats,
               moves: moves.map((move, index) => ({ slot: index + 1, moveId: move.id })),
             },
@@ -256,6 +257,11 @@ describe("WEB-006 party pages", () => {
     expect(screen.getByText("1枠 · 1体選出")).toBeVisible();
     expect(screen.getByLabelText("対戦レベル")).toHaveTextContent("Lv. 50");
     expect(screen.queryByRole("spinbutton", { name: "実数値の計算レベル" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "能力ポイント" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "実数値" })).toBeVisible();
+    expect(screen.queryByText(/EV 0\/510/u)).toBeNull();
+    expect(screen.queryByLabelText(/ EV$/u)).toBeNull();
+    expect(screen.queryByLabelText(/ IV$/u)).toBeNull();
     const pokemonSearch = screen.getByLabelText("ポケモン");
     await user.type(pokemonSearch, "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
@@ -291,7 +297,7 @@ describe("WEB-006 party pages", () => {
     );
   });
 
-  it("実数値を再計算し、技をpokemon_idで検索して正常保存後に一覧をinvalidateする", async () => {
+  it("能力ポイントと直接入力した実数値を分離保存し、一覧をinvalidateする", async () => {
     let createdBody: unknown;
     const fetchMock = createFetchMock({
       onCreate: (body) => (createdBody = body),
@@ -305,24 +311,39 @@ describe("WEB-006 party pages", () => {
     await user.type(screen.getByLabelText("パーティ名"), "ランク用");
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
-    await user.type(screen.getByLabelText("ポケモン"), "ギャ");
+    fireEvent.change(screen.getByLabelText("ポケモン"), { target: { value: "ギャ" } });
+    fireEvent.change(screen.getByLabelText("持ち物（任意）"), { target: { value: "オボ" } });
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
     await user.selectOptions(screen.getByLabelText("性格"), "まじめ");
-    await user.type(screen.getByLabelText("持ち物（任意）"), "オボ");
     await user.click(await screen.findByRole("button", { name: "オボンのみ" }));
     await waitFor(() => expect(screen.getByLabelText("特性（任意）")).toContainHTML("いかく"));
     await user.selectOptions(screen.getByLabelText("特性（任意）"), "1");
 
-    expect(await screen.findByLabelText("ポケモン1 HP 実数値")).toHaveValue(170);
-    await user.clear(screen.getByLabelText("ポケモン1 HP EV"));
-    await user.type(screen.getByLabelText("ポケモン1 HP EV"), "252");
-    expect(screen.getByLabelText("ポケモン1 HP 実数値")).toHaveValue(202);
+    const pointValues = [32, 0, 0, 32, 2, 0];
+    const actualValues = [185, 93, 98, 177, 107, 120];
+    const labels = ["HP", "攻撃", "防御", "特攻", "特防", "素早さ"];
+    for (const [index, label] of labels.entries()) {
+      const pointInput = screen.getByLabelText(`ポケモン1 ${label} 能力ポイント`);
+      fireEvent.change(pointInput, { target: { value: String(pointValues[index]) } });
+      fireEvent.change(screen.getByLabelText(`ポケモン1 ${label} 実数値`), {
+        target: { value: String(actualValues[index]) },
+      });
+    }
+    expect(screen.getByText("合計 66/66")).toBeVisible();
+    expect(screen.getByLabelText("ポケモン1 HP 能力ポイント")).toHaveAttribute("max", "32");
+    expect(screen.getByLabelText("ポケモン1 HP 能力ポイント")).toHaveValue(32);
 
     const moveInputs = screen.getAllByPlaceholderText("技名を2文字以上入力");
+    for (const input of moveInputs) {
+      fireEvent.change(input, { target: { value: "わざ" } });
+    }
     for (const [index, input] of moveInputs.entries()) {
-      await user.type(input, "わざ");
+      const picker = input.parentElement;
+      if (!picker) throw new Error(`move ${index + 1} picker missing`);
       await user.click(
-        await screen.findByRole("button", { name: new RegExp(moves[index]?.nameJa ?? "") }),
+        await within(picker).findByRole("button", {
+          name: new RegExp(moves[index]?.nameJa ?? ""),
+        }),
       );
     }
     await user.dblClick(screen.getByRole("button", { name: "パーティを保存" }));
@@ -337,13 +358,23 @@ describe("WEB-006 party pages", () => {
           pokemonId: 1,
           itemId: 1,
           abilityId: 1,
+          statPoints: {
+            hp: 32,
+            attack: 0,
+            defense: 0,
+            specialAttack: 32,
+            specialDefense: 2,
+            speed: 0,
+          },
+          evs: null,
+          ivs: null,
           actualStats: {
-            hp: 202,
-            attack: 145,
-            defense: 99,
-            specialAttack: 80,
-            specialDefense: 120,
-            speed: 101,
+            hp: 185,
+            attack: 93,
+            defense: 98,
+            specialAttack: 177,
+            specialDefense: 107,
+            speed: 120,
           },
           moves: [
             { slot: 1, moveId: 1 },
@@ -385,26 +416,33 @@ describe("WEB-006 party pages", () => {
     ).toHaveLength(0);
   });
 
-  it("EV合計超過を保存前に表示する", async () => {
+  it("能力ポイント合計67を即時表示し、保存前に拒否する", async () => {
     const fetchMock = createFetchMock();
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     renderApp("/parties/new");
 
-    await user.type(screen.getByLabelText("パーティ名"), "EVテスト");
+    await user.type(screen.getByLabelText("パーティ名"), "能力ポイントテスト");
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
     await user.type(screen.getByLabelText("ポケモン"), "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
 
-    for (const stat of ["HP", "攻撃", "防御"]) {
-      const input = screen.getByLabelText(`ポケモン1 ${stat} EV`);
+    for (const [stat, points] of [
+      ["HP", 32],
+      ["攻撃", 32],
+      ["防御", 3],
+    ] as const) {
+      const input = screen.getByLabelText(`ポケモン1 ${stat} 能力ポイント`);
       await user.clear(input);
-      await user.type(input, "252");
+      await user.type(input, String(points));
     }
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "能力ポイントの合計を66以下にしてください（現在67）。",
+    );
     await user.click(screen.getByRole("button", { name: "パーティを保存" }));
 
-    expect(await screen.findByText("努力値の合計を510以下にしてください。")).toBeVisible();
+    expect(await screen.findByText("能力ポイントの合計を66以下にしてください。")).toBeVisible();
     expect(
       fetchMock.mock.calls.filter(
         ([input, init]) => String(input).endsWith("/parties") && init?.method === "POST",
@@ -412,7 +450,7 @@ describe("WEB-006 party pages", () => {
     ).toHaveLength(0);
   });
 
-  it("Rule変更時に新しいbattleLevelで実数値を再計算する", async () => {
+  it("Rule・Pokemon・性格を変更しても直接入力した実数値を上書きしない", async () => {
     const levelOneRule = { ...rule, id: 2, name: "レベル1", battleLevel: 1 };
     vi.stubGlobal("fetch", createFetchMock({ rules: [rule, levelOneRule] }));
     const user = userEvent.setup();
@@ -423,10 +461,12 @@ describe("WEB-006 party pages", () => {
     await user.type(screen.getByLabelText("ポケモン"), "ギャ");
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
     await user.selectOptions(screen.getByLabelText("性格"), "まじめ");
-    expect(await screen.findByLabelText("ポケモン1 HP 実数値")).toHaveValue(170);
+    await user.type(screen.getByLabelText("ポケモン1 HP 実数値"), "185");
 
     await user.selectOptions(screen.getByLabelText("Rule"), "2");
     expect(screen.getByLabelText("対戦レベル")).toHaveTextContent("Lv. 1");
-    expect(screen.getByLabelText("ポケモン1 HP 実数値")).toHaveValue(13);
+    expect(screen.getByLabelText("ポケモン1 HP 実数値")).toHaveValue(185);
+    await user.selectOptions(screen.getByLabelText("性格"), "おくびょう");
+    expect(screen.getByLabelText("ポケモン1 HP 実数値")).toHaveValue(185);
   });
 });
