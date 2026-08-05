@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -311,10 +311,10 @@ describe("WEB-006 party pages", () => {
     await user.type(screen.getByLabelText("パーティ名"), "ランク用");
     await screen.findByRole("option", { name: /シングルバトル/u });
     await user.selectOptions(screen.getByLabelText("Rule"), "1");
-    await user.type(screen.getByLabelText("ポケモン"), "ギャ");
+    fireEvent.change(screen.getByLabelText("ポケモン"), { target: { value: "ギャ" } });
+    fireEvent.change(screen.getByLabelText("持ち物（任意）"), { target: { value: "オボ" } });
     await user.click(await screen.findByRole("button", { name: "ギャラドス（normal）" }));
     await user.selectOptions(screen.getByLabelText("性格"), "まじめ");
-    await user.type(screen.getByLabelText("持ち物（任意）"), "オボ");
     await user.click(await screen.findByRole("button", { name: "オボンのみ" }));
     await waitFor(() => expect(screen.getByLabelText("特性（任意）")).toContainHTML("いかく"));
     await user.selectOptions(screen.getByLabelText("特性（任意）"), "1");
@@ -324,22 +324,26 @@ describe("WEB-006 party pages", () => {
     const labels = ["HP", "攻撃", "防御", "特攻", "特防", "素早さ"];
     for (const [index, label] of labels.entries()) {
       const pointInput = screen.getByLabelText(`ポケモン1 ${label} 能力ポイント`);
-      await user.clear(pointInput);
-      await user.type(pointInput, String(pointValues[index]));
-      await user.type(
-        screen.getByLabelText(`ポケモン1 ${label} 実数値`),
-        String(actualValues[index]),
-      );
+      fireEvent.change(pointInput, { target: { value: String(pointValues[index]) } });
+      fireEvent.change(screen.getByLabelText(`ポケモン1 ${label} 実数値`), {
+        target: { value: String(actualValues[index]) },
+      });
     }
     expect(screen.getByText("合計 66/66")).toBeVisible();
     expect(screen.getByLabelText("ポケモン1 HP 能力ポイント")).toHaveAttribute("max", "32");
     expect(screen.getByLabelText("ポケモン1 HP 能力ポイント")).toHaveValue(32);
 
     const moveInputs = screen.getAllByPlaceholderText("技名を2文字以上入力");
+    for (const input of moveInputs) {
+      fireEvent.change(input, { target: { value: "わざ" } });
+    }
     for (const [index, input] of moveInputs.entries()) {
-      await user.type(input, "わざ");
+      const picker = input.parentElement;
+      if (!picker) throw new Error(`move ${index + 1} picker missing`);
       await user.click(
-        await screen.findByRole("button", { name: new RegExp(moves[index]?.nameJa ?? "") }),
+        await within(picker).findByRole("button", {
+          name: new RegExp(moves[index]?.nameJa ?? ""),
+        }),
       );
     }
     await user.dblClick(screen.getByRole("button", { name: "パーティを保存" }));
